@@ -1538,6 +1538,17 @@ const ADMIN_HTML = `<!doctype html>
   #cv-btn{height:52px;min-width:52px;border-radius:26px;background:#111;display:flex;gap:8px;
     align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:0 14px}
   @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px}}
+  #bot-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  #bot-tabs button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 16px;
+    font-size:14px;font-weight:600;color:#555;cursor:pointer}
+  #bot-tabs button.on{background:var(--grad);color:#fff;border-color:transparent}
+  .chk{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;margin-bottom:8px;font-size:14px}
+  .chk .chk-ic{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    flex:none;background:#eef1f8;color:var(--mut);font-weight:700;font-size:14px}
+  .chk.done .chk-ic{background:#e3f6e9;color:#1d9e4b}
+  .chk button{margin-left:auto;white-space:nowrap}
+  #crumb a{text-decoration:none;font-weight:600;color:var(--acc)}
   .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:fit-content}
   .seg button{border:0;background:#fff;padding:8px 16px;font-size:13.5px;cursor:pointer;color:#555}
   .seg button.on{background:var(--acc);color:#fff}
@@ -1596,6 +1607,41 @@ const ADMIN_HTML = `<!doctype html>
       <p id="crumb" class="mut"></p>
 
       <div id="edit-col">
+
+      <div id="bot-tabs" class="hide">
+        <button data-bt="cerebro" class="on">🧠 Cerebro</button>
+        <button data-bt="contenido">📚 Contenido</button>
+        <button data-bt="diseno">🎨 Diseño</button>
+        <button data-bt="calidad">🎓 Calidad</button>
+        <button data-bt="publicar">🚀 Publicar</button>
+      </div>
+
+      <div class="card hide" id="v-wizard">
+        <h2>✨ Nuevo cliente en un paso</h2>
+        <p class="sub">Rellena esto y ExpoBot crea el cliente, su proyecto y su chatbot ya configurado
+        por la IA, con la demo lista para enseñar.</p>
+        <div class="row">
+          <div><label>Nombre del negocio</label><input id="w-name" placeholder="Clínica Sonrisa"></div>
+          <div><label>Su página web</label><input id="w-web" placeholder="clinicasonrisa.com"></div>
+        </div>
+        <div class="row">
+          <div><label>Email del cliente (para su portal e informes)</label><input id="w-email" type="email"></div>
+          <div><label>Teléfono (opcional)</label><input id="w-phone"></div>
+        </div>
+        <label>Cuéntale a la IA qué hace el negocio y qué debe conseguir el bot</label>
+        <textarea id="w-brief" rows="3" placeholder="Clínica dental en Valencia. El bot resuelve dudas de tratamientos y precios orientativos, capta pacientes interesados con nombre y teléfono, y nunca da consejo médico."></textarea>
+        <div class="actions">
+          <button id="w-go" class="primary">Crear cliente y chatbot con IA</button>
+          <span id="w-msg" class="mut"></span>
+        </div>
+        <p class="mut" style="margin-top:8px"><a href="#" id="w-manual" style="color:var(--mut)">Prefiero crearlo a mano, paso a paso</a></p>
+      </div>
+
+      <div class="card hide" id="v-check">
+        <h2>✅ Listo para publicar</h2>
+        <p class="sub">Los pasos que separan este chatbot de estar funcionando en la web del cliente.</p>
+        <div id="check-list" class="mut">Cargando…</div>
+      </div>
 
       <div class="card hide" id="v-home">
         <h2>Resumen del mes</h2>
@@ -2148,6 +2194,7 @@ function toast(msg, isErr) {
 }
 
 function goHome() {
+  if (!guardNav()) return;
   sel = { type: "home" };
   renderTree();
   crumb(["Inicio"]);
@@ -2237,20 +2284,59 @@ function renderTree() {
   });
 }
 
-var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "v-exam", "integ", "ingest"];
-function showCards(ids) {
+var ALL_VIEWS = ["v-home", "v-wizard", "v-check", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "v-exam", "integ", "ingest"];
+function showCards(ids, keepTabs) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
+  if (!keepTabs) $("bot-tabs").classList.add("hide");
   var canvas = ids.indexOf("v-tenant") >= 0;
   $("canvas-panel").classList.toggle("hide", !canvas);
   $("main").classList.toggle("with-canvas", canvas);
   $("main").classList.remove("hide");
 }
 
-function crumb(parts) { $("crumb").textContent = parts.join("  ›  "); }
+function crumb(parts) {
+  var box = $("crumb");
+  box.innerHTML = "";
+  parts.forEach(function (p, i) {
+    if (i) box.appendChild(document.createTextNode("  ›  "));
+    if (p && p.go) {
+      var a = document.createElement("a");
+      a.href = "#";
+      a.textContent = p.t;
+      a.onclick = function (e) { e.preventDefault(); p.go(); };
+      box.appendChild(a);
+    } else {
+      box.appendChild(document.createTextNode(typeof p === "string" ? p : p.t));
+    }
+  });
+}
+
+// ----- cambios sin guardar -----
+
+var dirty = false;
+var populating = false;
+function markDirty() { if (!populating) dirty = true; }
+function guardNav() {
+  if (!dirty) return true;
+  if (confirm("Hay cambios sin guardar que se perderán si sales. ¿Salir sin guardar?")) {
+    dirty = false;
+    return true;
+  }
+  return false;
+}
+["v-client", "v-project", "v-tenant"].forEach(function (id) {
+  $(id).addEventListener("input", markDirty);
+  $(id).addEventListener("change", markDirty);
+});
+window.addEventListener("beforeunload", function (e) {
+  if (dirty) { e.preventDefault(); e.returnValue = ""; }
+});
 
 // ----- cliente -----
 
 function selClient(id) {
+  if (sel.type !== "client" || sel.id !== id) { if (!guardNav()) return; }
+  populating = true;
   sel = { type: "client", id: id, isNew: !id };
   renderTree();
   var c = id ? findClient(id) : null;
@@ -2276,6 +2362,7 @@ function selClient(id) {
     loadInvoices();
   }
   showCards(c ? ["v-client", "v-client-projects", "v-client-portal", "v-client-inv"] : ["v-client"]);
+  populating = false;
 }
 
 function loadInvoices() {
@@ -2382,7 +2469,103 @@ $("portal-pass").onclick = function () {
   });
 };
 
-$("new-client").onclick = function () { selClient(null); };
+$("new-client").onclick = function () {
+  if (!guardNav()) return;
+  sel = { type: "wizard" };
+  renderTree();
+  crumb(["Nuevo cliente"]);
+  ["w-name", "w-web", "w-email", "w-phone", "w-brief"].forEach(function (id) { $(id).value = ""; });
+  $("w-msg").textContent = "";
+  $("w-go").disabled = false;
+  showCards(["v-wizard"]);
+};
+
+$("w-manual").onclick = function (e) {
+  e.preventDefault();
+  selClient(null);
+};
+
+function wmsg(txt, cls) { $("w-msg").textContent = txt; $("w-msg").className = cls || "mut"; }
+
+function slugify(s) {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+$("w-go").onclick = function () {
+  var name = $("w-name").value.trim();
+  var brief = $("w-brief").value.trim();
+  if (!name) { wmsg("El nombre del negocio es obligatorio.", "err"); return; }
+  if (brief.length < 20) { wmsg("Cuéntale a la IA algo más del negocio: al menos una frase completa.", "err"); return; }
+  var web = $("w-web").value.trim().replace("https://", "").replace("http://", "");
+  var slash = web.indexOf("/");
+  if (slash > 0) web = web.slice(0, slash);
+  $("w-go").disabled = true;
+  wmsg("Creando el cliente… (paso 1 de 3)");
+  var clientId, projectId, cfg = {};
+  api("/admin/api/clients", {
+    method: "POST",
+    body: JSON.stringify({
+      name: name,
+      contact_name: null,
+      email: $("w-email").value.trim() || null,
+      phone: $("w-phone").value.trim() || null,
+      notes: web ? "Web: " + web : "",
+    }),
+  }).then(function (r) {
+    if (r.error) throw new Error(r.error);
+    clientId = r.id;
+    wmsg("Creando el proyecto… (paso 2 de 3)");
+    return api("/admin/api/projects", {
+      method: "POST",
+      body: JSON.stringify({ client_id: clientId, name: "Chatbot web" }),
+    });
+  }).then(function (r) {
+    if (r.error) throw new Error(r.error);
+    projectId = r.id;
+    wmsg("La IA está redactando la configuración del bot… (paso 3 de 3, hasta 30 segundos)");
+    return api("/admin/api/assist", {
+      method: "POST",
+      body: JSON.stringify({ brief: brief + (web ? " La web del negocio es https://" + web : "") }),
+    }).catch(function () { return {}; });
+  }).then(function (r) {
+    if (r && !r.error) cfg = r;
+    var mk = function (slug) {
+      return api("/admin/api/tenants", {
+        method: "POST",
+        body: JSON.stringify({
+          project_id: projectId,
+          slug: slug,
+          name: "Asistente de " + name,
+          system_prompt: cfg.system_prompt || "",
+          welcome_message: cfg.welcome_message || "¡Hola! ¿En qué puedo ayudarte?",
+          suggested_questions: cfg.suggested_questions || [],
+          provider: "google",
+          model: "gemini-3.5-flash",
+          allowed_domains: web ? [web] : [],
+          active: true,
+        }),
+      });
+    };
+    var slug = slugify(name);
+    return mk(slug).then(function (r2) {
+      if (r2.error) return mk(slug + "-" + Math.random().toString(36).slice(2, 5));
+      return r2;
+    });
+  }).then(function (r) {
+    if (r.error) throw new Error(r.error);
+    dirty = false;
+    toast("Cliente y chatbot creados ✓");
+    if (!cfg.system_prompt) {
+      toast("Creado, pero la IA no pudo generar la configuración: revísala en Cerebro.", true);
+    }
+    sel = { type: "tenant", id: r.id, isNew: false };
+    return load();
+  }).catch(function (e) {
+    $("w-go").disabled = false;
+    wmsg((e && e.message) || "No se ha podido crear. Inténtalo otra vez.", "err");
+  });
+};
 
 function renderProjects(c) {
   var box = $("proj-list");
@@ -2412,6 +2595,7 @@ $("c-save").onclick = function () {
   req.then(function (r) {
     if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; toast(r.error, true); return; }
     sel = { type: "client", id: r.id, isNew: false };
+    dirty = false;
     toast("Cliente guardado ✓");
     load();
   });
@@ -2431,6 +2615,7 @@ $("c-del").onclick = function () {
   api("/admin/api/clients/" + sel.id, { method: "DELETE" }).then(function (r) {
     if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; toast(r.error, true); return; }
     sel = { type: null };
+    dirty = false;
     toast("Cliente eliminado");
     load();
   });
@@ -2443,6 +2628,7 @@ $("proj-create").onclick = function () {
     .then(function (r) {
       if (r.error) { $("proj-msg").textContent = r.error; $("proj-msg").className = "err"; return; }
       sel = { type: "project", id: r.id };
+      dirty = false;
       load();
     });
 };
@@ -2450,17 +2636,20 @@ $("proj-create").onclick = function () {
 // ----- proyecto -----
 
 function selProject(id) {
+  if (sel.type !== "project" || sel.id !== id) { if (!guardNav()) return; }
+  populating = true;
   sel = { type: "project", id: id };
   renderTree();
   var f = findProject(id);
-  if (!f) return;
-  crumb([f.client.name, f.project.name]);
+  if (!f) { populating = false; return; }
+  crumb([{ t: f.client.name, go: function () { selClient(f.client.id); } }, f.project.name]);
   $("p-title").textContent = f.project.name;
   $("p-name").value = f.project.name;
   $("p-desc").value = f.project.description || "";
   $("p-msg").textContent = "";
   renderBots(f.project);
   showCards(["v-project", "v-project-tools"]);
+  populating = false;
 }
 
 function renderBots(p) {
@@ -2480,6 +2669,7 @@ $("p-save").onclick = function () {
   if (!d.name) { $("p-msg").textContent = "El nombre es obligatorio."; $("p-msg").className = "err"; return; }
   api("/admin/api/projects/" + sel.id, { method: "PATCH", body: JSON.stringify(d) }).then(function (r) {
     if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; toast(r.error, true); return; }
+    dirty = false;
     toast("Proyecto guardado ✓");
     load();
   });
@@ -2497,6 +2687,7 @@ $("p-del").onclick = function () {
   api("/admin/api/projects/" + sel.id, { method: "DELETE" }).then(function (r) {
     if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; toast(r.error, true); return; }
     sel = f ? { type: "client", id: f.client.id } : { type: null };
+    dirty = false;
     toast("Proyecto eliminado");
     load();
   });
@@ -2522,15 +2713,26 @@ function lines(v) {
 }
 
 function selTenant(id, projectId) {
+  var sameTenant = sel.type === "tenant" && sel.id === id;
+  if (!sameTenant) { if (!guardNav()) return; }
+  populating = true;
   sel = { type: "tenant", id: id, isNew: !id, parentId: projectId || null };
   renderTree();
   var f = id ? findTenant(id) : null;
   var t = f ? f.tenant : null;
   if (f) {
-    crumb([f.client.name, f.project.name, t.name]);
+    crumb([
+      { t: f.client.name, go: function () { selClient(f.client.id); } },
+      { t: f.project.name, go: function () { selProject(f.project.id); } },
+      t.name,
+    ]);
   } else {
     var pf = findProject(projectId);
-    crumb(pf ? [pf.client.name, pf.project.name, "Nuevo chatbot"] : ["Nuevo chatbot"]);
+    crumb(pf ? [
+      { t: pf.client.name, go: function () { selClient(pf.client.id); } },
+      { t: pf.project.name, go: function () { selProject(pf.project.id); } },
+      "Nuevo chatbot",
+    ] : ["Nuevo chatbot"]);
   }
   var isNew = !t;
   $("f-title").textContent = isNew ? "Nuevo chatbot" : t.name;
@@ -2603,8 +2805,140 @@ function selTenant(id, projectId) {
   $("ex-msg").textContent = ""; $("ex-score").textContent = ""; $("ex-list").innerHTML = "";
   $("gap-msg").textContent = ""; $("gap-list").innerHTML = "";
   $("gap-approve-row").classList.add("hide");
-  if (t) { renderInteg(t); loadDocs(); loadFaq(); }
-  showCards(t ? ["v-assist", "v-tenant", "v-exam", "integ", "ingest"] : ["v-assist", "v-tenant"]);
+  if (t) {
+    renderInteg(t);
+    loadDocs();
+    loadFaq();
+    setBotTab(sameTenant ? curBT : "cerebro");
+  } else {
+    document.querySelector(".ftabs").classList.remove("hide");
+    document.querySelector('.ftabs button[data-ft="ft-ap"]').classList.remove("hide");
+    showCards(["v-assist", "v-tenant"]);
+  }
+  populating = false;
+}
+
+// ----- pestañas principales del chatbot -----
+
+var curBT = "cerebro";
+var BT_CARDS = {
+  cerebro: ["v-assist", "v-tenant"],
+  contenido: ["ingest"],
+  diseno: ["v-tenant"],
+  calidad: ["v-exam"],
+  publicar: ["v-check", "integ"],
+};
+
+function ftShow(id) {
+  [].forEach.call(document.querySelectorAll(".ftabs button"), function (x) {
+    x.classList.toggle("on", x.dataset.ft === id);
+  });
+  [].forEach.call(document.querySelectorAll(".ft"), function (x) {
+    x.classList.toggle("on", x.id === id);
+  });
+}
+
+function setBotTab(bt) {
+  curBT = bt;
+  [].forEach.call(document.querySelectorAll("#bot-tabs button"), function (b) {
+    b.classList.toggle("on", b.dataset.bt === bt);
+  });
+  showCards(BT_CARDS[bt] || [], true);
+  $("bot-tabs").classList.remove("hide");
+  var ftbar = document.querySelector(".ftabs");
+  var apBtn = document.querySelector('.ftabs button[data-ft="ft-ap"]');
+  if (bt === "diseno") {
+    ftbar.classList.add("hide");
+    ftShow("ft-ap");
+  } else if (bt === "cerebro") {
+    ftbar.classList.remove("hide");
+    apBtn.classList.add("hide");
+    ftShow("ft-comp");
+  }
+  if (bt === "publicar") loadChecklist();
+}
+
+[].forEach.call(document.querySelectorAll("#bot-tabs button"), function (b) {
+  b.onclick = function () { setBotTab(b.dataset.bt); };
+});
+
+function checkRow(ok, label, hint, go) {
+  var row = document.createElement("div");
+  row.className = "chk" + (ok ? " done" : "");
+  var ic = document.createElement("span");
+  ic.className = "chk-ic";
+  ic.textContent = ok ? "✓" : "○";
+  var body = document.createElement("div");
+  var l1 = document.createElement("div");
+  l1.textContent = label;
+  l1.style.fontWeight = "600";
+  body.appendChild(l1);
+  if (!ok && hint) {
+    var l2 = document.createElement("div");
+    l2.className = "meta";
+    l2.textContent = hint;
+    body.appendChild(l2);
+  }
+  row.appendChild(ic);
+  row.appendChild(body);
+  if (!ok && go) {
+    var b = document.createElement("button");
+    b.className = "ghost small";
+    b.textContent = "Resolver";
+    b.onclick = go;
+    row.appendChild(b);
+  }
+  return row;
+}
+
+function loadChecklist() {
+  var box = $("check-list");
+  var f = findTenant(sel.id);
+  if (!f) { box.textContent = ""; return; }
+  var t = f.tenant;
+  var c = f.client;
+  box.className = "";
+  box.innerHTML = "";
+  var dom = (t.allowed_domains || [])[0] || "";
+  box.appendChild(checkRow(!!(t.system_prompt || "").trim(), "Cerebro configurado",
+    "El bot no tiene instrucciones. Ve a Cerebro y usa el asistente de IA.",
+    function () { setBotTab("cerebro"); }));
+  box.appendChild(checkRow(!!dom, "Dominio del cliente añadido",
+    "Sin dominio no funcionan ni el widget ni la demo. Cerebro → Seguridad y límites.",
+    function () { setBotTab("cerebro"); ftShow("ft-seg"); }));
+  var rowDocs = checkRow(DOCS_COUNT > 0, "Contenido indexado",
+    "El bot no tiene conocimiento: sube documentos o responde el FAQ en Contenido.",
+    function () { setBotTab("contenido"); });
+  box.appendChild(rowDocs);
+  box.appendChild(checkRow(!!c.portal_password_hash, "Acceso del cliente creado",
+    "Genera su contraseña del portal en la ficha del cliente.",
+    function () { selClient(c.id); }));
+  var rowLive = checkRow(false, "Widget instalado en la web del cliente",
+    "Comprobando si hay conversaciones reales…", null);
+  box.appendChild(rowLive);
+  if (!t.panel_token) {
+    rowLive.querySelector(".meta").textContent = "Aún sin comprobar: guarda el chatbot primero.";
+    return;
+  }
+  fetch("/panel/data?token=" + encodeURIComponent(t.panel_token))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var convs = (d && d.conversations) || [];
+      var live = convs.some(function (cv) {
+        var u = cv.page_url || "";
+        return dom && u.indexOf(dom) >= 0 && u.indexOf("/demo") < 0 && u.indexOf(location.host) < 0;
+      });
+      var any = convs.length > 0;
+      var fresh = checkRow(live, "Widget instalado en la web del cliente",
+        any ? "Hay conversaciones de prueba, pero ninguna desde " + (dom || "la web del cliente") +
+              ". Copia el snippet de la pestaña Publicar y pégalo en su web."
+            : "Todavía no hay ninguna conversación. Prueba el bot en la demo y luego instala el snippet.",
+        null);
+      rowLive.parentNode.replaceChild(fresh, rowLive);
+    })
+    .catch(function () {
+      rowLive.querySelector(".meta").textContent = "No se ha podido comprobar ahora mismo.";
+    });
 }
 
 function loadFaq() {
@@ -2728,11 +3062,13 @@ function buildPick(elId, map, selected, allowText, cb) {
 function renderIconPicks() {
   buildPick("pick-btn", BTN_ICONS, iconBtnSel, false, function (k) {
     iconBtnSel = k;
+    markDirty();
     renderIconPicks();
     updPrev();
   });
   buildPick("pick-send", SEND_ICONS, iconSendSel, true, function (k) {
     iconSendSel = k;
+    markDirty();
     renderIconPicks();
     updPrev();
   });
@@ -2775,7 +3111,7 @@ function renderGradStyles() {
     b.type = "button";
     b.style.background = g($("g-c1").value, $("g-c2").value);
     if (i === gradStyle) b.classList.add("on");
-    b.onclick = function () { gradStyle = i; renderGradStyles(); updPrev(); };
+    b.onclick = function () { gradStyle = i; markDirty(); renderGradStyles(); updPrev(); };
     box.appendChild(b);
   });
 }
@@ -2792,7 +3128,7 @@ function setBgMode(m) {
   updPrev();
 }
 [].forEach.call(document.querySelectorAll("#bg-seg button"), function (b) {
-  b.onclick = function () { setBgMode(b.dataset.m); };
+  b.onclick = function () { markDirty(); setBgMode(b.dataset.m); };
 });
 
 $("cv-dark").onclick = function () {
@@ -3020,15 +3356,18 @@ function applyDesign(o) {
     setBgMode("solid");
   }
   $("f-dark").value = o.theme.dark || "off";
+  markDirty();
   updPrev();
   toast("Diseño aplicado: revísalo en la vista previa y pulsa Guardar.");
 }
 
+var DOCS_COUNT = 0;
 function loadDocs() {
   var box = $("doc-list");
   box.textContent = "Cargando…";
   api("/admin/api/tenants/" + sel.id + "/documents").then(function (docs) {
     if (docs.error) { box.textContent = docs.error; return; }
+    DOCS_COUNT = docs.length;
     box.innerHTML = "";
     if (!docs.length) { box.textContent = "Aún no hay contenido indexado. Súbelo abajo."; return; }
     docs.forEach(function (d) {
@@ -3148,6 +3487,7 @@ $("save").onclick = function () {
   req.then(function (r) {
     if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; toast(r.error, true); return; }
     sel = { type: "tenant", id: r.id, isNew: false };
+    dirty = false;
     toast("Chatbot guardado ✓");
     load();
   }).catch(function () {
@@ -3167,6 +3507,7 @@ $("f-del").onclick = function () {
   api("/admin/api/tenants/" + sel.id, { method: "DELETE" }).then(function (r) {
     if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; toast(r.error, true); return; }
     sel = f ? { type: "project", id: f.project.id } : { type: null };
+    dirty = false;
     toast("Chatbot eliminado");
     load();
   });
@@ -3620,18 +3961,24 @@ const PORTAL_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Portal de cliente</title>
+<title>Portal de cliente — ExpoBot</title>
 <style>
-  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5;--err:#b3261e;--ok:#0a7a4b}
+  :root{--ink:#10182b;--mut:#6b7590;--line:#e4e7f0;--bg:#f5f7fc;--err:#b3261e;--ok:#0a7a4b;
+    --acc:#3c62f0;--grad:linear-gradient(135deg,#3c62f0,#6b8cff)}
   *{box-sizing:border-box;margin:0}
   body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
   .hide{display:none!important}
   button{font:inherit;cursor:pointer}
   input,select{font:inherit;width:100%;border:1px solid var(--line);border-radius:10px;
     padding:10px 12px;background:#fff;color:var(--ink)}
-  input:focus,select:focus{outline:0;border-color:#999}
+  input:focus,select:focus{outline:0;border-color:var(--acc)}
   label{display:block;font-size:13px;color:var(--mut);margin:14px 0 4px}
-  .btn{background:#111;color:#fff;border:0;border-radius:10px;padding:11px 20px}
+  .btn{background:var(--grad);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-weight:600}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+  .brand svg{width:30px;height:27px;flex:0 0 auto}
+  .brand b{color:var(--acc);font-weight:800}
+  footer{text-align:center;color:var(--mut);font-size:12.5px;padding:10px 0 26px}
+  footer b{color:var(--acc)}
   .ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px}
   .small{font-size:13px;padding:6px 12px}
   .mut{color:var(--mut);font-size:13px}
@@ -3665,6 +4012,7 @@ const PORTAL_HTML = `<!doctype html>
 
 <div id="login" class="login hide">
   <div class="card">
+    <div class="brand" style="margin-bottom:14px"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
     <h2>Portal de cliente</h2>
     <p class="sub">Accede con el email y la contraseña que te hemos facilitado.</p>
     <label>Email</label>
@@ -3680,7 +4028,10 @@ const PORTAL_HTML = `<!doctype html>
 
 <div id="app" class="hide">
   <header>
-    <h1 id="c-name">Portal</h1>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
+      <h1 id="c-name" style="font-weight:600;color:var(--mut);font-size:15px">Portal</h1>
+    </div>
     <button id="logout" class="ghost small">Salir</button>
   </header>
   <main>
@@ -3718,6 +4069,7 @@ const PORTAL_HTML = `<!doctype html>
       </div>
     </div>
   </main>
+  <footer>Impulsado por <b>ExpoBot</b> — estudio de asistentes IA</footer>
 </div>
 
 <script>
@@ -4051,13 +4403,19 @@ const PANEL_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Panel del asistente</title>
+<title>Panel del asistente — ExpoBot</title>
 <style>
-  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5}
+  :root{--ink:#10182b;--mut:#6b7590;--line:#e4e7f0;--bg:#f5f7fc;--acc:#3c62f0;
+    --grad:linear-gradient(135deg,#3c62f0,#6b8cff)}
   *{box-sizing:border-box;margin:0}
   body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
-  header{background:#fff;border-bottom:1px solid var(--line);padding:18px 24px}
-  h1{font-size:18px;font-weight:600}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:-.02em}
+  .brand svg{width:28px;height:25px;flex:0 0 auto}
+  .brand b{color:var(--acc);font-weight:800}
+  .brand-sep{width:1px;height:26px;background:var(--line)}
+  h1{font-size:17px;font-weight:600}
   .sub{color:var(--mut);font-size:13px}
   main{max-width:960px;margin:0 auto;padding:24px 16px}
   .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
@@ -4065,8 +4423,8 @@ const PANEL_HTML = `<!doctype html>
   .stat b{display:block;font-size:24px}
   .stat span{color:var(--mut);font-size:13px}
   nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-  nav button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 16px;cursor:pointer;font-size:14px}
-  nav button.on{background:#111;color:#fff;border-color:#111}
+  nav button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 16px;cursor:pointer;font-size:14px;color:var(--ink)}
+  nav button.on{background:var(--grad);color:#fff;border-color:transparent}
   section{display:none}
   section.on{display:block}
   table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -4081,16 +4439,18 @@ const PANEL_HTML = `<!doctype html>
   .conv.open .msgs{display:block}
   .m{width:fit-content;max-width:80%;padding:8px 12px;border-radius:12px;margin-bottom:8px;white-space:pre-wrap;font-size:14px}
   .m.user{background:#e8eefc;margin-left:auto}
-  .m.assistant{background:#f2f2f0}
+  .m.assistant{background:#eef1f8}
   .box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px}
-  .btn{background:#111;color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font:inherit}
+  .btn{background:var(--grad);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font:inherit;font-weight:600}
   .btn:disabled{opacity:.5;cursor:default}
   .ok{color:#0a7a4b;font-size:13px}
   .err{color:#b3261e;font-size:13px}
   #up-files{border:1px dashed var(--line);border-radius:10px;padding:16px;width:100%;background:#fff}
-  #dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:#111;margin-right:8px}
+  #dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--acc);margin-right:8px}
   #chart{display:flex;align-items:flex-end;gap:3px;height:72px}
-  #chart div{flex:1;background:#c9d4e8;border-radius:3px 3px 0 0;min-height:3px}
+  #chart div{flex:1;background:#b9c8f2;border-radius:3px 3px 0 0;min-height:3px}
+  footer{text-align:center;color:var(--mut);font-size:12.5px;padding:10px 0 26px}
+  footer b{color:var(--acc)}
   .mini{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;
     font:13px system-ui,sans-serif;cursor:pointer;white-space:nowrap}
   .done{color:#0a7a4b;font-size:13px;white-space:nowrap}
@@ -4100,8 +4460,12 @@ const PANEL_HTML = `<!doctype html>
 </head>
 <body>
 <header>
-  <h1><span id="dot"></span><span id="name">Cargando…</span></h1>
-  <div class="sub">Conversaciones, leads, contenido y pruebas de tu asistente</div>
+  <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
+  <div class="brand-sep"></div>
+  <div>
+    <h1><span id="dot"></span><span id="name">Cargando…</span></h1>
+    <div class="sub">Conversaciones, leads, contenido y pruebas de tu asistente</div>
+  </div>
 </header>
 <main>
   <div class="stats">
@@ -4163,6 +4527,7 @@ const PANEL_HTML = `<!doctype html>
     </div>
   </section>
 </main>
+<footer>Impulsado por <b>ExpoBot</b> — estudio de asistentes IA</footer>
 <script>
 var token = new URLSearchParams(location.search).get("token") || "";
 var LEADS = [];
