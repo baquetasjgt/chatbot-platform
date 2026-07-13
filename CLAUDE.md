@@ -61,27 +61,48 @@ de buscar.** Nunca se cruzan datos entre clientes.
 2. Nada de consejo clínico (es una feria, no una consulta).
 3. Si es una empresa interesada en stand → capturar lead con la tool `guardar_lead`.
 
-## Estado
+## Estado (julio 2026)
 
-Hecho: esquema aplicado, tenant `fisioexpo` creado con clave
-`pk_fisioexpo_739c231e7180a38646bdf491` y configurado con `provider = 'google'` +
-`model = 'gemini-3.1-flash-lite'`, código del Worker y del widget escrito.
+Desplegado en producción vía GitHub → Workers Builds (cada push a la rama
+`claude/project-creation-63klor` despliega en ~90 s). Marca: **ExpoBot**
+(azul `#3c62f0`, degradado `--grad`, isotipo bocadillo-robot, la «o» de Bot
+es un bocadillo). Hecho y verificado de punta a punta:
 
-Pendiente inmediato:
-1. `wrangler deploy` + los 5 secretos (SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY,
-   ADMIN_TOKEN, GEMINI_API_KEY — este último ya es necesario: fisioexpo usa Gemini)
-2. Indexar contenido. **Ojo: fisioexpo.es bloquea el scraping por robots.txt** — la
-   indexación por URL puede fallar. Usar el campo `texts` del endpoint de ingest.
-3. Escribir a mano el FAQ con los datos duros (fechas, precios, tipos de stand, contacto).
-   Esto importa más que cualquier ajuste del prompt.
-4. Probar el circuito de punta a punta.
+- Motor RAG multi-tenant con proveedor/modelo por tenant (fisioexpo: `google`
+  + `gemini-3.1-flash-lite`), rate limiting por IP (20/min, SQL `check_rate`),
+  límite mensual, captura de leads desactivable (`tenants.features.leads`).
+- `/admin` (auth ADMIN_TOKEN): árbol clientes→proyectos→bots, wizard de alta en
+  un paso (cliente+proyecto+bot por IA), pestañas del bot (Cerebro/Contenido/
+  Diseño/Calidad/Publicar), checklist «Listo para publicar», canvas con vista en
+  vivo **y chat real**, asistente de diseño IA (3 propuestas desde la web del
+  cliente), selector de color estilo Canva, exámenes con preguntas trampa,
+  huecos de contenido con auto-mejora IA, vista global de Leads (filtro+CSV),
+  buscador Ctrl+K, breadcrumbs clicables, aviso de cambios sin guardar,
+  duplicar bot, salud del motor (error_log + alertas), informes mensuales
+  (cron día 1, Resend), formulario FAQ con enlace para el cliente, guía de
+  integración por plataforma (PDF + URL), facturas con PDF (bucket `facturas`).
+- `/panel?token=` (cliente, por bot): leads, conversaciones, huecos, subir
+  contenido, probar el bot; pestañas activables por bot (`tenants.panel_features`)
+  y panel apagable (`tenants.panel_enabled`).
+- `/acceso` (portal del cliente): login email+contraseña (PBKDF2, token HMAC 30d),
+  proyectos y herramientas, facturación, método de pago; acceso activable
+  (`clients.portal_enabled`) y contraseña revocable desde /admin.
 
-Backlog: rate limiting por IP, reindexado con Cron Trigger, streaming de respuestas,
-enviar leads por email a `handoff_email` (hoy solo webhook), integraciones de canal
-(Telegram vía Bot API, WhatsApp vía Meta Cloud API) y sync de Google Drive. Los paneles
-ya existen: `/admin` para el dueño (auth: ADMIN_TOKEN) y `/panel?token=` para cada
-cliente (auth: `tenants.panel_token`; incluye chat de prueba y subida de documentos).
-`monthly_message_limit` se aplica en /api/chat (función SQL `monthly_messages`).
+Pendiente del usuario: secretos RESEND_API_KEY + EMAIL_FROM + ADMIN_ALERT_EMAIL
+(tiene ya el dominio expobot.es → verificar en Resend), contenido real de
+FISIOEXPO (fechas en conflicto, ver abajo), Stripe (fase 2 de facturación).
+
+Backlog: streaming de respuestas, leads por email a `handoff_email` (hoy solo
+webhook), Telegram (primer canal recomendado), WhatsApp (Meta Cloud API), sync
+de Google Drive, plantillas de bot, dominio expobot.es como custom domain del
+Worker.
+
+Cómo se prueba (el contenedor no puede llegar a *.workers.dev): HTTP vía
+Supabase `pg_net` (`net.http_get` → poll `net._http_response`); las 4 páginas
+embebidas (ADMIN/PANEL/PORTAL/FAQ_HTML) se extraen del template literal y se
+comprueban con Playwright headless (scripts en el scratchpad de la sesión).
+Ojo con las páginas embebidas: JS de página necesita `\\n`, `<\\/script>`, sin
+backticks ni `${`, y las regex con barra invertida pierden el escape.
 
 ## Dato sin resolver
 
