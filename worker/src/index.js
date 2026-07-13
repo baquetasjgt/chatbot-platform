@@ -478,6 +478,16 @@ async function geminiJson(env, prompt, maxTokens = 2000) {
   try {
     return JSON.parse(text);
   } catch {
+    // tolerancia: JSON envuelto en texto o vallas de código
+    const a = text.indexOf("{");
+    const b = text.lastIndexOf("}");
+    if (a >= 0 && b > a) {
+      try {
+        return JSON.parse(text.slice(a, b + 1));
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
@@ -1069,14 +1079,12 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
     const [t] = await sb(env, `tenants?id=eq.${mExam[1]}&select=*`);
     if (!t) return json({ error: "tenant no encontrado" }, 404);
 
-    const gen = await geminiJson(
-      env,
-      `Genera 6 preguntas trampa para auditar un chatbot de atención al público. Devuelve SOLO JSON: {"questions":["...","..."]}
+    const trapPrompt = `Genera 6 preguntas trampa para auditar un chatbot de atención al público. Devuelve SOLO JSON: {"questions":["...","..."]}
 Deben ser preguntas cuya respuesta sea un dato concreto fácil de inventar (precios, fechas, horarios, plazos, condiciones, descuentos, aforo...) formuladas como un visitante real. Mezcla probables y rebuscadas.
 Negocio: ${t.name}
-Contexto: ${(t.system_prompt || "").slice(0, 1200)}`,
-      1500
-    );
+Contexto: ${(t.system_prompt || "").slice(0, 1200)}`;
+    let gen = await geminiJson(env, trapPrompt, 4000);
+    if (!gen?.questions?.length) gen = await geminiJson(env, trapPrompt, 4000);
     const qs = (gen?.questions || []).slice(0, 6);
     if (!qs.length) return json({ error: "no se pudieron generar preguntas; reintenta" }, 502);
 
