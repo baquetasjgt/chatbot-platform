@@ -447,11 +447,12 @@ async function handleAdminApi(request, env, url) {
     return json(rows[0]);
   }
   if (mClient && request.method === "DELETE") {
+    // en cascada: primero los chatbots de sus proyectos (arrastran conversaciones,
+    // leads, claves y contenido), luego el cliente (los proyectos caen por FK)
     const projs = await sb(env, `projects?client_id=eq.${mClient[1]}&select=id`);
     if (projs?.length) {
       const ids = projs.map((p) => p.id).join(",");
-      const bots = await sb(env, `tenants?project_id=in.(${ids})&select=id&limit=1`);
-      if (bots?.length) return json({ error: "este cliente tiene chatbots; elimínalos primero" }, 409);
+      await sb(env, `tenants?project_id=in.(${ids})`, { method: "DELETE" });
     }
     await sb(env, `clients?id=eq.${mClient[1]}`, { method: "DELETE" });
     return json({ ok: true });
@@ -472,8 +473,8 @@ async function handleAdminApi(request, env, url) {
     return json(rows[0]);
   }
   if (mProj && request.method === "DELETE") {
-    const bots = await sb(env, `tenants?project_id=eq.${mProj[1]}&select=id&limit=1`);
-    if (bots?.length) return json({ error: "este proyecto tiene chatbots; elimínalos primero" }, 409);
+    // en cascada: los chatbots del proyecto y después el proyecto
+    await sb(env, `tenants?project_id=eq.${mProj[1]}`, { method: "DELETE" });
     await sb(env, `projects?id=eq.${mProj[1]}`, { method: "DELETE" });
     return json({ ok: true });
   }
@@ -942,7 +943,15 @@ $("c-save").onclick = function () {
 
 $("c-del").onclick = function () {
   if (sel.isNew) return;
-  if (!confirm("¿Eliminar este cliente y sus proyectos? Sus chatbots deben eliminarse antes.")) return;
+  var c = findClient(sel.id);
+  var bots = 0;
+  (c.projects || []).forEach(function (p) { bots += (p.tenants || []).length; });
+  var w = prompt(
+    "Vas a eliminar el cliente «" + c.name + "» con " + (c.projects || []).length +
+    " proyecto(s) y " + bots + " chatbot(s), incluidas todas sus conversaciones, leads, claves y contenido. " +
+    "No se puede deshacer.\\n\\nEscribe ELIMINAR para confirmar:"
+  );
+  if (w !== "ELIMINAR") return;
   api("/admin/api/clients/" + sel.id, { method: "DELETE" }).then(function (r) {
     if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; return; }
     sel = { type: null };
@@ -1000,7 +1009,13 @@ $("p-save").onclick = function () {
 
 $("p-del").onclick = function () {
   var f = findProject(sel.id);
-  if (!confirm("¿Eliminar este proyecto? Sus chatbots deben eliminarse antes.")) return;
+  var bots = f ? (f.project.tenants || []).length : 0;
+  var w = prompt(
+    "Vas a eliminar el proyecto «" + (f ? f.project.name : "") + "» y sus " + bots +
+    " chatbot(s), con todas sus conversaciones, leads y contenido. No se puede deshacer." +
+    "\\n\\nEscribe ELIMINAR para confirmar:"
+  );
+  if (w !== "ELIMINAR") return;
   api("/admin/api/projects/" + sel.id, { method: "DELETE" }).then(function (r) {
     if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; return; }
     sel = f ? { type: "client", id: f.client.id } : { type: null };
@@ -1122,7 +1137,12 @@ $("save").onclick = function () {
 $("f-del").onclick = function () {
   if (sel.isNew) return;
   var f = findTenant(sel.id);
-  if (!confirm("¿Eliminar este chatbot y TODOS sus datos (conversaciones, leads y contenido indexado)? No se puede deshacer.")) return;
+  var w = prompt(
+    "Vas a eliminar el chatbot «" + (f ? f.tenant.name : "") + "» y TODOS sus datos: " +
+    "conversaciones, leads, claves y contenido indexado. El widget dejará de funcionar al momento. " +
+    "No se puede deshacer.\\n\\nEscribe ELIMINAR para confirmar:"
+  );
+  if (w !== "ELIMINAR") return;
   api("/admin/api/tenants/" + sel.id, { method: "DELETE" }).then(function (r) {
     if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; return; }
     sel = f ? { type: "project", id: f.project.id } : { type: null };
