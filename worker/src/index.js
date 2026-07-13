@@ -1179,7 +1179,12 @@ export default {
       return json({ error: "no encontrado" }, 404);
     } catch (err) {
       console.error(err);
-      return json({ error: "error interno" }, 500, cors(origin, []));
+      // el detalle no incluye secretos: son mensajes de estado de Supabase/proveedor
+      return json(
+        { error: "error interno", detail: String(err?.message || err).slice(0, 300) },
+        500,
+        cors(origin, [])
+      );
     }
   },
 };
