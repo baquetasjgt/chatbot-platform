@@ -279,6 +279,483 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
   };
 }
 
+// ---------- administración (para el dueño de la plataforma) ----------
+
+function isAdmin(request, env) {
+  return request.headers.get("Authorization") === `Bearer ${env.ADMIN_TOKEN}`;
+}
+
+function randomHex(bytes) {
+  const a = new Uint8Array(bytes);
+  crypto.getRandomValues(a);
+  return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// campos del tenant que el panel de admin puede escribir
+const TENANT_FIELDS = [
+  "slug", "name", "active", "system_prompt", "provider", "model",
+  "welcome_message", "suggested_questions", "primary_color", "allowed_domains",
+  "handoff_email", "lead_webhook_url", "monthly_message_limit",
+];
+
+function pick(obj, keys) {
+  const out = {};
+  for (const k of keys) if (obj[k] !== undefined) out[k] = obj[k];
+  return out;
+}
+
+async function handleAdminApi(request, env, url) {
+  if (url.pathname === "/admin/api/tenants" && request.method === "GET") {
+    const tenants = await sb(
+      env,
+      "tenants?select=*,tenant_keys(public_key,revoked_at)&order=created_at.asc"
+    );
+    return json(tenants);
+  }
+
+  if (url.pathname === "/admin/api/tenants" && request.method === "POST") {
+    const data = pick(await request.json(), TENANT_FIELDS);
+    if (!data.slug || !data.name) return json({ error: "slug y nombre son obligatorios" }, 400);
+    const [tenant] = await sb(env, "tenants", { method: "POST", body: data });
+    const key = `pk_${tenant.slug}_${randomHex(12)}`;
+    await sb(env, "tenant_keys", {
+      method: "POST",
+      body: { tenant_id: tenant.id, public_key: key },
+    });
+    return json({ ...tenant, tenant_keys: [{ public_key: key, revoked_at: null }] });
+  }
+
+  const edit = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})$/);
+  if (edit && request.method === "PATCH") {
+    const data = pick(await request.json(), TENANT_FIELDS);
+    const rows = await sb(env, `tenants?id=eq.${edit[1]}`, { method: "PATCH", body: data });
+    if (!rows?.length) return json({ error: "tenant no encontrado" }, 404);
+    return json(rows[0]);
+  }
+
+  const rot = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/(rotate-key|rotate-panel)$/);
+  if (rot && request.method === "POST") {
+    const id = rot[1];
+    if (rot[2] === "rotate-key") {
+      const [t] = await sb(env, `tenants?id=eq.${id}&select=slug`);
+      if (!t) return json({ error: "tenant no encontrado" }, 404);
+      await sb(env, `tenant_keys?tenant_id=eq.${id}&revoked_at=is.null`, {
+        method: "PATCH",
+        body: { revoked_at: new Date().toISOString() },
+      });
+      const key = `pk_${t.slug}_${randomHex(12)}`;
+      await sb(env, "tenant_keys", { method: "POST", body: { tenant_id: id, public_key: key } });
+      return json({ public_key: key });
+    }
+    const token = `pt_${randomHex(16)}`;
+    const rows = await sb(env, `tenants?id=eq.${id}`, {
+      method: "PATCH",
+      body: { panel_token: token },
+    });
+    if (!rows?.length) return json({ error: "tenant no encontrado" }, 404);
+    return json({ panel_token: token });
+  }
+
+  return json({ error: "no encontrado" }, 404);
+}
+
+const ADMIN_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Administración — chatbots</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5;--acc:#111;--ok:#0a7a4b;--err:#b3261e}
+  *{box-sizing:border-box;margin:0}
+  body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  .hide{display:none!important}
+  button{font:inherit;cursor:pointer}
+  input,textarea,select{font:inherit;width:100%;border:1px solid var(--line);border-radius:10px;
+    padding:9px 12px;background:#fff;color:var(--ink)}
+  input:focus,textarea:focus,select:focus{outline:0;border-color:#999}
+  textarea{resize:vertical}
+  label{display:block;font-size:13px;color:var(--mut);margin:14px 0 4px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  @media(max-width:640px){.row{grid-template-columns:1fr}}
+  .primary{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 18px}
+  .ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+  .small{font-size:13px;padding:6px 12px}
+  .mut{color:var(--mut);font-size:13px}
+  .ok{color:var(--ok);font-size:13px}
+  .err{color:var(--err);font-size:13px}
+  /* login */
+  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px;
+    width:380px;max-width:100%}
+  .login h1{font-size:18px;margin-bottom:6px}
+  .login input{margin:14px 0 10px}
+  .login button{width:100%}
+  /* app */
+  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;display:flex;
+    justify-content:space-between;align-items:center}
+  header h1{font-size:17px}
+  .wrap{display:grid;grid-template-columns:240px 1fr;gap:20px;max-width:1080px;margin:0 auto;
+    padding:20px 16px}
+  @media(max-width:760px){.wrap{grid-template-columns:1fr}}
+  aside .primary{width:100%;margin-bottom:12px}
+  #list button{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:10px 14px;margin-bottom:8px}
+  #list button.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+  #list .off{color:var(--mut);text-decoration:line-through}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px}
+  .card h2{font-size:15px;margin-bottom:4px}
+  .card .sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+  .actions{display:flex;gap:10px;align-items:center;margin-top:18px;flex-wrap:wrap}
+  .check{display:flex;gap:8px;align-items:center;margin-top:14px}
+  .check input{width:auto}
+  .copyrow{display:flex;gap:8px;margin-top:6px}
+  .copyrow input,.copyrow textarea{font-family:ui-monospace,monospace;font-size:12.5px;background:#fafaf8}
+</style>
+</head>
+<body>
+
+<div id="login" class="login hide">
+  <div class="card">
+    <h1>Administración de chatbots</h1>
+    <p class="mut">Introduce el token de administración (el secreto ADMIN_TOKEN del Worker).</p>
+    <input id="tok" type="password" placeholder="Token" autocomplete="current-password">
+    <button id="enter" class="primary">Entrar</button>
+    <p id="login-err" class="err"></p>
+  </div>
+</div>
+
+<div id="app" class="hide">
+  <header>
+    <h1>Clientes del chatbot</h1>
+    <button id="logout" class="ghost small">Salir</button>
+  </header>
+  <div class="wrap">
+    <aside>
+      <button id="new" class="primary">+ Nuevo cliente</button>
+      <div id="list"></div>
+    </aside>
+    <main id="main" class="hide">
+
+      <div class="card">
+        <h2 id="f-title">Cliente</h2>
+        <p class="sub">Los cambios se aplican al guardar. El bot los usa en la siguiente conversación.</p>
+        <div class="row">
+          <div><label>Nombre (lo ve el usuario en el chat)</label><input id="f-name"></div>
+          <div><label>Slug (identificador interno, sin espacios)</label><input id="f-slug"></div>
+        </div>
+        <label>Instrucciones del bot (system prompt): quién es, qué puede y qué no puede decir</label>
+        <textarea id="f-prompt" rows="8"></textarea>
+        <label>Mensaje de bienvenida</label>
+        <input id="f-welcome">
+        <label>Preguntas sugeridas (una por línea)</label>
+        <textarea id="f-sugg" rows="3"></textarea>
+        <div class="row">
+          <div>
+            <label>Proveedor de IA</label>
+            <select id="f-provider">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="google">Google (Gemini)</option>
+            </select>
+          </div>
+          <div>
+            <label>Modelo</label>
+            <input id="f-model" list="models">
+            <datalist id="models">
+              <option value="claude-sonnet-4-6"><option value="claude-sonnet-5">
+              <option value="claude-haiku-4-5"><option value="gemini-3.5-flash">
+              <option value="gemini-3.1-flash-lite"><option value="gemini-flash-latest">
+              <option value="gemini-flash-lite-latest">
+            </datalist>
+          </div>
+        </div>
+        <div class="row">
+          <div><label>Color principal del widget</label><input id="f-color" type="color"></div>
+          <div><label>Límite de mensajes al mes</label><input id="f-limit" type="number" min="0"></div>
+        </div>
+        <label>Dominios permitidos (uno por línea; el widget solo funciona desde estos)</label>
+        <textarea id="f-domains" rows="2"></textarea>
+        <div class="row">
+          <div><label>Email para leads / handoff</label><input id="f-email" type="email"></div>
+          <div><label>Webhook de leads (Zapier, Make, CRM…)</label><input id="f-webhook" type="url"></div>
+        </div>
+        <div class="check"><input id="f-active" type="checkbox"><label for="f-active" style="margin:0">Activo (desmárcalo para apagar el bot de este cliente)</label></div>
+        <div class="actions">
+          <button id="save" class="primary">Guardar</button>
+          <span id="save-msg"></span>
+        </div>
+      </div>
+
+      <div class="card" id="integ">
+        <h2>Integración</h2>
+        <p class="sub">Esto es lo que se pega en la web del cliente, y el enlace de su panel de datos.</p>
+        <label>Snippet del widget</label>
+        <div class="copyrow"><textarea id="i-snippet" rows="3" readonly></textarea>
+          <button class="ghost small" data-copy="i-snippet">Copiar</button></div>
+        <label>Panel del cliente (conversaciones, leads, preguntas sin respuesta)</label>
+        <div class="copyrow"><input id="i-panel" readonly>
+          <button class="ghost small" data-copy="i-panel">Copiar</button>
+          <button id="i-open" class="ghost small">Abrir</button></div>
+        <div class="actions">
+          <button id="rot-key" class="ghost small">Rotar clave del widget</button>
+          <button id="rot-panel" class="ghost small">Rotar enlace del panel</button>
+          <span id="integ-msg" class="mut"></span>
+        </div>
+        <p class="mut" style="margin-top:10px">Rotar invalida lo anterior al momento: tendrás que
+        actualizar el snippet en la web del cliente o reenviarle el enlace nuevo.</p>
+      </div>
+
+      <div class="card" id="ingest">
+        <h2>Contenido del bot</h2>
+        <p class="sub">Lo que el bot sabe. Reindexar una URL reemplaza la versión anterior, no duplica.
+        Si la web bloquea el scraping o los datos están en PDF/imágenes, pega el texto a mano — es lo
+        que mejor funciona.</p>
+        <label>URLs a indexar (una por línea)</label>
+        <textarea id="g-urls" rows="3"></textarea>
+        <label>O texto pegado a mano — título</label>
+        <input id="g-title" placeholder="FAQ oficial y tarifas">
+        <label>Contenido</label>
+        <textarea id="g-content" rows="6" placeholder="Fechas: … Horarios: … Precios: … Contacto: …"></textarea>
+        <div class="actions">
+          <button id="g-run" class="primary">Indexar</button>
+          <span id="g-msg" class="mut"></span>
+        </div>
+        <div id="g-report" class="mut" style="margin-top:10px"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+var TOKEN = localStorage.getItem("cb_admin") || "";
+var tenants = [];
+var current = null; // objeto tenant, o "new"
+
+function $(id) { return document.getElementById(id); }
+
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign(
+    { Authorization: "Bearer " + TOKEN, "Content-Type": "application/json" },
+    opts.headers || {}
+  );
+  return fetch(path, opts).then(function (r) {
+    if (r.status === 401) { showLogin("Token no válido o caducado."); throw new Error("401"); }
+    return r.json();
+  });
+}
+
+function showLogin(msg) {
+  $("app").classList.add("hide");
+  $("login").classList.remove("hide");
+  $("login-err").textContent = msg || "";
+  $("tok").focus();
+}
+
+function showApp() {
+  $("login").classList.add("hide");
+  $("app").classList.remove("hide");
+}
+
+$("enter").onclick = function () {
+  TOKEN = $("tok").value.trim();
+  if (!TOKEN) return;
+  localStorage.setItem("cb_admin", TOKEN);
+  load();
+};
+$("tok").addEventListener("keydown", function (e) { if (e.key === "Enter") $("enter").click(); });
+$("logout").onclick = function () {
+  localStorage.removeItem("cb_admin");
+  TOKEN = "";
+  showLogin();
+};
+
+function load() {
+  api("/admin/api/tenants").then(function (d) {
+    if (d.error) { showLogin(d.error); return; }
+    tenants = d;
+    showApp();
+    renderList();
+    if (current && current !== "new") {
+      var again = tenants.find(function (t) { return t.id === current.id; });
+      select(again || tenants[0] || null);
+    } else if (current !== "new") {
+      select(tenants[0] || null);
+    }
+  }).catch(function () {});
+}
+
+function renderList() {
+  var box = $("list");
+  box.innerHTML = "";
+  tenants.forEach(function (t) {
+    var b = document.createElement("button");
+    b.textContent = t.name + " (" + t.slug + ")";
+    if (!t.active) b.classList.add("off");
+    if (current && current !== "new" && current.id === t.id) b.classList.add("on");
+    b.onclick = function () { select(t); };
+    box.appendChild(b);
+  });
+}
+
+function activeKey(t) {
+  var ks = (t.tenant_keys || []).filter(function (k) { return !k.revoked_at; });
+  return ks.length ? ks[ks.length - 1].public_key : "";
+}
+
+function lines(v) {
+  return v.split("\\n").map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
+function select(t) {
+  current = t;
+  renderList();
+  if (!t) { $("main").classList.add("hide"); return; }
+  $("main").classList.remove("hide");
+  var isNew = t === "new";
+  $("f-title").textContent = isNew ? "Nuevo cliente" : t.name;
+  $("f-name").value = isNew ? "" : t.name;
+  $("f-slug").value = isNew ? "" : t.slug;
+  $("f-slug").readOnly = !isNew;
+  $("f-prompt").value = isNew ? "" : t.system_prompt || "";
+  $("f-welcome").value = isNew ? "¡Hola! ¿En qué puedo ayudarte?" : t.welcome_message || "";
+  $("f-sugg").value = isNew ? "" : (t.suggested_questions || []).join("\\n");
+  $("f-provider").value = isNew ? "anthropic" : t.provider || "anthropic";
+  $("f-model").value = isNew ? "claude-sonnet-4-6" : t.model || "";
+  $("f-color").value = isNew ? "#111111" : t.primary_color || "#111111";
+  $("f-limit").value = isNew ? 5000 : t.monthly_message_limit;
+  $("f-domains").value = isNew ? "" : (t.allowed_domains || []).join("\\n");
+  $("f-email").value = isNew ? "" : t.handoff_email || "";
+  $("f-webhook").value = isNew ? "" : t.lead_webhook_url || "";
+  $("f-active").checked = isNew ? true : !!t.active;
+  $("save-msg").textContent = "";
+  $("integ").classList.toggle("hide", isNew);
+  $("ingest").classList.toggle("hide", isNew);
+  $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
+  $("g-report").textContent = ""; $("g-msg").textContent = "";
+  if (!isNew) renderInteg(t);
+}
+
+function renderInteg(t) {
+  var key = activeKey(t);
+  $("i-snippet").value =
+    '<script src="https://TU-CDN/widget.js"\\n' +
+    '        data-key="' + key + '"\\n' +
+    '        data-api="' + location.origin + '"><\\/script>';
+  $("i-panel").value = location.origin + "/panel?token=" + (t.panel_token || "");
+  $("integ-msg").textContent = "";
+}
+
+$("new").onclick = function () { select("new"); };
+
+$("f-provider").onchange = function () {
+  $("f-model").value = this.value === "google" ? "gemini-3.5-flash" : "claude-sonnet-4-6";
+};
+
+function collect() {
+  var d = {
+    name: $("f-name").value.trim(),
+    system_prompt: $("f-prompt").value,
+    welcome_message: $("f-welcome").value.trim(),
+    suggested_questions: lines($("f-sugg").value),
+    provider: $("f-provider").value,
+    model: $("f-model").value.trim(),
+    primary_color: $("f-color").value,
+    allowed_domains: lines($("f-domains").value),
+    handoff_email: $("f-email").value.trim() || null,
+    lead_webhook_url: $("f-webhook").value.trim() || null,
+    active: $("f-active").checked,
+  };
+  var lim = parseInt($("f-limit").value, 10);
+  if (!isNaN(lim)) d.monthly_message_limit = lim;
+  if (current === "new") d.slug = $("f-slug").value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
+  return d;
+}
+
+$("save").onclick = function () {
+  var d = collect();
+  if (!d.name || (current === "new" && !d.slug)) {
+    $("save-msg").textContent = "El nombre y el slug son obligatorios.";
+    $("save-msg").className = "err";
+    return;
+  }
+  $("save-msg").textContent = "Guardando…"; $("save-msg").className = "mut";
+  var req = current === "new"
+    ? api("/admin/api/tenants", { method: "POST", body: JSON.stringify(d) })
+    : api("/admin/api/tenants/" + current.id, { method: "PATCH", body: JSON.stringify(d) });
+  req.then(function (r) {
+    if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; return; }
+    current = r;
+    $("save-msg").textContent = "Guardado."; $("save-msg").className = "ok";
+    load();
+  }).catch(function () {
+    $("save-msg").textContent = "No se ha podido guardar."; $("save-msg").className = "err";
+  });
+};
+
+$("rot-key").onclick = function () {
+  if (!confirm("La clave actual dejará de funcionar y habrá que actualizar el snippet en la web del cliente. ¿Seguir?")) return;
+  api("/admin/api/tenants/" + current.id + "/rotate-key", { method: "POST" }).then(function (r) {
+    $("integ-msg").textContent = r.error || "Clave rotada. Copia el snippet nuevo.";
+    load();
+  });
+};
+
+$("rot-panel").onclick = function () {
+  if (!confirm("El enlace actual del panel dejará de funcionar. ¿Seguir?")) return;
+  api("/admin/api/tenants/" + current.id + "/rotate-panel", { method: "POST" }).then(function (r) {
+    $("integ-msg").textContent = r.error || "Enlace rotado. Reenvíaselo al cliente.";
+    load();
+  });
+};
+
+$("i-open").onclick = function () { window.open($("i-panel").value, "_blank"); };
+
+document.querySelectorAll("[data-copy]").forEach(function (b) {
+  b.onclick = function () {
+    navigator.clipboard.writeText($(b.dataset.copy).value).then(function () {
+      b.textContent = "Copiado";
+      setTimeout(function () { b.textContent = "Copiar"; }, 1500);
+    });
+  };
+});
+
+$("g-run").onclick = function () {
+  var urls = lines($("g-urls").value);
+  var texts = [];
+  if ($("g-content").value.trim()) {
+    texts.push({ title: $("g-title").value.trim() || "Texto pegado", content: $("g-content").value });
+  }
+  if (!urls.length && !texts.length) {
+    $("g-msg").textContent = "Añade URLs o pega texto."; $("g-msg").className = "err";
+    return;
+  }
+  $("g-msg").textContent = "Indexando… puede tardar un poco."; $("g-msg").className = "mut";
+  $("g-report").textContent = "";
+  api("/admin/ingest", {
+    method: "POST",
+    body: JSON.stringify({ slug: current.slug, urls: urls, texts: texts }),
+  }).then(function (r) {
+    if (r.error) { $("g-msg").textContent = r.error; $("g-msg").className = "err"; return; }
+    $("g-msg").textContent = "Hecho."; $("g-msg").className = "ok";
+    $("g-report").innerHTML = (r.indexed || []).map(function (x) {
+      return (x.ok ? "✓ " : "✗ ") + x.source +
+        (x.ok ? " — " + x.chunks + " fragmentos" : " — " + (x.reason || "error"));
+    }).map(function (s) {
+      var d = document.createElement("div"); d.textContent = s; return d.outerHTML;
+    }).join("");
+  }).catch(function () {
+    $("g-msg").textContent = "Error al indexar."; $("g-msg").className = "err";
+  });
+};
+
+if (TOKEN) load(); else showLogin();
+</script>
+</body>
+</html>`;
+
 // ---------- panel del cliente (solo lectura) ----------
 
 async function getTenantByPanelToken(env, token) {
@@ -580,6 +1057,18 @@ export default {
         });
 
         return json({ reply: text, sources }, 200, ch);
+      }
+
+      // --- panel de administración ---
+      if (url.pathname === "/admin") {
+        return new Response(ADMIN_HTML, {
+          headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
+        });
+      }
+
+      if (url.pathname.startsWith("/admin/api/")) {
+        if (!isAdmin(request, env)) return json({ error: "no autorizado" }, 401);
+        return await handleAdminApi(request, env, url);
       }
 
       // --- indexación (admin) ---

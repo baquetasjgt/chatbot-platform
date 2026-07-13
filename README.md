@@ -143,6 +143,26 @@ update tenants set panel_token = 'pt_' || encode(gen_random_bytes(16), 'hex')
 where slug = 'fisioexpo';
 ```
 
+## 6. Panel de administración (el tuyo)
+
+Todo lo de los puntos 2 y 4 sin escribir SQL ni curl:
+
+```
+https://TU-WORKER.workers.dev/admin
+```
+
+Se entra con el `ADMIN_TOKEN` (el mismo secreto del Worker). Desde ahí puedes:
+
+- Dar de alta clientes y editar toda su configuración: prompt, proveedor y modelo,
+  mensaje de bienvenida, preguntas sugeridas, color, dominios permitidos, límite
+  mensual, email de leads y webhook
+- Apagar el bot de un cliente (checkbox "Activo")
+- Copiar el snippet del widget y el enlace del panel de cada cliente, y rotar
+  ambos si se filtran
+- Indexar contenido (URLs o texto pegado a mano) y ver el resultado
+
+El alta por SQL sigue funcionando igual; el panel hace lo mismo por debajo.
+
 ## Consultas útiles
 
 ```sql
@@ -172,4 +192,4 @@ que puedes enseñarle al cliente cada mes para justificar la cuota.
 - Rate limiting por IP en el Worker
 - Reindexado automático con un Cron Trigger
 - Streaming de la respuesta (ahora llega de golpe)
-- Panel de admin para ti (el panel de cliente ya existe: `/panel`)
+- Enviar los leads por email a `handoff_email` (hoy solo webhook; el campo ya existe)
