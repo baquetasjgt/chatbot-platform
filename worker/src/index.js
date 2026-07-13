@@ -858,6 +858,7 @@ const ADMIN_HTML = `<!doctype html>
         <div class="copyrow"><input id="i-demo" readonly>
           <button class="ghost small" data-copy="i-demo">Copiar</button>
           <button id="i-demo-open" class="ghost small">Abrir</button></div>
+        <p id="i-demo-hint" class="mut" style="margin-top:6px"></p>
         <label>Snippet del widget (pegar en la web del cliente cuando dé el visto bueno)</label>
         <div class="copyrow"><textarea id="i-snippet" rows="3" readonly></textarea>
           <button class="ghost small" data-copy="i-snippet">Copiar</button></div>
@@ -1359,6 +1360,15 @@ function renderInteg(t) {
     '        data-api="' + location.origin + '"><\\/script>';
   $("i-panel").value = location.origin + "/panel?token=" + (t.panel_token || "");
   $("i-demo").value = location.origin + "/demo?key=" + key;
+  var dom = (t.allowed_domains || [])[0];
+  var hint = $("i-demo-hint");
+  if (dom) {
+    hint.textContent = "La demo clona https://" + dom + " — se toma del primer dominio de la pestaña «Seguridad y límites».";
+    hint.className = "mut";
+  } else {
+    hint.textContent = "⚠ Este chatbot no tiene dominio: la demo mostrará una maqueta genérica. Escribe la web del cliente en «Seguridad y límites» → Dominios permitidos y guarda.";
+    hint.className = "err";
+  }
   $("integ-msg").textContent = "";
 }
 
