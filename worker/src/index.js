@@ -652,7 +652,11 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
         headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: instructions }] }],
-          generationConfig: { maxOutputTokens: 3000, responseMimeType: "application/json" },
+          generationConfig: {
+            maxOutputTokens: 8000,
+            responseMimeType: "application/json",
+            thinkingConfig: { thinkingLevel: "low" },
+          },
         }),
       }
     );
@@ -666,7 +670,13 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
     try {
       parsed = JSON.parse(text);
     } catch {
-      return json({ error: "la IA no devolvió diseños válidos; vuelve a intentarlo" }, 502);
+      return json(
+        {
+          error: "la IA no devolvió diseños válidos; vuelve a intentarlo",
+          detail: out.candidates?.[0]?.finishReason || "sin respuesta",
+        },
+        502
+      );
     }
     const FONTS = ["system", "Inter", "Poppins", "Roboto", "Montserrat", "Lato", "georgia"];
     const hex = (v, d) => (/^#[0-9a-fA-F]{6}$/.test(v || "") ? v : d);
