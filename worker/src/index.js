@@ -15,6 +15,31 @@ function h(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 }
 
+// señales visuales de la web del cliente para el asistente de diseño
+async function siteSignals(domain) {
+  try {
+    const r = await fetch(`https://${domain}`, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        Accept: "text/html",
+      },
+    });
+    if (!r.ok) return null;
+    const html = (await r.text()).slice(0, 400000);
+    return {
+      title: (html.match(/<title[^>]*>([^<]*)</i)?.[1] || "").trim().slice(0, 120),
+      description: (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i)?.[1] || "")
+        .trim().slice(0, 200),
+      colors: [...new Set(html.match(/#[0-9a-fA-F]{6}\b/g) || [])].slice(0, 40),
+      fonts: [...new Set((html.match(/font-family:\s*([^;}"']{2,60})/gi) || []).map((f) => f.slice(12).trim()))]
+        .slice(0, 10),
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ---------- utilidades Supabase (REST con service key) ----------
 
 async function sb(env, path, { method = "GET", body, headers = {} } = {}) {
@@ -594,6 +619,78 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
     return json({ token: row.token, status: row.status, created_at: row.created_at });
   }
 
+  // --- asistente de diseño: 3 propuestas visuales a partir de la web del cliente ---
+  const mDesign = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/design-assist$/);
+  if (mDesign && request.method === "POST") {
+    if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
+    const [t] = await sb(env, `tenants?id=eq.${mDesign[1]}&select=name,allowed_domains`);
+    if (!t) return json({ error: "tenant no encontrado" }, 404);
+    const { brief } = await request.json().catch(() => ({}));
+    const domain = (t.allowed_domains || [])[0];
+    const signals = domain ? await siteSignals(domain) : null;
+
+    const instructions = `Eres director de arte digital especializado en widgets de chat embebidos en webs. Diseña 3 propuestas visuales COMPLETAS y claramente DISTINTAS entre sí para el widget de chat de este negocio. Devuelve SOLO un objeto JSON:
+{"options":[{"name":"...","why":"...","primary_color":"#RRGGBB","theme":{"secondary_color":"#RRGGBB","bg_color":"#RRGGBB","font":"...","radius":N,"shadow":"suave","subtitle":"...","bg_image":"","dark":"off"}}]}
+
+Reglas:
+- Enfoque de las 3 (adáptalo si hay indicaciones): 1) fiel a la identidad visual de la web del cliente; 2) moderna y llamativa; 3) elegante y sobria.
+- font: solo system, Inter, Poppins, Roboto, Montserrat, Lato o georgia.
+- radius: número par entre 0 y 24. shadow: suave, ninguna o fuerte. dark: off o auto.
+- primary_color va en cabecera, botón y mensajes del usuario (el color del texto se ajusta solo). secondary_color es el fondo de las burbujas del bot: coherente con bg_color y con contraste legible.
+- bg_image: cadena vacía o un degradado CSS sutil (linear-gradient) coherente con la paleta. NUNCA una URL.
+- subtitle: subtítulo corto de cabecera con la voz de la marca.
+- name: nombre corto y vendedor de la propuesta. why: una frase de por qué encaja.
+
+Negocio: ${t.name}
+Señales visuales encontradas en la web del cliente: ${signals ? JSON.stringify(signals) : "no disponibles"}
+Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 1000) : "ninguna"}`;
+
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: instructions }] }],
+          generationConfig: { maxOutputTokens: 3000, responseMimeType: "application/json" },
+        }),
+      }
+    );
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+    const out = await res.json();
+    const text = (out.candidates?.[0]?.content?.parts || [])
+      .filter((p) => p.text && !p.thought)
+      .map((p) => p.text)
+      .join("");
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return json({ error: "la IA no devolvió diseños válidos; vuelve a intentarlo" }, 502);
+    }
+    const FONTS = ["system", "Inter", "Poppins", "Roboto", "Montserrat", "Lato", "georgia"];
+    const hex = (v, d) => (/^#[0-9a-fA-F]{6}$/.test(v || "") ? v : d);
+    const options = (parsed.options || []).slice(0, 3).map((o) => ({
+      name: String(o.name || "Propuesta").slice(0, 60),
+      why: String(o.why || "").slice(0, 200),
+      primary_color: hex(o.primary_color, "#111111"),
+      theme: {
+        secondary_color: hex(o.theme?.secondary_color, "#f2f2f0"),
+        bg_color: hex(o.theme?.bg_color, "#ffffff"),
+        font: FONTS.includes(o.theme?.font) ? o.theme.font : "system",
+        radius: Math.max(0, Math.min(24, parseInt(o.theme?.radius, 10) || 14)),
+        shadow: ["suave", "ninguna", "fuerte"].includes(o.theme?.shadow) ? o.theme.shadow : "suave",
+        subtitle: String(o.theme?.subtitle || "").slice(0, 60),
+        bg_image: /gradient\(/.test(o.theme?.bg_image || "")
+          ? String(o.theme.bg_image).slice(0, 200)
+          : "",
+        dark: o.theme?.dark === "auto" ? "auto" : "off",
+      },
+    }));
+    if (!options.length) return json({ error: "la IA no devolvió diseños; vuelve a intentarlo" }, 502);
+    return json({ options, analyzed: domain || null });
+  }
+
   // --- clientes ---
   if (url.pathname === "/admin/api/clients" && request.method === "GET") {
     const rows = await sb(
@@ -846,6 +943,13 @@ const ADMIN_HTML = `<!doctype html>
   table.home th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
   table.home tbody tr{cursor:pointer}
   table.home tbody tr:hover td{background:#fafaf8}
+  #ds-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px}
+  .dsopt{border:1px solid var(--line);border-radius:14px;padding:14px}
+  .dsopt .dshead{display:flex;align-items:center;gap:8px;padding:8px 11px;font-size:12.5px;font-weight:600}
+  .dsopt .dsbub{padding:6px 10px;font-size:12px;margin-top:8px;width:fit-content;max-width:92%}
+  .dsopt .dsmine{margin-left:auto}
+  .dsopt .dsname{font-weight:600;margin-top:12px;font-size:14px}
+  .dsopt .dswhy{font-size:12px;opacity:.75;margin:4px 0 10px}
   #prev{border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:8px;background:#f7f7f5;
     display:flex;flex-direction:column;gap:10px;max-width:340px}
   #pv-head{display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;background:#111;color:#fff}
@@ -1042,6 +1146,17 @@ const ADMIN_HTML = `<!doctype html>
           </div>
         </div>
         <div class="ft" id="ft-ap">
+          <label style="font-weight:600;color:var(--ink)">Diseñar con IA</label>
+          <p class="mut" style="margin-bottom:6px">Analiza la web del cliente (el primer dominio de
+          «Seguridad y límites») y, con tus indicaciones, propone 3 diseños completos. Elige uno:
+          se vuelca en los controles de abajo y lo retocas antes de guardar.</p>
+          <textarea id="ds-brief" rows="2" placeholder="Ej.: moderno y llamativo respetando el azul corporativo; una de las opciones oscura y elegante; tipografía con personalidad."></textarea>
+          <div class="actions" style="margin:8px 0 4px">
+            <button id="ds-run" class="ghost small">✨ Proponer 3 diseños</button>
+            <span id="ds-msg" class="mut"></span>
+          </div>
+          <div id="ds-options"></div>
+          <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
           <div class="row">
             <div><label>Color principal (cabecera, botón, mensajes del usuario)</label>
               <input id="f-color" type="color" style="width:100%;height:42px;padding:4px"></div>
@@ -1721,6 +1836,7 @@ function selTenant(id, projectId) {
   $("f-css").value = th.custom_css || "";
   $("save-msg").textContent = "";
   $("a-brief").value = ""; $("a-msg").textContent = "";
+  $("ds-brief").value = ""; $("ds-msg").textContent = ""; $("ds-options").innerHTML = "";
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
   $("g-report").textContent = ""; $("g-msg").textContent = "";
   $("g-files").value = ""; $("g-upmsg").textContent = "";
@@ -1849,6 +1965,95 @@ function updPrev() {
 ["f-font", "f-shadow"].forEach(function (id) {
   $(id).onchange = updPrev;
 });
+
+// ----- asistente de diseño -----
+
+$("ds-run").onclick = function () {
+  var t = curTenant();
+  if (!t && !sel.isNew) return;
+  if (sel.isNew) {
+    $("ds-msg").textContent = "Guarda primero el chatbot para poder analizar su web.";
+    $("ds-msg").className = "err";
+    return;
+  }
+  $("ds-msg").textContent = "Analizando la web del cliente y generando propuestas… hasta 30 segundos.";
+  $("ds-msg").className = "mut";
+  $("ds-options").innerHTML = "";
+  api("/admin/api/tenants/" + sel.id + "/design-assist", {
+    method: "POST",
+    body: JSON.stringify({ brief: $("ds-brief").value.trim() }),
+  }).then(function (r) {
+    if (r.error) { $("ds-msg").textContent = r.error; $("ds-msg").className = "err"; return; }
+    $("ds-msg").textContent = (r.analyzed ? "Web analizada: " + r.analyzed + ". " : "") +
+      "Elige una propuesta y retócala abajo antes de guardar.";
+    $("ds-msg").className = "ok";
+    renderDesigns(r.options || []);
+  }).catch(function () { $("ds-msg").textContent = "Error al generar."; $("ds-msg").className = "err"; });
+};
+
+function renderDesigns(opts) {
+  var box = $("ds-options");
+  box.innerHTML = "";
+  opts.forEach(function (o) {
+    loadFont(o.theme.font);
+    var card = document.createElement("div");
+    card.className = "dsopt";
+    card.style.background = o.theme.bg_color;
+    if (o.theme.bg_image) card.style.backgroundImage = o.theme.bg_image;
+    card.style.fontFamily = fontStack(o.theme.font);
+    var head = document.createElement("div");
+    head.className = "dshead";
+    head.style.background = o.primary_color;
+    head.style.color = contrastFor(o.primary_color);
+    head.style.borderRadius = o.theme.radius + "px";
+    head.textContent = $("f-name").value.trim() || "Asistente";
+    var b1 = document.createElement("div");
+    b1.className = "dsbub";
+    b1.style.background = o.theme.secondary_color;
+    b1.style.color = contrastFor(o.theme.secondary_color);
+    b1.style.borderRadius = o.theme.radius + "px";
+    b1.textContent = "¡Hola! ¿En qué te ayudo?";
+    var b2 = document.createElement("div");
+    b2.className = "dsbub dsmine";
+    b2.style.background = o.primary_color;
+    b2.style.color = contrastFor(o.primary_color);
+    b2.style.borderRadius = o.theme.radius + "px";
+    b2.textContent = "Tengo una duda";
+    var nm = document.createElement("div");
+    nm.className = "dsname";
+    nm.style.color = contrastFor(o.theme.bg_color);
+    nm.textContent = o.name;
+    var why = document.createElement("div");
+    why.className = "dswhy";
+    why.style.color = contrastFor(o.theme.bg_color);
+    why.textContent = o.why;
+    var use = document.createElement("button");
+    use.className = "primary small";
+    use.textContent = "Usar este diseño";
+    use.onclick = function () { applyDesign(o); };
+    card.appendChild(head);
+    card.appendChild(b1);
+    card.appendChild(b2);
+    card.appendChild(nm);
+    card.appendChild(why);
+    card.appendChild(use);
+    box.appendChild(card);
+  });
+}
+
+function applyDesign(o) {
+  $("f-color").value = o.primary_color;
+  $("f-color2").value = o.theme.secondary_color;
+  $("f-colorbg").value = o.theme.bg_color;
+  $("f-font").value = o.theme.font;
+  $("f-radius").value = o.theme.radius;
+  $("f-shadow").value = o.theme.shadow;
+  if (o.theme.subtitle) $("f-subtitle").value = o.theme.subtitle;
+  $("f-bgimg").value = o.theme.bg_image || "";
+  $("f-dark").value = o.theme.dark || "off";
+  updPrev();
+  toast("Diseño aplicado: revísalo en la vista previa y pulsa Guardar.");
+}
 
 function loadDocs() {
   var box = $("doc-list");
