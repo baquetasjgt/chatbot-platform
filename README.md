@@ -105,12 +105,14 @@ update tenants set provider = 'google', model = 'gemini-3.5-flash' where slug = 
 | `provider`  | `model` (opciones razonables) | Cuándo |
 |-------------|-------------------------------|--------|
 | `anthropic` | `claude-sonnet-4-6` (default), `claude-sonnet-5`, `claude-haiku-4-5` | Prima la fiabilidad (no inventar precios ni fechas) |
-| `google`    | `gemini-3.5-flash` (GA, recomendado), `gemini-flash-latest`, `gemini-flash-lite-latest` | Prima el coste por mensaje |
+| `google`    | `gemini-3.5-flash` (GA, recomendado), `gemini-3.1-flash-lite` (el más barato), `gemini-flash-latest`, `gemini-flash-lite-latest` | Prima el coste por mensaje |
 
 Notas sobre Gemini:
 
-- Usa modelos de la familia 3.x: los Gemini 2.0 se apagaron en junio de 2026 y el
-  Worker pide `thinkingLevel: "low"`, que es un parámetro de esa familia.
+- Usa modelos de la familia 3.x: los Gemini 2.0 se apagaron en junio de 2026, los 2.5
+  (incluido `gemini-2.5-flash-lite`) devuelven 404 desde julio de 2026, y el Worker
+  pide `thinkingLevel: "low"`, que es un parámetro de la familia 3. El sustituto de
+  `gemini-2.5-flash-lite` es `gemini-3.1-flash-lite`.
 - La lista de modelos cambia rápido; la referencia viva es
   <https://ai.google.dev/gemini-api/docs/models>.
 - Antes de poner Gemini a un cliente real, pruébalo con preguntas trampa (precios y
