@@ -546,13 +546,18 @@ async function handleAdminApi(request, env, url) {
     if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
     const [t] = await sb(env, `tenants?id=eq.${mFaq[1]}&select=name,system_prompt`);
     if (!t) return json({ error: "tenant no encontrado" }, 404);
+    const { brief } = await request.json().catch(() => ({}));
 
     const instructions = `Eres consultor de contenido para chatbots de atención al público. Genera las preguntas frecuentes que el dueño de este negocio debería responder para alimentar a su chatbot. Devuelve SOLO un objeto JSON: {"questions":["...","..."]}
 
-Entre 10 y 14 preguntas, en español, concretas y de respuesta factual (precios, horarios, condiciones, proceso de compra o reserva, ubicación, contacto, plazos, garantías, métodos de pago...). Formúlalas como las haría un visitante real de la web. Evita preguntas genéricas o de respuesta obvia.
+Entre 10 y 14 preguntas (salvo que las indicaciones digan otra cantidad), en español, concretas y de respuesta factual (precios, horarios, condiciones, proceso de compra o reserva, ubicación, contacto, plazos, garantías, métodos de pago...). Formúlalas como las haría un visitante real de la web. Evita preguntas genéricas o de respuesta obvia.
 
 Negocio: ${t.name}
-Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}`;
+Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
+      brief && brief.trim()
+        ? `\n\nINDICACIONES DEL DUEÑO DE LA PLATAFORMA (tienen prioridad sobre todo lo anterior):\n${brief.trim().slice(0, 1500)}`
+        : ""
+    }`;
 
     const res = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
@@ -1192,6 +1197,8 @@ const ADMIN_HTML = `<!doctype html>
         <div class="copyrow hide" id="faq-linkrow"><input id="faq-link" readonly>
           <button class="ghost small" data-copy="faq-link">Copiar</button>
           <button id="faq-open" class="ghost small">Abrir</button></div>
+        <label>Indicaciones para la IA (opcional): qué temas cubrir, cuántas preguntas, qué evitar…</label>
+        <textarea id="faq-brief" rows="2" placeholder="Ej.: céntrate en precios de stands y patrocinio; añade preguntas sobre parking y horarios de montaje; unas 8 preguntas en total; nada de temas clínicos."></textarea>
         <div class="actions" style="margin-top:8px">
           <button id="faq-gen" class="ghost small">Generar formulario con IA</button>
           <span id="faq-msg" class="mut"></span>
@@ -1749,7 +1756,10 @@ $("faq-gen").onclick = function () {
       !confirm("Ya hay un formulario para este chatbot. ¿Generar uno nuevo? El enlace anterior dejará de funcionar.")) return;
   $("faq-msg").textContent = "Generando preguntas con IA… unos segundos.";
   $("faq-msg").className = "mut";
-  api("/admin/api/tenants/" + sel.id + "/faq-form", { method: "POST" }).then(function (r) {
+  api("/admin/api/tenants/" + sel.id + "/faq-form", {
+    method: "POST",
+    body: JSON.stringify({ brief: $("faq-brief").value.trim() }),
+  }).then(function (r) {
     if (r.error) { $("faq-msg").textContent = r.error; $("faq-msg").className = "err"; return; }
     $("faq-msg").textContent = "Formulario creado ✓ Copia el enlace y envíaselo al cliente.";
     $("faq-msg").className = "ok";
