@@ -665,6 +665,8 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}`;
       if (up.ok) {
         await sb(env, `invoices?id=eq.${inv.id}`, { method: "PATCH", body: { pdf_path: path } });
         inv.pdf_path = path;
+      } else {
+        inv.pdf_error = `Storage ${up.status}: ${(await up.text()).slice(0, 200)}`;
       }
     }
     return json(inv);
