@@ -454,6 +454,23 @@ async function handleAdminApi(request, env, url) {
     return json({ panel_token: token });
   }
 
+  // --- documentos indexados de un chatbot ---
+  const mDocs = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/documents$/);
+  if (mDocs && request.method === "GET") {
+    const rows = await sb(
+      env,
+      `documents?tenant_id=eq.${mDocs[1]}` +
+        `&select=id,title,source_type,source_url,indexed_at,created_at,chunks(count)` +
+        `&order=created_at.desc`
+    );
+    return json(rows);
+  }
+  const mDoc = url.pathname.match(/^\/admin\/api\/documents\/([0-9a-f-]{36})$/);
+  if (mDoc && request.method === "DELETE") {
+    await sb(env, `documents?id=eq.${mDoc[1]}`, { method: "DELETE" });
+    return json({ ok: true });
+  }
+
   // --- clientes ---
   if (url.pathname === "/admin/api/clients" && request.method === "GET") {
     const rows = await sb(
@@ -610,6 +627,9 @@ const ADMIN_HTML = `<!doctype html>
   .copyrow{display:flex;gap:8px;margin-top:6px}
   .copyrow input,.copyrow textarea{font-family:ui-monospace,monospace;font-size:12.5px;background:#fafaf8}
   #crumb{margin-bottom:12px}
+  .doc{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:7px;font-size:14px}
+  .doc .meta{color:var(--mut);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -778,6 +798,9 @@ const ADMIN_HTML = `<!doctype html>
         <h2>Contenido del bot</h2>
         <p class="sub">Lo que el bot sabe. Reindexar la misma fuente (URL o archivo con el mismo nombre)
         reemplaza la versión anterior, no duplica.</p>
+        <label>Documentos indexados — incluye los que suba el cliente desde su panel</label>
+        <div id="doc-list" class="mut">Cargando…</div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <label>Subir archivos (PDF, TXT, MD, CSV, HTML, imágenes…)</label>
         <input id="g-files" type="file" multiple
           accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
@@ -1103,8 +1126,46 @@ function selTenant(id, projectId) {
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
   $("g-report").textContent = ""; $("g-msg").textContent = "";
   $("g-files").value = ""; $("g-upmsg").textContent = "";
-  if (t) renderInteg(t);
+  if (t) { renderInteg(t); loadDocs(); }
   showCards(t ? ["v-assist", "v-tenant", "integ", "ingest"] : ["v-assist", "v-tenant"]);
+}
+
+function loadDocs() {
+  var box = $("doc-list");
+  box.textContent = "Cargando…";
+  api("/admin/api/tenants/" + sel.id + "/documents").then(function (docs) {
+    if (docs.error) { box.textContent = docs.error; return; }
+    box.innerHTML = "";
+    if (!docs.length) { box.textContent = "Aún no hay contenido indexado. Súbelo abajo."; return; }
+    docs.forEach(function (d) {
+      var row = document.createElement("div");
+      row.className = "doc";
+      var left = document.createElement("div");
+      var title = document.createElement("div");
+      var icon = d.source_type === "url" ? "🌐 " : d.source_type === "file" ? "📄 " : "✍️ ";
+      title.textContent = icon + (d.title || d.source_url || "(sin título)");
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      var n = d.chunks && d.chunks.length ? d.chunks[0].count : null;
+      var when = d.indexed_at || d.created_at;
+      meta.textContent =
+        (when ? new Date(when).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "") +
+        (n != null ? " · " + n + " fragmentos" : "");
+      left.appendChild(title);
+      left.appendChild(meta);
+      var del = document.createElement("button");
+      del.className = "ghost small";
+      del.textContent = "Eliminar";
+      del.onclick = function () {
+        if (!confirm("¿Eliminar «" + (d.title || d.source_url || "este documento") + "» del conocimiento del bot?")) return;
+        del.disabled = true;
+        api("/admin/api/documents/" + d.id, { method: "DELETE" }).then(loadDocs);
+      };
+      row.appendChild(left);
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+  }).catch(function () { box.textContent = "No se ha podido cargar la lista."; });
 }
 
 function renderInteg(t) {
@@ -1260,6 +1321,7 @@ $("g-run").onclick = function () {
     if (r.error) { $("g-msg").textContent = r.error; $("g-msg").className = "err"; return; }
     $("g-msg").textContent = "Hecho."; $("g-msg").className = "ok";
     showReport(r);
+    loadDocs();
   }).catch(function () {
     $("g-msg").textContent = "Error al indexar."; $("g-msg").className = "err";
   });
@@ -1297,6 +1359,7 @@ $("g-upload").onclick = function () {
     $("g-upmsg").textContent = "Hecho."; $("g-upmsg").className = "ok";
     showReport(r);
     $("g-files").value = "";
+    loadDocs();
   }).catch(function () {
     $("g-upmsg").textContent = "Error al subir."; $("g-upmsg").className = "err";
   });
