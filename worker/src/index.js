@@ -1526,7 +1526,7 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     if (d.public_key) {
       var ws = document.createElement("script");
       ws.id = "cb-widget-script";
-      ws.src = "/widget.js";
+      ws.src = "/widget.js?v=" + Date.now();
       ws.setAttribute("data-key", d.public_key);
       ws.setAttribute("data-api", location.origin);
       document.body.appendChild(ws);
@@ -1700,7 +1700,7 @@ export default {
         return new Response(WIDGET_JS, {
           headers: {
             "Content-Type": "application/javascript;charset=utf-8",
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "public, max-age=300",
             "Access-Control-Allow-Origin": "*",
           },
         });
@@ -1739,7 +1739,7 @@ export default {
           `font:600 13px/1.4 system-ui,sans-serif;padding:9px 16px;text-align:center">` +
           `DEMOSTRACIÓN · Así se verá el asistente de ${h(tenant.name)} en su web · ` +
           `El chat funciona de verdad: pruébelo · ¿Le gusta? Se activa en su web en 5 minutos</div>` +
-          `<script src="${url.origin}/widget.js" data-key="${h(key)}" data-api="${url.origin}" data-open="2500"></script>`;
+          `<script src="${url.origin}/widget.js?v=${Date.now()}" data-key="${h(key)}" data-api="${url.origin}" data-open="2500"></script>`;
 
         if (page) {
           // copia estática: fuera scripts y CSP; base para que css/imágenes carguen del sitio real
