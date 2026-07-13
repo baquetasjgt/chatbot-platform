@@ -614,6 +614,115 @@ const GUIDES = {
   },
 };
 
+// guía de integración para un tenant resuelto por su clave pública;
+// pKey (opcional) fija la plataforma sin re-analizar la web
+async function guideFor(env, publicKey, pKey) {
+  const tenant = await getTenant(env, publicKey);
+  if (!tenant) return null;
+  const domain = (tenant.allowed_domains || [])[0] || null;
+  let key = pKey && GUIDES[pKey] ? pKey : null;
+  if (!key) {
+    let html = null;
+    if (domain) {
+      try {
+        const r = await fetch(`https://${domain}`, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            Accept: "text/html",
+          },
+        });
+        if (r.ok) html = (await r.text()).slice(0, 500000);
+      } catch (err) {
+        // sin acceso: guía genérica
+      }
+    }
+    key = html ? detectPlatform(html) : "desconocida";
+  }
+  return { tenant, domain, key, guide: GUIDES[key] || GUIDES.html };
+}
+
+// ---------- generador de PDF (una tipografía estándar, sin dependencias) ----------
+
+function pdfLatin1(s) {
+  return String(s)
+    .replace(/[—–]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/…/g, "...")
+    .replace(/[^ -ÿ]/g, "?");
+}
+
+function pdfEscape(s) {
+  return pdfLatin1(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function wrapLine(t, max) {
+  const words = String(t).split(/\s+/);
+  const out = [];
+  let cur = "";
+  for (const w of words) {
+    if ((cur + " " + w).trim().length > max) {
+      if (cur) out.push(cur);
+      cur = w;
+    } else {
+      cur = (cur + " " + w).trim();
+    }
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [""];
+}
+
+// lines: [{t, size, font: 1|2|3 (normal|negrita|mono), gap}]
+function buildPdf(lines) {
+  const H = 842, M = 56;
+  const pages = [];
+  let cur = [];
+  let y = H - M;
+  for (const ln of lines) {
+    const lh = Math.round((ln.size || 11) * 1.5);
+    if (y - lh < M) {
+      pages.push(cur);
+      cur = [];
+      y = H - M;
+    }
+    y -= lh;
+    cur.push({ ...ln, y });
+    if (ln.gap) y -= ln.gap;
+  }
+  if (cur.length) pages.push(cur);
+
+  const objs = {};
+  objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  const kids = pages.map((_, i) => `${7 + i * 2} 0 R`).join(" ");
+  objs[2] = `<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`;
+  objs[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objs[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  objs[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>";
+  objs[6] = "<< /F1 3 0 R /F2 4 0 R /F3 5 0 R >>";
+
+  pages.forEach((pg, i) => {
+    const content = pg
+      .map((ln) => `/F${ln.font || 1} ${ln.size || 11} Tf 1 0 0 1 ${ln.x || M} ${ln.y} Tm (${pdfEscape(ln.t)}) Tj`)
+      .join("\n");
+    const stream = `BT\n${content}\nET`;
+    objs[7 + i * 2] =
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font 6 0 R >> ` +
+      `/Contents ${8 + i * 2} 0 R >>`;
+    objs[8 + i * 2] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+
+  const count = 6 + pages.length * 2;
+  let out = "%PDF-1.4\n";
+  const offsets = [];
+  for (let i = 1; i <= count; i++) {
+    offsets[i] = out.length;
+    out += `${i} 0 obj\n${objs[i]}\nendobj\n`;
+  }
+  const xref = out.length;
+  out += `xref\n0 ${count + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= count; i++) out += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
+  out += `trailer\n<< /Size ${count + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Uint8Array.from(pdfLatin1(out), (c) => c.charCodeAt(0));
+}
+
 async function handleAdminApi(request, env, url) {
   if (url.pathname === "/admin/api/tenants" && request.method === "GET") {
     const tenants = await sb(
@@ -1484,8 +1593,13 @@ const ADMIN_HTML = `<!doctype html>
           <div id="ig-title" style="font-weight:600;margin-bottom:6px"></div>
           <ol id="ig-steps" style="padding-left:20px;font-size:14px"></ol>
           <p id="ig-note" class="mut" style="margin-top:8px"></p>
+          <label>Enlace con estas instrucciones (para el informático del cliente)</label>
+          <div class="copyrow"><input id="ig-url" readonly>
+            <button class="ghost small" data-copy="ig-url">Copiar</button>
+            <button id="ig-url-open" class="ghost small">Abrir</button></div>
           <div class="actions">
-            <button id="ig-copy" class="ghost small">Copiar instrucciones + código (para enviar al cliente)</button>
+            <button id="ig-pdf" class="ghost small">📄 Descargar PDF</button>
+            <button id="ig-copy" class="ghost small">Copiar instrucciones + código como texto</button>
           </div>
         </div>
         <label>Panel del cliente (conversaciones, leads, preguntas sin respuesta)</label>
@@ -2527,7 +2641,16 @@ $("ig-run").onclick = function () {
       ol.appendChild(li);
     });
     $("ig-note").textContent = r.note || "";
+    var k = activeKey(curTenant());
+    $("ig-url").value = location.origin + "/instrucciones?key=" + k + "&p=" + r.key;
   }).catch(function () { $("ig-msg").textContent = "Error al analizar."; $("ig-msg").className = "err"; });
+};
+
+$("ig-url-open").onclick = function () { window.open($("ig-url").value, "_blank"); };
+$("ig-pdf").onclick = function () {
+  if (!IG_LAST) return;
+  var k = activeKey(curTenant());
+  window.open(location.origin + "/instrucciones.pdf?key=" + k + "&p=" + IG_LAST.key, "_blank");
 };
 
 $("ig-copy").onclick = function () {
@@ -3782,6 +3905,81 @@ ${inject}</body></html>`;
             "Content-Disposition": `inline; filename="factura-${inv.number.replace(/[^\w.-]/g, "_")}.pdf"`,
             "Cache-Control": "no-store",
           },
+        });
+      }
+
+      // --- instrucciones de integración: página pública y PDF ---
+      if (url.pathname === "/instrucciones" || url.pathname === "/instrucciones.pdf") {
+        const pk = url.searchParams.get("key") || "";
+        const info = await guideFor(env, pk, url.searchParams.get("p"));
+        if (!info) return new Response("Enlace no válido", { status: 401 });
+        const snippetRaw =
+          `<script src="${url.origin}/widget.js"\n` +
+          `        data-key="${pk}"\n` +
+          `        data-api="${url.origin}"></scr` + `ipt>`;
+        const pageUrl = `${url.origin}/instrucciones?key=${pk}&p=${info.key}`;
+
+        if (url.pathname === "/instrucciones.pdf") {
+          const L = [];
+          const add = (t, size, font, gap, x) =>
+            wrapLine(t, font === 3 ? 78 : Math.round(950 / (size || 11))).forEach((w, i, arr) =>
+              L.push({ t: w, size, font, x, gap: i === arr.length - 1 ? gap : 0 })
+            );
+          add("Integración del asistente virtual", 17, 2, 6);
+          add(`${info.tenant.name}${info.domain ? " - " + info.domain : ""}`, 11, 1, 12);
+          add(`Plataforma detectada: ${info.guide.name}`, 13, 2, 8);
+          info.guide.steps.forEach((s, i) => add(`${i + 1}. ${s}`, 11, 1, 4));
+          if (info.guide.note) add(`Nota: ${info.guide.note}`, 10, 1, 8);
+          add("Código a pegar (justo antes de la etiqueta </body>):", 12, 2, 6);
+          snippetRaw.split("\n").forEach((s) => add(s, 9, 3, 2));
+          add(" ", 10, 1, 4);
+          add("Cómo comprobar que funciona:", 12, 2, 4);
+          add("1. Recarga la web: debe aparecer el botón del chat abajo.", 11, 1, 2);
+          add("2. Escribe una pregunta y comprueba que responde.", 11, 1, 10);
+          add(`Estas mismas instrucciones, en línea: ${pageUrl}`, 9, 1, 0);
+          return new Response(buildPdf(L), {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="integracion-${info.tenant.slug}.pdf"`,
+              "Cache-Control": "no-store",
+            },
+          });
+        }
+
+        const stepsHtml = info.guide.steps.map((s) => `<li>${h(s)}</li>`).join("");
+        const page = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Integración del asistente — ${h(info.tenant.name)}</title>
+<style>body{margin:0;font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1a1a1a;background:#f7f7f5}
+header{background:#fff;border-bottom:1px solid #e5e5e2;padding:20px 24px}
+h1{font-size:19px;margin:0}
+.sub{color:#777;font-size:14px;margin-top:4px}
+main{max-width:720px;margin:0 auto;padding:24px 16px 60px}
+.card{background:#fff;border:1px solid #e5e5e2;border-radius:14px;padding:20px;margin-bottom:16px}
+h2{font-size:15px;margin:0 0 10px}
+ol{margin:0;padding-left:22px}
+li{margin-bottom:8px}
+pre{background:#14151a;color:#e7e9ee;border-radius:10px;padding:14px;overflow-x:auto;font-size:12.5px}
+.mut{color:#777;font-size:13px}
+.btn{display:inline-block;background:#111;color:#fff;border:0;border-radius:10px;padding:10px 18px;
+cursor:pointer;font:inherit;text-decoration:none}
+@media print{body{background:#fff}header{border:0}.noprint{display:none}.card{border:0;padding:8px 0}}</style>
+</head><body>
+<header><h1>Integración del asistente virtual — ${h(info.tenant.name)}</h1>
+<p class="sub">Plataforma detectada: <b>${h(info.guide.name)}</b>${info.domain ? " · " + h(info.domain) : ""}</p></header>
+<main>
+<div class="card"><h2>Pasos</h2><ol>${stepsHtml}</ol>
+${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide.note)}</p>` : ""}</div>
+<div class="card"><h2>Código a pegar (justo antes de la etiqueta &lt;/body&gt;)</h2>
+<pre id="snip">${h(snippetRaw)}</pre>
+<button class="btn noprint" onclick="navigator.clipboard.writeText(document.getElementById('snip').textContent).then(()=>{this.textContent='Copiado ✓'})">Copiar código</button></div>
+<div class="card"><h2>Cómo comprobar que funciona</h2>
+<ol><li>Recarga la web: debe aparecer el botón del chat abajo.</li>
+<li>Escribe una pregunta y comprueba que responde.</li></ol></div>
+<p class="noprint"><a class="btn" href="${h(`${url.origin}/instrucciones.pdf?key=${pk}&p=${info.key}`)}">Descargar en PDF</a></p>
+</main></body></html>`;
+        return new Response(page, {
+          headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
         });
       }
 
