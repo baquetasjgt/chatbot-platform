@@ -1154,8 +1154,8 @@ const ADMIN_HTML = `<!doctype html>
 <meta name="robots" content="noindex">
 <title>ExpoBot — Estudio</title>
 <style>
-  :root{--ink:#191926;--mut:#75758a;--line:#e6e6f0;--bg:#f6f7fb;--acc:#6d5ef1;--acc2:#38bdf8;
-    --grad:linear-gradient(135deg,#6d5ef1,#38bdf8);--ok:#0a7a4b;--err:#b3261e}
+  :root{--ink:#10182b;--mut:#6b7590;--line:#e4e7f0;--bg:#f5f7fc;--acc:#3c62f0;--acc2:#7c96ff;
+    --grad:linear-gradient(135deg,#3c62f0,#6b8cff);--ok:#0a7a4b;--err:#b3261e}
   *{box-sizing:border-box;margin:0}
   body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
   .hide{display:none!important}
@@ -1174,9 +1174,10 @@ const ADMIN_HTML = `<!doctype html>
   .mut{color:var(--mut);font-size:13px}
   .ok{color:var(--ok);font-size:13px}
   .err{color:var(--err);font-size:13px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.02em}
-  .brand svg{width:32px;height:32px;flex:0 0 auto}
-  .brand span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+  .brand svg{width:34px;height:30px;flex:0 0 auto}
+  .brand span{color:var(--ink)}
+  .brand span b{color:var(--acc);font-weight:800}
   .brand em{font:400 12.5px system-ui,sans-serif;color:var(--mut);font-style:normal;margin-left:2px}
   .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
     background:var(--grad)}
@@ -1299,7 +1300,7 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="login" class="login hide">
   <div class="card">
-    <div class="brand" style="margin-bottom:12px"><svg viewBox="0 0 32 32"><defs><linearGradient id="xg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5ef1"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect x="2" y="3" width="28" height="21" rx="8" fill="url(#xg1)"/><path d="M9 24v6l7-6z" fill="url(#xg1)"/><circle cx="12" cy="13.5" r="2.6" fill="#fff"/><circle cx="20" cy="13.5" r="2.6" fill="#fff"/></svg><span>ExpoBot</span></div>
+    <div class="brand" style="margin-bottom:12px"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
     <h1>Bienvenido a tu estudio</h1>
     <p class="mut">Introduce tu clave de acceso para gestionar tus clientes y sus asistentes.</p>
     <input id="tok" type="password" placeholder="Token" autocomplete="current-password">
@@ -1310,7 +1311,7 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="app" class="hide">
   <header>
-    <div class="brand"><svg viewBox="0 0 32 32"><defs><linearGradient id="xg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5ef1"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect x="2" y="3" width="28" height="21" rx="8" fill="url(#xg2)"/><path d="M9 24v6l7-6z" fill="url(#xg2)"/><circle cx="12" cy="13.5" r="2.6" fill="#fff"/><circle cx="20" cy="13.5" r="2.6" fill="#fff"/></svg><span>ExpoBot</span><em>estudio de asistentes IA</em></div>
+    <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span><em>estudio de asistentes IA</em></div>
     <button id="logout" class="ghost small">Salir</button>
   </header>
   <div class="wrap">
