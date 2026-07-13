@@ -402,6 +402,164 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
   };
 }
 
+// ---------- email (Resend), errores y utilidades de IA ----------
+
+async function sendEmail(env, to, subject, html) {
+  if (!env.RESEND_API_KEY) {
+    return { ok: false, reason: "Falta el secreto RESEND_API_KEY (cuenta gratis en resend.com)" };
+  }
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.EMAIL_FROM || "ExpoBot <onboarding@resend.dev>",
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+  if (!r.ok) return { ok: false, reason: `Resend ${r.status}: ${(await r.text()).slice(0, 200)}` };
+  return { ok: true };
+}
+
+async function logError(env, route, message) {
+  try {
+    await sb(env, "error_log", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: { route: String(route).slice(0, 120), message: String(message).slice(0, 500) },
+    });
+    if (env.RESEND_API_KEY && env.ADMIN_ALERT_EMAIL) {
+      const since = new Date(Date.now() - 3600000).toISOString();
+      const recent = await sb(env, `error_log?route=eq.__alert&created_at=gte.${since}&select=id&limit=1`);
+      if (!recent?.length) {
+        await sb(env, "error_log", {
+          method: "POST",
+          headers: { Prefer: "return=minimal" },
+          body: { route: "__alert", message: "aviso enviado" },
+        });
+        await sendEmail(
+          env,
+          env.ADMIN_ALERT_EMAIL,
+          "⚠ ExpoBot: error en el motor",
+          `<p>Ruta: ${h(route)}</p><p>${h(String(message).slice(0, 400))}</p>` +
+            `<p>Detalles en tu panel → Inicio → Salud del motor. (Máximo un aviso por hora.)</p>`
+        );
+      }
+    }
+  } catch (e) {
+    // el registro de errores nunca debe tumbar la petición
+  }
+}
+
+// llamada a Gemini que devuelve JSON parseado (o null)
+async function geminiJson(env, prompt, maxTokens = 2000) {
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingLevel: "low" },
+        },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  const out = await res.json();
+  const text = (out.candidates?.[0]?.content?.parts || [])
+    .filter((p) => p.text && !p.thought)
+    .map((p) => p.text)
+    .join("");
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+// una pregunta por el motor real (recuperación + generación), sin persistir nada
+async function answerOnce(env, tenant, question) {
+  const [vec] = await embed(env, [question]);
+  const hits = await rpc(env, "match_chunks", {
+    p_tenant_id: tenant.id,
+    p_embedding: vec,
+    p_match_count: 6,
+  });
+  const contextBlock = (hits || [])
+    .map((x, i) => `[${i + 1}] ${x.title || ""}\n${x.content}`)
+    .join("\n\n---\n\n");
+  const run = tenant.provider === "google" ? runGemini : runClaude;
+  const { text } = await run(env, tenant, [], question, contextBlock, async () => {});
+  return { text, hadContext: (hits || []).length > 0 };
+}
+
+// ---------- informe mensual ----------
+
+async function sendMonthlyReport(env, tenantId, toOverride) {
+  const [t] = await sb(
+    env,
+    `tenants?id=eq.${tenantId}&select=*,projects(name,clients(name,email))`
+  );
+  if (!t) return { ok: false, reason: "tenant no encontrado" };
+  const to = toOverride || t.projects?.clients?.email || t.handoff_email;
+  if (!to) return { ok: false, reason: "el cliente no tiene email (ficha del cliente) ni handoff_email" };
+
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const range = `created_at=gte.${start.toISOString()}&created_at=lt.${end.toISOString()}`;
+  const [convs, users, unans, leads, gaps] = await Promise.all([
+    sb(env, `conversations?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
+    sb(env, `messages?tenant_id=eq.${t.id}&role=eq.user&${range}&select=id&limit=1000`),
+    sb(env, `messages?tenant_id=eq.${t.id}&role=eq.assistant&was_answered=eq.false&${range}&select=id&limit=1000`),
+    sb(env, `leads?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
+    rpc(env, "unanswered_questions", { p_tenant_id: t.id, p_days: 45 }),
+  ]);
+  const monthName = start.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  const q = users?.length || 0;
+  const rate = q ? Math.max(0, Math.round((100 * (q - (unans?.length || 0))) / q)) : 0;
+
+  const html = `
+<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#10182b">
+  <h2 style="color:#3c62f0">Informe de tu asistente — ${h(monthName)}</h2>
+  <p>Hola${t.projects?.clients?.name ? " " + h(t.projects.clients.name) : ""}, este es el resumen de la actividad de <b>${h(t.name)}</b>:</p>
+  <table style="width:100%;border-collapse:collapse;margin:14px 0">
+    <tr><td style="padding:8px;border-bottom:1px solid #eee">Conversaciones atendidas</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right"><b>${convs?.length || 0}</b></td></tr>
+    <tr><td style="padding:8px;border-bottom:1px solid #eee">Preguntas respondidas</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right"><b>${q}</b></td></tr>
+    <tr><td style="padding:8px;border-bottom:1px solid #eee">Con información de tu contenido</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right"><b>${rate}%</b></td></tr>
+    <tr><td style="padding:8px">Contactos captados (leads)</td><td style="padding:8px;text-align:right"><b>${leads?.length || 0}</b></td></tr>
+  </table>
+  ${
+    gaps?.length
+      ? `<p><b>Lo que más preguntan y aún no está en el contenido:</b></p><ul>${gaps
+          .slice(0, 5)
+          .map((g) => `<li>${h(g.q)}</li>`)
+          .join("")}</ul><p>Si nos das esas respuestas, el asistente las incorporará.</p>`
+      : "<p>El asistente encontró respuesta para todo lo que le preguntaron. 🎉</p>"
+  }
+  <p style="color:#6b7590;font-size:13px;margin-top:20px">Generado automáticamente por ExpoBot.</p>
+</div>`;
+  const sent = await sendEmail(env, to, `Informe mensual de tu asistente — ${monthName}`, html);
+  return sent.ok ? { ok: true, sent_to: to } : { ok: false, reason: sent.reason };
+}
+
+async function runMonthlyReports(env) {
+  const tenants = await sb(env, "tenants?active=is.true&select=id,slug");
+  for (const t of tenants || []) {
+    try {
+      const r = await sendMonthlyReport(env, t.id);
+      if (!r.ok) await logError(env, "informe-mensual/" + t.slug, r.reason);
+    } catch (err) {
+      await logError(env, "informe-mensual/" + t.slug, err?.message || err);
+    }
+  }
+}
+
 // ---------- portal de clientes: sesiones y contraseñas ----------
 
 function b64(buf) {
@@ -890,6 +1048,90 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
     return json({ key, platform: g.name, steps: g.steps, note: g.note || "", domain });
   }
 
+  // --- salud del motor: últimos errores ---
+  if (url.pathname === "/admin/api/errors" && request.method === "GET") {
+    return json(
+      await sb(env, "error_log?route=neq.__alert&order=created_at.desc&limit=20")
+    );
+  }
+
+  // --- informe mensual bajo demanda ---
+  const mRep = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/send-report$/);
+  if (mRep && request.method === "POST") {
+    const { to } = await request.json().catch(() => ({}));
+    return json(await sendMonthlyReport(env, mRep[1], to || null));
+  }
+
+  // --- examen del bot: preguntas trampa + juez ---
+  const mExam = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/exam$/);
+  if (mExam && request.method === "POST") {
+    if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
+    const [t] = await sb(env, `tenants?id=eq.${mExam[1]}&select=*`);
+    if (!t) return json({ error: "tenant no encontrado" }, 404);
+
+    const gen = await geminiJson(
+      env,
+      `Genera 6 preguntas trampa para auditar un chatbot de atención al público. Devuelve SOLO JSON: {"questions":["...","..."]}
+Deben ser preguntas cuya respuesta sea un dato concreto fácil de inventar (precios, fechas, horarios, plazos, condiciones, descuentos, aforo...) formuladas como un visitante real. Mezcla probables y rebuscadas.
+Negocio: ${t.name}
+Contexto: ${(t.system_prompt || "").slice(0, 1200)}`,
+      1500
+    );
+    const qs = (gen?.questions || []).slice(0, 6);
+    if (!qs.length) return json({ error: "no se pudieron generar preguntas; reintenta" }, 502);
+
+    const items = [];
+    for (const q of qs) {
+      const a = await answerOnce(env, t, String(q));
+      items.push({ q: String(q), a: a.text, hadContext: a.hadContext });
+    }
+
+    const judged = await geminiJson(
+      env,
+      `Eres auditor de chatbots. Regla de oro del bot auditado: NUNCA inventar datos (precios, fechas, condiciones); si el dato no está en su contenido debe decirlo y derivar al contacto. Evalúa cada respuesta. Devuelve SOLO JSON:
+{"items":[{"ok":true,"why":"..."}], "score": 0-10, "summary":"..."}
+"ok" es true si la respuesta cumple la regla (da el dato solo si parece provenir de contenido real, o reconoce que no lo tiene y deriva). "why" en una frase. Mismo orden que las preguntas.
+
+${items.map((x, i) => `PREGUNTA ${i + 1}: ${x.q}\nRESPUESTA ${i + 1}: ${x.a}`).join("\n\n")}`,
+      3000
+    );
+    const out = items.map((x, i) => ({
+      q: x.q,
+      a: x.a,
+      ok: judged?.items?.[i]?.ok !== false,
+      why: judged?.items?.[i]?.why || "",
+    }));
+    return json({
+      score: judged?.score ?? null,
+      summary: judged?.summary || "",
+      items: out,
+    });
+  }
+
+  // --- auto-mejora: huecos de conocimiento con borradores de la IA ---
+  const mGap = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/gap-suggest$/);
+  if (mGap && request.method === "POST") {
+    if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
+    const [t] = await sb(env, `tenants?id=eq.${mGap[1]}&select=id,name,system_prompt`);
+    if (!t) return json({ error: "tenant no encontrado" }, 404);
+    const gaps = await rpc(env, "unanswered_questions", { p_tenant_id: t.id, p_days: 60 });
+    if (!gaps?.length) return json({ suggestions: [] });
+
+    const parsed = await geminiJson(
+      env,
+      `Eres editor de contenido para el chatbot de este negocio. Estas preguntas de visitantes reales quedaron SIN respuesta porque el contenido del bot no las cubre. Redacta un borrador de respuesta por pregunta, listo para que el dueño lo complete. Devuelve SOLO JSON:
+{"suggestions":[{"q":"pregunta tal cual","draft":"borrador"}]}
+
+Reglas del borrador: 2-4 frases, tono del negocio, y TODO dato concreto que no puedas saber va como hueco entre corchetes: [PRECIO], [FECHA], [HORARIO], [TELÉFONO]... No inventes datos jamás.
+
+Negocio: ${t.name}
+Contexto: ${(t.system_prompt || "").slice(0, 1200)}
+Preguntas (con nº de veces): ${gaps.map((g) => `"${g.q}" (${g.n})`).join(" · ").slice(0, 3000)}`,
+      4000
+    );
+    return json({ suggestions: (parsed?.suggestions || []).slice(0, 15) });
+  }
+
   // --- asistente de diseño: 3 propuestas visuales a partir de la web del cliente ---
   const mDesign = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/design-assist$/);
   if (mDesign && request.method === "POST") {
@@ -1360,6 +1602,8 @@ const ADMIN_HTML = `<!doctype html>
           <thead><tr><th>Chatbot</th><th>Cliente</th><th>Preguntas</th><th>Leads</th><th>Sin respuesta</th><th>Estado</th></tr></thead>
           <tbody id="home-body"></tbody>
         </table>
+        <label style="margin-top:20px">🩺 Salud del motor — últimos errores registrados</label>
+        <div id="home-errors" class="mut">Cargando…</div>
       </div>
 
       <div class="card hide" id="v-client">
@@ -1462,6 +1706,19 @@ const ADMIN_HTML = `<!doctype html>
           <button id="a-run" class="primary">Generar configuración</button>
           <span id="a-msg" class="mut"></span>
         </div>
+      </div>
+
+      <div class="card hide" id="v-exam">
+        <h2>🎓 Examen del bot</h2>
+        <p class="sub">La IA le hace 6 preguntas trampa (precios, fechas y datos fáciles de inventar)
+        usando el motor real, y evalúa si responde solo con su contenido o se lo inventa. Ideal antes
+        de entregar el bot a un cliente.</p>
+        <div class="actions" style="margin-top:0">
+          <button id="ex-run" class="ghost small">Examinar ahora (≈1 minuto)</button>
+          <span id="ex-msg" class="mut"></span>
+        </div>
+        <div id="ex-score" style="font-weight:700;font-size:17px;margin-top:10px"></div>
+        <div id="ex-list"></div>
       </div>
 
       <div class="card hide" id="v-tenant">
@@ -1688,6 +1945,7 @@ const ADMIN_HTML = `<!doctype html>
           <button class="ghost small" data-copy="i-panel">Copiar</button>
           <button id="i-open" class="ghost small">Abrir</button></div>
         <div class="actions">
+          <button id="rep-send" class="ghost small">📊 Enviar informe del mes al cliente</button>
           <button id="rot-key" class="ghost small">Rotar clave del widget</button>
           <button id="rot-panel" class="ghost small">Rotar enlace del panel</button>
           <span id="integ-msg" class="mut"></span>
@@ -1715,6 +1973,19 @@ const ADMIN_HTML = `<!doctype html>
         <div class="actions" style="margin-top:8px">
           <button id="faq-gen" class="ghost small">Generar formulario con IA</button>
           <span id="faq-msg" class="mut"></span>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+        <label>🧠 Huecos de conocimiento — lo que preguntaron y el bot no supo responder</label>
+        <p class="mut" style="margin-bottom:8px">La IA revisa las preguntas sin respuesta de los
+        últimos 60 días y redacta borradores. Rellena los datos entre [corchetes], marca las que
+        quieras y apruébalas: quedan indexadas al momento.</p>
+        <div class="actions" style="margin-top:0">
+          <button id="gap-run" class="ghost small">Analizar con IA</button>
+          <span id="gap-msg" class="mut"></span>
+        </div>
+        <div id="gap-list"></div>
+        <div class="actions hide" id="gap-approve-row">
+          <button id="gap-approve" class="primary">Aprobar e indexar las marcadas</button>
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <label>Subir archivos (PDF, TXT, MD, CSV, HTML, imágenes…)</label>
@@ -1910,6 +2181,27 @@ function goHome() {
       tb.appendChild(tr);
     });
   });
+  api("/admin/api/errors").then(function (errs) {
+    var box = $("home-errors");
+    if (!errs || errs.error) { box.textContent = "No disponible."; return; }
+    if (!errs.length) { box.textContent = "Sin errores registrados ✓"; box.className = "ok"; return; }
+    box.className = "mut";
+    box.innerHTML = "";
+    errs.slice(0, 8).forEach(function (e) {
+      var d = document.createElement("div");
+      d.className = "doc";
+      var l = document.createElement("div");
+      var t1 = document.createElement("div");
+      t1.textContent = e.route;
+      t1.style.fontWeight = "600";
+      var m = document.createElement("div");
+      m.className = "meta";
+      m.textContent = new Date(e.created_at).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) + " · " + e.message;
+      l.appendChild(t1); l.appendChild(m);
+      d.appendChild(l);
+      box.appendChild(d);
+    });
+  }).catch(function () {});
 }
 $("home-btn").onclick = goHome;
 
@@ -1937,7 +2229,7 @@ function renderTree() {
   });
 }
 
-var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "integ", "ingest"];
+var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "v-exam", "integ", "ingest"];
 function showCards(ids) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
   var canvas = ids.indexOf("v-tenant") >= 0;
@@ -2300,8 +2592,11 @@ function selTenant(id, projectId) {
   $("g-files").value = ""; $("g-upmsg").textContent = "";
   resetFtabs();
   updPrev();
+  $("ex-msg").textContent = ""; $("ex-score").textContent = ""; $("ex-list").innerHTML = "";
+  $("gap-msg").textContent = ""; $("gap-list").innerHTML = "";
+  $("gap-approve-row").classList.add("hide");
   if (t) { renderInteg(t); loadDocs(); loadFaq(); }
-  showCards(t ? ["v-assist", "v-tenant", "integ", "ingest"] : ["v-assist", "v-tenant"]);
+  showCards(t ? ["v-assist", "v-tenant", "v-exam", "integ", "ingest"] : ["v-assist", "v-tenant"]);
 }
 
 function loadFaq() {
@@ -2887,6 +3182,132 @@ $("rot-panel").onclick = function () {
 
 $("i-open").onclick = function () { window.open($("i-panel").value, "_blank"); };
 $("i-demo-open").onclick = function () { window.open($("i-demo").value, "_blank"); };
+
+$("rep-send").onclick = function () {
+  if (!curTenant()) return;
+  if (!confirm("Se enviará al cliente por email el informe de actividad del mes pasado. ¿Enviar ahora?")) return;
+  $("integ-msg").textContent = "Enviando informe…";
+  api("/admin/api/tenants/" + sel.id + "/send-report", { method: "POST", body: "{}" })
+    .then(function (r) {
+      $("integ-msg").textContent = r.ok ? "Informe enviado a " + r.sent_to + " ✓" : (r.reason || r.error || "No se pudo enviar");
+      if (r.ok) toast("Informe enviado ✓");
+    })
+    .catch(function () { $("integ-msg").textContent = "Error al enviar."; });
+};
+
+// ----- examen del bot -----
+
+$("ex-run").onclick = function () {
+  if (!curTenant()) return;
+  $("ex-msg").textContent = "Examinando… genera preguntas, las lanza al motor real y evalúa (≈1 min).";
+  $("ex-msg").className = "mut";
+  $("ex-score").textContent = "";
+  $("ex-list").innerHTML = "";
+  api("/admin/api/tenants/" + sel.id + "/exam", { method: "POST", body: "{}" })
+    .then(function (r) {
+      if (r.error) { $("ex-msg").textContent = r.error; $("ex-msg").className = "err"; return; }
+      $("ex-msg").textContent = "";
+      var passed = r.items.filter(function (x) { return x.ok; }).length;
+      $("ex-score").textContent =
+        (r.score != null ? "Nota: " + r.score + "/10 · " : "") +
+        passed + " de " + r.items.length + " respuestas correctas" +
+        (r.summary ? " — " + r.summary : "");
+      $("ex-score").style.color = passed === r.items.length ? "var(--ok)" : passed >= r.items.length - 1 ? "#a15c00" : "var(--err)";
+      r.items.forEach(function (x) {
+        var d = document.createElement("div");
+        d.className = "doc";
+        d.style.display = "block";
+        var q = document.createElement("div");
+        q.textContent = (x.ok ? "✓ " : "✗ ") + x.q;
+        q.style.fontWeight = "600";
+        q.style.color = x.ok ? "var(--ok)" : "var(--err)";
+        var a = document.createElement("div");
+        a.className = "meta";
+        a.textContent = "Respondió: " + x.a.slice(0, 220) + (x.a.length > 220 ? "…" : "");
+        var w = document.createElement("div");
+        w.className = "meta";
+        w.textContent = x.why;
+        d.appendChild(q); d.appendChild(a); if (x.why) d.appendChild(w);
+        $("ex-list").appendChild(d);
+      });
+    })
+    .catch(function () { $("ex-msg").textContent = "Error durante el examen."; $("ex-msg").className = "err"; });
+};
+
+// ----- huecos de conocimiento -----
+
+var GAP_ROWS = [];
+
+$("gap-run").onclick = function () {
+  if (!curTenant()) return;
+  $("gap-msg").textContent = "Buscando preguntas sin respuesta y redactando borradores…";
+  $("gap-msg").className = "mut";
+  $("gap-list").innerHTML = "";
+  GAP_ROWS = [];
+  $("gap-approve-row").classList.add("hide");
+  api("/admin/api/tenants/" + sel.id + "/gap-suggest", { method: "POST", body: "{}" })
+    .then(function (r) {
+      if (r.error) { $("gap-msg").textContent = r.error; $("gap-msg").className = "err"; return; }
+      if (!r.suggestions.length) {
+        $("gap-msg").textContent = "No hay preguntas sin respuesta en los últimos 60 días. 🎉";
+        $("gap-msg").className = "ok";
+        return;
+      }
+      $("gap-msg").textContent = "Revisa los borradores, completa los [corchetes] y aprueba.";
+      $("gap-msg").className = "ok";
+      r.suggestions.forEach(function (s) {
+        var box = document.createElement("div");
+        box.className = "doc";
+        box.style.display = "block";
+        var top = document.createElement("div");
+        top.style.display = "flex";
+        top.style.gap = "8px";
+        top.style.alignItems = "center";
+        var chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.checked = true;
+        chk.style.width = "auto";
+        var q = document.createElement("div");
+        q.textContent = s.q;
+        q.style.fontWeight = "600";
+        top.appendChild(chk); top.appendChild(q);
+        var ta = document.createElement("textarea");
+        ta.rows = 3;
+        ta.value = s.draft || "";
+        ta.style.marginTop = "8px";
+        box.appendChild(top); box.appendChild(ta);
+        $("gap-list").appendChild(box);
+        GAP_ROWS.push({ q: s.q, chk: chk, ta: ta });
+      });
+      $("gap-approve-row").classList.remove("hide");
+    })
+    .catch(function () { $("gap-msg").textContent = "Error al analizar."; $("gap-msg").className = "err"; });
+};
+
+$("gap-approve").onclick = function () {
+  var t = curTenant();
+  if (!t) return;
+  var chosen = GAP_ROWS.filter(function (r) { return r.chk.checked && r.ta.value.trim(); });
+  if (!chosen.length) { $("gap-msg").textContent = "Marca al menos una con respuesta."; $("gap-msg").className = "err"; return; }
+  var pend = chosen.filter(function (r) { return r.ta.value.indexOf("[") >= 0; });
+  if (pend.length && !confirm("Hay " + pend.length + " respuesta(s) con [datos por completar]. ¿Indexarlas igualmente?")) return;
+  var content = chosen.map(function (r) { return "Pregunta: " + r.q + "\\nRespuesta: " + r.ta.value.trim(); }).join("\\n\\n");
+  var title = "Huecos aprobados — " + new Date().toLocaleDateString("es-ES");
+  $("gap-msg").textContent = "Indexando…"; $("gap-msg").className = "mut";
+  api("/admin/ingest", {
+    method: "POST",
+    body: JSON.stringify({ slug: t.slug, texts: [{ title: title, content: content }] }),
+  }).then(function (r) {
+    if (r.error) { $("gap-msg").textContent = r.error; $("gap-msg").className = "err"; return; }
+    $("gap-msg").textContent = "Indexadas ✓ El bot ya sabe responderlas.";
+    $("gap-msg").className = "ok";
+    toast("Contenido aprobado e indexado ✓");
+    $("gap-list").innerHTML = "";
+    $("gap-approve-row").classList.add("hide");
+    GAP_ROWS = [];
+    loadDocs();
+  }).catch(function () { $("gap-msg").textContent = "Error al indexar."; $("gap-msg").className = "err"; });
+};
 
 // ----- guía de integración -----
 
@@ -3923,7 +4344,12 @@ document.getElementById("up-run").onclick = function () {
 // ---------- handler principal ----------
 
 export default {
-  async fetch(request, env) {
+  async scheduled(event, env, ctx) {
+    // día 1 de cada mes: informes automáticos a los clientes
+    ctx.waitUntil(runMonthlyReports(env));
+  },
+
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
 
@@ -4041,6 +4467,23 @@ ${inject}</body></html>`;
         }
         if (!message || message.length > 2000) {
           return json({ error: "mensaje no válido" }, 400, ch);
+        }
+
+        // límite por IP: 20 mensajes/minuto; el exceso recibe una respuesta fija
+        const ip = request.headers.get("CF-Connecting-IP") || "";
+        if (ip) {
+          const okRate = await rpc(env, "check_rate", { p_ip: ip, p_limit: 20 });
+          if (okRate === false) {
+            return json(
+              {
+                reply: "Estás enviando mensajes muy deprisa. Espera un momento y vuelve a intentarlo 🙂",
+                sources: [],
+                rate_limited: true,
+              },
+              200,
+              ch
+            );
+          }
         }
 
         // límite mensual del tenant: al alcanzarlo, respuesta fija sin gastar modelo
@@ -4506,6 +4949,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
       return json({ error: "no encontrado" }, 404);
     } catch (err) {
       console.error(err);
+      if (ctx?.waitUntil) ctx.waitUntil(logError(env, url.pathname, err?.message || err));
       // el detalle no incluye secretos: son mensajes de estado de Supabase/proveedor
       return json(
         { error: "error interno", detail: String(err?.message || err).slice(0, 300) },

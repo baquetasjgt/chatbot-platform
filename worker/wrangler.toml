@@ -7,6 +7,10 @@ rules = [
   { type = "Text", globs = ["**/*.txt"], fallthrough = true }
 ]
 
+# Día 1 de cada mes a las 07:00 UTC: informes automáticos a los clientes
+[triggers]
+crons = ["0 7 1 * *"]
+
 # Embeddings (@cf/baai/bge-m3) via Workers AI
 [ai]
 binding = "AI"
@@ -14,3 +18,5 @@ binding = "AI"
 # Secretos (con `wrangler secret put`, nunca aquí):
 #   SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, ADMIN_TOKEN
 #   GEMINI_API_KEY (solo si algún tenant usa provider = 'google')
+#   RESEND_API_KEY + EMAIL_FROM (emails: informes y alertas; cuenta gratis en resend.com)
+#   ADMIN_ALERT_EMAIL (tu email para avisos de error, máx. 1/hora)
