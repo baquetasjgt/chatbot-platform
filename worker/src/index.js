@@ -386,7 +386,7 @@ function randomHex(bytes) {
 const TENANT_FIELDS = [
   "slug", "name", "active", "system_prompt", "provider", "model",
   "welcome_message", "suggested_questions", "primary_color", "allowed_domains",
-  "handoff_email", "lead_webhook_url", "monthly_message_limit", "project_id",
+  "handoff_email", "lead_webhook_url", "monthly_message_limit", "project_id", "theme",
 ];
 const CLIENT_FIELDS = ["name", "contact_name", "email", "phone", "notes"];
 const PROJECT_FIELDS = ["client_id", "name", "description"];
@@ -812,15 +812,60 @@ const ADMIN_HTML = `<!doctype html>
           </div>
         </div>
         <div class="ft" id="ft-ap">
-          <label>Color principal del widget</label>
-          <input id="f-color" type="color" style="width:120px;height:42px;padding:4px">
+          <div class="row">
+            <div><label>Color principal (cabecera, botón, mensajes del usuario)</label>
+              <input id="f-color" type="color" style="width:100%;height:42px;padding:4px"></div>
+            <div><label>Color de las respuestas del bot</label>
+              <input id="f-color2" type="color" value="#f2f2f0" style="width:100%;height:42px;padding:4px"></div>
+          </div>
+          <div class="row">
+            <div><label>Fondo de la ventana de chat</label>
+              <input id="f-colorbg" type="color" value="#ffffff" style="width:100%;height:42px;padding:4px"></div>
+            <div><label>Tipografía</label>
+              <select id="f-font">
+                <option value="system">Sistema (por defecto)</option>
+                <option value="Inter">Inter</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Lato">Lato</option>
+                <option value="georgia">Georgia (serif clásica)</option>
+              </select></div>
+          </div>
+          <div class="row">
+            <div><label>Redondez de bordes: <span id="f-radius-v">14</span> px</label>
+              <input id="f-radius" type="range" min="0" max="24" step="2" value="14"></div>
+            <div><label>Sombras</label>
+              <select id="f-shadow">
+                <option value="suave">Suaves</option>
+                <option value="ninguna">Sin sombra</option>
+                <option value="fuerte">Marcadas</option>
+              </select></div>
+          </div>
+          <div class="row">
+            <div><label>Posición en la web</label>
+              <select id="f-side">
+                <option value="derecha">Abajo a la derecha</option>
+                <option value="izquierda">Abajo a la izquierda</option>
+              </select></div>
+            <div><label>Subtítulo de la cabecera</label>
+              <input id="f-subtitle" placeholder="Suele responder al instante"></div>
+          </div>
+          <label>Logo del cliente (URL de una imagen cuadrada; vacío = inicial del nombre)</label>
+          <input id="f-logo" type="url" placeholder="https://cliente.com/logo.png">
+          <div class="row">
+            <div class="check" style="margin-top:18px"><input id="f-teaser" type="checkbox" checked>
+              <label for="f-teaser" style="margin:0">Burbuja de invitación automática</label></div>
+            <div><label>Segundos hasta la invitación</label>
+              <input id="f-tdelay" type="number" min="1" max="60" value="4" style="max-width:120px"></div>
+          </div>
           <label>Vista previa en vivo</label>
           <div id="prev">
             <div id="pv-head">
               <div id="pv-av">A</div>
               <div>
                 <div id="pv-name" style="font-weight:600;font-size:14px">Asistente</div>
-                <div style="font-size:11px;opacity:.75">Suele responder al instante</div>
+                <div id="pv-sub" style="font-size:11px;opacity:.75">Suele responder al instante</div>
               </div>
             </div>
             <div id="pv-bub">¡Hola!</div>
@@ -1260,6 +1305,18 @@ function selTenant(id, projectId) {
   $("f-email").value = isNew ? "" : t.handoff_email || "";
   $("f-webhook").value = isNew ? "" : t.lead_webhook_url || "";
   $("f-active").checked = isNew ? true : !!t.active;
+  var th = (t && t.theme) || {};
+  $("f-color2").value = th.secondary_color || "#f2f2f0";
+  $("f-colorbg").value = th.bg_color || "#ffffff";
+  $("f-font").value = th.font || "system";
+  $("f-radius").value = th.radius == null ? 14 : th.radius;
+  $("f-radius-v").textContent = $("f-radius").value;
+  $("f-shadow").value = th.shadow || "suave";
+  $("f-side").value = th.position || "derecha";
+  $("f-subtitle").value = th.subtitle || "";
+  $("f-logo").value = th.logo_url || "";
+  $("f-teaser").checked = th.teaser !== false;
+  $("f-tdelay").value = th.teaser_delay || 4;
   $("save-msg").textContent = "";
   $("a-brief").value = ""; $("a-msg").textContent = "";
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
@@ -1297,22 +1354,57 @@ function contrastFor(hex) {
   return l > 0.6 ? "#1a1a1a" : "#fff";
 }
 
+function fontStack(f) {
+  if (f === "georgia") return 'Georgia,"Times New Roman",serif';
+  if (!f || f === "system") return 'system-ui,-apple-system,"Segoe UI",sans-serif';
+  return "'" + f + "',system-ui,sans-serif";
+}
+
+function loadFont(f) {
+  if (["Inter", "Poppins", "Roboto", "Montserrat", "Lato"].indexOf(f) < 0) return;
+  if (document.getElementById("gf-" + f)) return;
+  var lk = document.createElement("link");
+  lk.id = "gf-" + f;
+  lk.rel = "stylesheet";
+  lk.href = "https://fonts.googleapis.com/css2?family=" + encodeURIComponent(f) + ":wght@400;600&display=swap";
+  document.head.appendChild(lk);
+}
+
 function updPrev() {
   var c = $("f-color").value || "#111111";
   var t = contrastFor(c);
+  var c2 = $("f-color2").value || "#f2f2f0";
   var name = $("f-name").value.trim() || "Asistente";
+  var rad = $("f-radius").value;
+  var sh = $("f-shadow").value;
+  var font = $("f-font").value;
+  loadFont(font);
+  $("f-radius-v").textContent = rad;
+  var prev = $("prev");
+  prev.style.background = $("f-colorbg").value || "#ffffff";
+  prev.style.fontFamily = fontStack(font);
+  prev.style.boxShadow = sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.35)" : "0 12px 48px rgba(0,0,0,.15)";
   $("pv-head").style.background = c;
   $("pv-head").style.color = t;
+  $("pv-head").style.borderRadius = rad + "px";
   $("pv-av").textContent = name.charAt(0).toUpperCase();
   $("pv-name").textContent = name;
+  $("pv-sub").textContent = $("f-subtitle").value.trim() || "Suele responder al instante";
   $("pv-bub").textContent = $("f-welcome").value.trim() || "¡Hola!";
+  $("pv-bub").style.background = c2;
+  $("pv-bub").style.color = contrastFor(c2);
+  $("pv-bub").style.borderRadius = rad + "px";
   $("pv-mine").style.background = c;
   $("pv-mine").style.color = t;
+  $("pv-mine").style.borderRadius = rad + "px";
   $("pv-btn").style.background = c;
 }
-$("f-color").oninput = updPrev;
-$("f-name").oninput = updPrev;
-$("f-welcome").oninput = updPrev;
+["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome"].forEach(function (id) {
+  $(id).oninput = updPrev;
+});
+["f-font", "f-shadow"].forEach(function (id) {
+  $(id).onchange = updPrev;
+});
 
 function loadDocs() {
   var box = $("doc-list");
@@ -1389,6 +1481,18 @@ function collect() {
     handoff_email: $("f-email").value.trim() || null,
     lead_webhook_url: $("f-webhook").value.trim() || null,
     active: $("f-active").checked,
+    theme: {
+      secondary_color: $("f-color2").value,
+      bg_color: $("f-colorbg").value,
+      font: $("f-font").value,
+      radius: parseInt($("f-radius").value, 10),
+      shadow: $("f-shadow").value,
+      position: $("f-side").value,
+      subtitle: $("f-subtitle").value.trim(),
+      logo_url: $("f-logo").value.trim(),
+      teaser: $("f-teaser").checked,
+      teaser_delay: parseInt($("f-tdelay").value, 10) || 4,
+    },
   };
   var lim = parseInt($("f-limit").value, 10);
   if (!isNaN(lim)) d.monthly_message_limit = lim;
@@ -1979,6 +2083,7 @@ ${inject}</body></html>`;
             welcome_message: tenant.welcome_message,
             suggested_questions: tenant.suggested_questions,
             primary_color: tenant.primary_color,
+            theme: tenant.theme || {},
           },
           200,
           // el host propio se permite siempre: las páginas /demo viven en él

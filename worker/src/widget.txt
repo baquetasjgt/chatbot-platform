@@ -15,32 +15,38 @@
   var open = false;
   var busy = false;
   var teaser = null;
-  var cfg = { primary_color: "#111", name: "Asistente", welcome_message: "¡Hola!", suggested_questions: [] };
+  var cfg = { primary_color: "#111", name: "Asistente", welcome_message: "¡Hola!", suggested_questions: [], theme: {} };
+  var TH = {};
   var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var GOOGLE_FONTS = ["Inter", "Poppins", "Roboto", "Montserrat", "Lato"];
 
   var css = `
-  .cb-btn{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:28px;border:0;
+  .cb-btn{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;border:0;
     background:var(--cb);cursor:pointer;z-index:2147483000;display:flex;align-items:center;
-    justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.18);transition:transform .18s}
+    justify-content:center;box-shadow:var(--cbshb,0 4px 16px rgba(0,0,0,.18));transition:transform .18s}
   .cb-btn:hover{transform:scale(1.06)}
+  .cb-btn.cb-left{left:24px;right:auto}
   .cb-btn svg{width:26px;height:26px;fill:none;stroke:var(--cbt,#fff);stroke-width:1.8;stroke-linecap:round}
   .cb-panel{position:fixed;bottom:92px;right:24px;width:380px;max-width:calc(100vw - 32px);
-    height:560px;max-height:calc(100vh - 130px);background:#fff;border-radius:16px;z-index:2147483000;
-    display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.2);
-    font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1a1a1a}
+    height:560px;max-height:calc(100vh - 130px);background:var(--cbg,#fff);
+    border-radius:var(--cbrl,16px);z-index:2147483000;
+    display:none;flex-direction:column;overflow:hidden;box-shadow:var(--cbsh,0 12px 48px rgba(0,0,0,.2));
+    font:15px/1.55 var(--cbf,system-ui,-apple-system,"Segoe UI",sans-serif);color:#1a1a1a}
   .cb-panel.on{display:flex}
+  .cb-panel.cb-left{left:24px;right:auto}
   .cb-head{background:var(--cb);color:var(--cbt,#fff);padding:13px 16px;display:flex;
     align-items:center;gap:11px;flex:0 0 auto}
-  .cb-av{width:36px;height:36px;border-radius:18px;background:rgba(0,0,0,.18);display:flex;
-    align-items:center;justify-content:center;font-weight:600;font-size:16px;flex:0 0 auto}
+  .cb-av{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.18);display:flex;
+    align-items:center;justify-content:center;font-weight:600;font-size:16px;flex:0 0 auto;overflow:hidden}
+  .cb-av img{width:100%;height:100%;object-fit:cover}
   .cb-hname{font-weight:600;line-height:1.25}
   .cb-hsub{font-size:12px;opacity:.75;line-height:1.25}
   .cb-close{background:0;border:0;color:var(--cbt,#fff);font-size:22px;cursor:pointer;line-height:1;
     opacity:.8;margin-left:auto}
   .cb-close:hover{opacity:1}
   .cb-log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
-  .cb-msg{max-width:85%;padding:10px 14px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
-  .cb-msg.bot{background:#f2f2f0;align-self:flex-start;border-bottom-left-radius:4px}
+  .cb-msg{max-width:85%;padding:10px 14px;border-radius:var(--cbr,14px);white-space:pre-wrap;word-wrap:break-word}
+  .cb-msg.bot{background:var(--cb2,#f2f2f0);color:var(--cb2t,#1a1a1a);align-self:flex-start;border-bottom-left-radius:4px}
   .cb-msg.me{background:var(--cb);color:var(--cbt,#fff);align-self:flex-end;border-bottom-right-radius:4px}
   .cb-msg.md{white-space:normal}
   .cb-msg.md a{color:inherit;text-decoration:underline}
@@ -48,14 +54,15 @@
   .cb-src{font-size:12px;color:#888;align-self:flex-start;margin-top:-6px}
   .cb-src a{color:#888}
   .cb-sug{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 12px}
-  .cb-sug button{background:#fff;border:1px solid #ddd;border-radius:16px;padding:7px 12px;
-    font-size:13px;cursor:pointer;color:#333}
+  .cb-sug button{background:var(--cbg,#fff);border:1px solid #ddd;border-radius:16px;padding:7px 12px;
+    font-size:13px;cursor:pointer;color:#333;font-family:inherit}
   .cb-sug button:hover{border-color:var(--cb)}
   .cb-foot{display:flex;gap:8px;padding:12px;border-top:1px solid #eee;flex:0 0 auto}
-  .cb-foot input{flex:1;border:1px solid #ddd;border-radius:10px;padding:11px 13px;font-size:15px;outline:0}
+  .cb-foot input{flex:1;border:1px solid #ddd;border-radius:calc(var(--cbr,14px)*.72 + 4px);
+    padding:11px 13px;font-size:15px;outline:0;font-family:inherit;background:#fff;color:#1a1a1a}
   .cb-foot input:focus{border-color:var(--cb)}
-  .cb-foot button{background:var(--cb);color:var(--cbt,#fff);border:0;border-radius:10px;
-    padding:0 16px;cursor:pointer}
+  .cb-foot button{background:var(--cb);color:var(--cbt,#fff);border:0;
+    border-radius:calc(var(--cbr,14px)*.72 + 4px);padding:0 16px;cursor:pointer}
   .cb-foot button:disabled{opacity:.45;cursor:default}
   .cb-dots span{display:inline-block;width:6px;height:6px;margin-right:3px;border-radius:3px;
     background:#bbb;animation:cbd 1.2s infinite}
@@ -63,13 +70,14 @@
   .cb-dots span:nth-child(3){animation-delay:.36s}
   @keyframes cbd{0%,60%,100%{opacity:.3}30%{opacity:1}}
   .cb-tease{position:fixed;bottom:92px;right:24px;max-width:272px;background:#fff;color:#1a1a1a;
-    border:1px solid #e5e5e2;border-radius:14px;border-bottom-right-radius:4px;
-    padding:12px 34px 12px 14px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
-    box-shadow:0 8px 28px rgba(0,0,0,.16);cursor:pointer;z-index:2147483000;animation:cbtin .3s ease}
+    border:1px solid #e5e5e2;border-radius:var(--cbr,14px);border-bottom-right-radius:4px;
+    padding:12px 34px 12px 14px;font:14px/1.5 var(--cbf,system-ui,-apple-system,"Segoe UI",sans-serif);
+    box-shadow:var(--cbshb,0 8px 28px rgba(0,0,0,.16));cursor:pointer;z-index:2147483000;animation:cbtin .3s ease}
+  .cb-tease.cb-left{left:24px;right:auto;border-bottom-right-radius:var(--cbr,14px);border-bottom-left-radius:4px}
   @keyframes cbtin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .cb-tease .cb-tx{position:absolute;top:5px;right:7px;background:0;border:0;color:#999;
     font-size:16px;cursor:pointer;line-height:1;padding:2px}
-  @media(max-width:480px){.cb-panel{bottom:0;right:0;width:100%;max-width:100%;height:100%;
+  @media(max-width:480px){.cb-panel{bottom:0;right:0;left:0;width:100%;max-width:100%;height:100%;
     max-height:100%;border-radius:0}}
   @media(prefers-reduced-motion:reduce){.cb-btn,.cb-dots span,.cb-tease{transition:none;animation:none}}`;
 
@@ -107,19 +115,56 @@
     return x;
   }
 
-  function textColorFor(hex) {
+  function textColorFor(hex, fallback) {
     var m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
-    if (!m) return "#fff";
+    if (!m) return fallback || "#fff";
     var n = parseInt(m[1], 16);
     var l = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
     return l > 0.6 ? "#1a1a1a" : "#fff";
   }
 
+  function fontStack(f) {
+    if (f === "georgia") return 'Georgia,"Times New Roman",serif';
+    if (!f || f === "system") return 'system-ui,-apple-system,"Segoe UI",sans-serif';
+    return "'" + f + "',system-ui,sans-serif";
+  }
+
+  function applyTheme() {
+    TH = cfg.theme || {};
+    var r = document.documentElement.style;
+    r.setProperty("--cb", cfg.primary_color);
+    r.setProperty("--cbt", textColorFor(cfg.primary_color));
+    r.setProperty("--cb2", TH.secondary_color || "#f2f2f0");
+    r.setProperty("--cb2t", textColorFor(TH.secondary_color || "#f2f2f0", "#1a1a1a"));
+    r.setProperty("--cbg", TH.bg_color || "#ffffff");
+    var rad = TH.radius == null ? 14 : TH.radius;
+    r.setProperty("--cbr", rad + "px");
+    r.setProperty("--cbrl", Math.min(rad + 4, 28) + "px");
+    r.setProperty("--cbf", fontStack(TH.font));
+    var sh = TH.shadow || "suave";
+    r.setProperty("--cbsh", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.35)" : "0 12px 48px rgba(0,0,0,.2)");
+    r.setProperty("--cbshb", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 6px 22px rgba(0,0,0,.32)" : "0 4px 16px rgba(0,0,0,.18)");
+    if (GOOGLE_FONTS.indexOf(TH.font) >= 0 && !document.getElementById("cb-font")) {
+      var lk = document.createElement("link");
+      lk.id = "cb-font";
+      lk.rel = "stylesheet";
+      lk.href = "https://fonts.googleapis.com/css2?family=" + encodeURIComponent(TH.font) + ":wght@400;600&display=swap";
+      document.head.appendChild(lk);
+    }
+    var left = TH.position === "izquierda";
+    btn.classList.toggle("cb-left", left);
+    panel.classList.toggle("cb-left", left);
+    if (teaser) teaser.classList.toggle("cb-left", left);
+  }
+
   function render() {
+    var avatar = TH.logo_url
+      ? '<img src="' + esc(TH.logo_url) + '" alt="">'
+      : esc((cfg.name || "A").charAt(0).toUpperCase());
     panel.innerHTML =
-      '<div class="cb-head"><div class="cb-av">' + esc((cfg.name || "A").charAt(0).toUpperCase()) + '</div>' +
+      '<div class="cb-head"><div class="cb-av">' + avatar + '</div>' +
       '<div><div class="cb-hname">' + esc(cfg.name) + '</div>' +
-      '<div class="cb-hsub">Suele responder al instante</div></div>' +
+      '<div class="cb-hsub">' + esc(TH.subtitle || "Suele responder al instante") + '</div></div>' +
       '<button class="cb-close" aria-label="Cerrar chat">&times;</button></div>' +
       '<div class="cb-log" id="cb-log"></div>' +
       '<div class="cb-sug" id="cb-sug"></div>' +
@@ -246,7 +291,7 @@
   function showTeaser() {
     if (open || teaser || sessionStorage.getItem("cb_teased")) return;
     teaser = document.createElement("div");
-    teaser.className = "cb-tease";
+    teaser.className = "cb-tease" + (TH.position === "izquierda" ? " cb-left" : "");
     teaser.setAttribute("role", "button");
     teaser.innerHTML = '<button class="cb-tx" aria-label="Cerrar aviso">&times;</button>' + esc(cfg.welcome_message);
     teaser.onclick = function (e) {
@@ -278,24 +323,19 @@
     toggle();
   };
 
-  function applyColors() {
-    document.documentElement.style.setProperty("--cb", cfg.primary_color);
-    document.documentElement.style.setProperty("--cbt", textColorFor(cfg.primary_color));
-  }
-
   fetch(API + "/api/config?key=" + encodeURIComponent(KEY))
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (d.error) return;
       cfg = d;
-      applyColors();
+      applyTheme();
       if (AUTO > 0) {
         setTimeout(openChat, AUTO);
-      } else {
-        setTimeout(showTeaser, 4000);
+      } else if (!TH || TH.teaser !== false) {
+        setTimeout(showTeaser, Math.max(1, (TH && TH.teaser_delay) || 4) * 1000);
       }
     })
     .catch(function () {});
 
-  applyColors();
+  applyTheme();
 })();
