@@ -2233,7 +2233,7 @@ function selTenant(id, projectId) {
   slugTouched = !isNew;
   var bgi = th.bg_image || "";
   $("f-bgimg").value = "";
-  if (/gradient\(/.test(bgi)) {
+  if (bgi.indexOf("gradient(") >= 0) {
     var gcols = bgi.match(/#[0-9a-fA-F]{6}/g) || [];
     if (gcols[0]) $("g-c1").value = gcols[0];
     if (gcols.length > 1) $("g-c2").value = gcols[gcols.length - 1];
