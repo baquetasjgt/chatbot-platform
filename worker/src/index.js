@@ -93,6 +93,56 @@ function htmlToText(html) {
     .trim();
 }
 
+// ---------- indexación común (URLs, textos y archivos) ----------
+
+async function indexDocument(env, tenantId, { source_url = null, source_type, title, content }) {
+  const clean = (content || "").trim();
+  if (clean.length < 100) return { ok: false, reason: "sin contenido (menos de 100 caracteres)" };
+
+  // reemplaza el documento anterior de la misma fuente (los chunks caen en cascada)
+  if (source_url) {
+    await sb(env, `documents?tenant_id=eq.${tenantId}&source_url=eq.${encodeURIComponent(source_url)}`, {
+      method: "DELETE",
+    });
+  } else if (title) {
+    await sb(env, `documents?tenant_id=eq.${tenantId}&source_url=is.null&title=eq.${encodeURIComponent(title)}`, {
+      method: "DELETE",
+    });
+  }
+
+  const doc = (
+    await sb(env, "documents", {
+      method: "POST",
+      body: {
+        tenant_id: tenantId,
+        source_url,
+        source_type,
+        title,
+        content: clean,
+        indexed_at: new Date().toISOString(),
+      },
+    })
+  )[0];
+
+  const pieces = chunkText(clean);
+  for (let i = 0; i < pieces.length; i += 20) {
+    const batch = pieces.slice(i, i + 20);
+    const vecs = await embed(env, batch);
+    await sb(env, "chunks", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: batch.map((chunk, j) => ({
+        tenant_id: tenantId,
+        document_id: doc.id,
+        content: chunk,
+        embedding: vecs[j],
+        position: i + j,
+      })),
+    });
+  }
+  return { ok: true, chunks: pieces.length };
+}
+
 // ---------- herramienta de captura de lead ----------
 
 const LEAD_TOOL = {
@@ -510,9 +560,16 @@ const ADMIN_HTML = `<!doctype html>
 
       <div class="card" id="ingest">
         <h2>Contenido del bot</h2>
-        <p class="sub">Lo que el bot sabe. Reindexar una URL reemplaza la versión anterior, no duplica.
-        Si la web bloquea el scraping o los datos están en PDF/imágenes, pega el texto a mano — es lo
-        que mejor funciona.</p>
+        <p class="sub">Lo que el bot sabe. Reindexar la misma fuente (URL o archivo con el mismo nombre)
+        reemplaza la versión anterior, no duplica.</p>
+        <label>Subir archivos (PDF, TXT, MD, CSV, HTML, imágenes…)</label>
+        <input id="g-files" type="file" multiple
+          accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
+        <div class="actions">
+          <button id="g-upload" class="primary">Subir e indexar archivos</button>
+          <span id="g-upmsg" class="mut"></span>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <label>URLs a indexar (una por línea)</label>
         <textarea id="g-urls" rows="3"></textarea>
         <label>O texto pegado a mano — título</label>
@@ -637,6 +694,7 @@ function select(t) {
   $("ingest").classList.toggle("hide", isNew);
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
   $("g-report").textContent = ""; $("g-msg").textContent = "";
+  $("g-files").value = ""; $("g-upmsg").textContent = "";
   if (!isNew) renderInteg(t);
 }
 
@@ -742,14 +800,53 @@ $("g-run").onclick = function () {
   }).then(function (r) {
     if (r.error) { $("g-msg").textContent = r.error; $("g-msg").className = "err"; return; }
     $("g-msg").textContent = "Hecho."; $("g-msg").className = "ok";
-    $("g-report").innerHTML = (r.indexed || []).map(function (x) {
-      return (x.ok ? "✓ " : "✗ ") + x.source +
-        (x.ok ? " — " + x.chunks + " fragmentos" : " — " + (x.reason || "error"));
-    }).map(function (s) {
-      var d = document.createElement("div"); d.textContent = s; return d.outerHTML;
-    }).join("");
+    showReport(r);
   }).catch(function () {
     $("g-msg").textContent = "Error al indexar."; $("g-msg").className = "err";
+  });
+};
+
+function showReport(r) {
+  $("g-report").innerHTML = (r.indexed || []).map(function (x) {
+    var d = document.createElement("div");
+    d.textContent = (x.ok ? "✓ " : "✗ ") + x.source +
+      (x.ok ? " — " + x.chunks + " fragmentos" : " — " + (x.reason || "error"));
+    return d.outerHTML;
+  }).join("");
+}
+
+$("g-upload").onclick = function () {
+  var files = $("g-files").files;
+  if (!files.length) {
+    $("g-upmsg").textContent = "Elige uno o varios archivos primero."; $("g-upmsg").className = "err";
+    return;
+  }
+  var big = [].find.call(files, function (f) { return f.size > 10 * 1024 * 1024; });
+  if (big) {
+    $("g-upmsg").textContent = big.name + " pesa más de 10 MB; divídelo o reduce el PDF.";
+    $("g-upmsg").className = "err";
+    return;
+  }
+  $("g-upmsg").textContent = "Subiendo e indexando… puede tardar un poco."; $("g-upmsg").className = "mut";
+  Promise.all([].map.call(files, function (f) {
+    return new Promise(function (resolve, reject) {
+      var rd = new FileReader();
+      rd.onload = function () { resolve({ name: f.name, data: String(rd.result).split(",")[1] }); };
+      rd.onerror = reject;
+      rd.readAsDataURL(f);
+    });
+  })).then(function (payload) {
+    return api("/admin/upload", {
+      method: "POST",
+      body: JSON.stringify({ slug: current.slug, files: payload }),
+    });
+  }).then(function (r) {
+    if (r.error) { $("g-upmsg").textContent = r.error; $("g-upmsg").className = "err"; return; }
+    $("g-upmsg").textContent = "Hecho."; $("g-upmsg").className = "ok";
+    showReport(r);
+    $("g-files").value = "";
+  }).catch(function () {
+    $("g-upmsg").textContent = "Error al subir."; $("g-upmsg").className = "err";
   });
 };
 
@@ -1109,51 +1206,54 @@ export default {
 
         const report = [];
         for (const d of docs) {
-          if (d.error || !d.content || d.content.length < 100) {
-            report.push({ source: d.url || d.title, ok: false, reason: d.error || "sin contenido" });
+          if (d.error) {
+            report.push({ source: d.url || d.title, ok: false, reason: d.error });
             continue;
           }
-
-          // reemplaza el documento anterior de esa fuente (los chunks caen en cascada)
-          if (d.url) {
-            await sb(env, `documents?tenant_id=eq.${tenant.id}&source_url=eq.${encodeURIComponent(d.url)}`, {
-              method: "DELETE",
-            });
-          }
-
-          const doc = (
-            await sb(env, "documents", {
-              method: "POST",
-              body: {
-                tenant_id: tenant.id,
-                source_url: d.url,
-                source_type: d.url ? "url" : "text",
-                title: d.title,
-                content: d.content,
-                indexed_at: new Date().toISOString(),
-              },
-            })
-          )[0];
-
-          const pieces = chunkText(d.content);
-          for (let i = 0; i < pieces.length; i += 20) {
-            const batch = pieces.slice(i, i + 20);
-            const vecs = await embed(env, batch);
-            await sb(env, "chunks", {
-              method: "POST",
-              headers: { Prefer: "return=minimal" },
-              body: batch.map((content, j) => ({
-                tenant_id: tenant.id,
-                document_id: doc.id,
-                content,
-                embedding: vecs[j],
-                position: i + j,
-              })),
-            });
-          }
-          report.push({ source: d.url || d.title, ok: true, chunks: pieces.length });
+          const res = await indexDocument(env, tenant.id, {
+            source_url: d.url,
+            source_type: d.url ? "url" : "text",
+            title: d.title,
+            content: d.content,
+          });
+          report.push({ source: d.url || d.title, ...res });
         }
 
+        return json({ indexed: report });
+      }
+
+      // --- subida de archivos (admin): PDF, TXT, MD, CSV, imágenes… ---
+      if (url.pathname === "/admin/upload" && request.method === "POST") {
+        if (!isAdmin(request, env)) return json({ error: "no autorizado" }, 401);
+        const { slug, files = [] } = await request.json();
+        const tenant = (await sb(env, `tenants?slug=eq.${slug}&select=id`))[0];
+        if (!tenant) return json({ error: "tenant no encontrado" }, 404);
+
+        const report = [];
+        for (const f of files) {
+          try {
+            const bytes = Uint8Array.from(atob(f.data || ""), (c) => c.charCodeAt(0));
+            const ext = (f.name?.split(".").pop() || "").toLowerCase();
+            let content;
+            if (ext === "txt" || ext === "md") {
+              content = new TextDecoder().decode(bytes);
+            } else {
+              // PDF y demás: conversión a Markdown de Workers AI
+              const [md] = await env.AI.toMarkdown([
+                { name: f.name, blob: new Blob([bytes], { type: "application/octet-stream" }) },
+              ]);
+              content = md?.data || "";
+            }
+            const res = await indexDocument(env, tenant.id, {
+              source_type: "file",
+              title: f.name,
+              content,
+            });
+            report.push({ source: f.name, ...res });
+          } catch (err) {
+            report.push({ source: f.name, ok: false, reason: String(err?.message || err).slice(0, 200) });
+          }
+        }
         return json({ indexed: report });
       }
 
