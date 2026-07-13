@@ -3128,7 +3128,7 @@ export default {
         }
 
         const inject =
-          `<div style="position:fixed;top:0;left:0;right:0;z-index:2147483001;background:#111;color:#fff;` +
+          `<div style="position:fixed;top:0;left:0;right:0;z-index:2147482998;background:#111;color:#fff;` +
           `font:600 13px/1.4 system-ui,sans-serif;padding:9px 16px;text-align:center">` +
           `DEMOSTRACIÓN · Así se verá el asistente de ${h(tenant.name)} en su web · ` +
           `El chat funciona de verdad: pruébelo · ¿Le gusta? Se activa en su web en 5 minutos</div>` +
