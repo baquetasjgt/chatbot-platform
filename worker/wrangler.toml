@@ -1,0 +1,10 @@
+name = "chatbot-engine"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Embeddings (@cf/baai/bge-m3) via Workers AI
+[ai]
+binding = "AI"
+
+# Secretos (con `wrangler secret put`, nunca aquí):
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, ADMIN_TOKEN
