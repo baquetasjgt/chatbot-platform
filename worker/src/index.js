@@ -1294,6 +1294,27 @@ const ADMIN_HTML = `<!doctype html>
   .gradrow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .gradrow button{width:58px;height:42px;border:2px solid var(--line);border-radius:10px;cursor:pointer;padding:0}
   .gradrow button.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+  .cp-btn{border:1px solid var(--line);border-radius:10px;cursor:pointer;height:42px;width:100%;
+    padding:0;box-shadow:inset 0 0 0 3px #fff}
+  .cp-btn.mini{width:58px}
+  #cp{position:absolute;z-index:90;background:#fff;border:1px solid var(--line);border-radius:16px;
+    padding:14px;width:252px;box-shadow:0 14px 44px rgba(16,24,43,.28)}
+  #cp-sv{position:relative;height:140px;border-radius:12px;cursor:crosshair;
+    background:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,#f00)}
+  #cp-svc{position:absolute;width:18px;height:18px;border-radius:9px;border:3px solid #fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.3),0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%);
+    pointer-events:none}
+  #cp-hue{position:relative;height:12px;border-radius:6px;margin-top:14px;cursor:pointer;
+    background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+  #cp-huec{position:absolute;top:50%;width:20px;height:20px;border-radius:10px;background:#fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.2),0 1px 5px rgba(0,0,0,.35);transform:translate(-50%,-50%);
+    pointer-events:none}
+  #cp-row{display:flex;gap:8px;align-items:center;margin-top:14px}
+  #cp-swatch{width:36px;height:36px;border-radius:18px;border:1px solid var(--line);flex:0 0 auto}
+  #cp-hex{flex:1;font-family:ui-monospace,monospace;font-size:13px;text-transform:uppercase;
+    border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  #cp-eye{width:38px;height:38px;border-radius:19px;border:1px solid var(--line);background:#fff;
+    flex:0 0 auto;font-size:16px}
 </style>
 </head>
 <body>
@@ -1748,6 +1769,16 @@ const ADMIN_HTML = `<!doctype html>
 </div>
 
 <div id="toast"></div>
+
+<div id="cp" class="hide">
+  <div id="cp-sv"><div id="cp-svc"></div></div>
+  <div id="cp-hue"><div id="cp-huec"></div></div>
+  <div id="cp-row">
+    <div id="cp-swatch"></div>
+    <input id="cp-hex" maxlength="7" spellcheck="false">
+    <button id="cp-eye" type="button" title="Capturar un color de la pantalla">💧</button>
+  </div>
+</div>
 
 <script>
 var TOKEN = localStorage.getItem("cb_admin") || "";
@@ -2579,6 +2610,7 @@ function updPrev() {
     lbl.style.cssText = "color:" + t + ";font:600 14px system-ui,sans-serif";
     pb.appendChild(lbl);
   }
+  syncSwatches();
 }
 ["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
  "f-tplaceholder", "f-tsend", "f-brand", "f-sugg", "f-logo", "f-bgimg"].forEach(function (id) {
@@ -3004,6 +3036,147 @@ $("g-upload").onclick = function () {
     $("g-upmsg").textContent = "Error al subir."; $("g-upmsg").className = "err";
   });
 };
+
+// ----- selector de color estilo Canva -----
+
+var CP = { input: null, btn: null, h: 0, s: 1, v: 1 };
+var CP_BTNS = [];
+
+function hexToHsv(hex) {
+  var m = /^#?([0-9a-fA-F]{6})$/.exec(hex || "");
+  if (!m) return { h: 0, s: 0, v: 0 };
+  var n = parseInt(m[1], 16);
+  var r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, hh = 0;
+  if (d) {
+    if (mx === r) hh = ((g - b) / d) % 6;
+    else if (mx === g) hh = (b - r) / d + 2;
+    else hh = (r - g) / d + 4;
+    hh *= 60;
+    if (hh < 0) hh += 360;
+  }
+  return { h: hh, s: mx ? d / mx : 0, v: mx };
+}
+
+function hsvToHex(hh, s, v) {
+  var c = v * s, x = c * (1 - Math.abs(((hh / 60) % 2) - 1)), m = v - c;
+  var r = 0, g = 0, b = 0;
+  if (hh < 60) { r = c; g = x; } else if (hh < 120) { r = x; g = c; }
+  else if (hh < 180) { g = c; b = x; } else if (hh < 240) { g = x; b = c; }
+  else if (hh < 300) { r = x; b = c; } else { r = c; b = x; }
+  function q(u) { return ("0" + Math.round((u + m) * 255).toString(16)).slice(-2); }
+  return "#" + q(r) + q(g) + q(b);
+}
+
+function cpRender(updateHexField) {
+  var hex = hsvToHex(CP.h, CP.s, CP.v);
+  $("cp-sv").style.background =
+    "linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff," + hsvToHex(CP.h, 1, 1) + ")";
+  $("cp-svc").style.left = (CP.s * 100) + "%";
+  $("cp-svc").style.top = ((1 - CP.v) * 100) + "%";
+  $("cp-svc").style.background = hex;
+  $("cp-huec").style.left = ((CP.h / 360) * 100) + "%";
+  $("cp-swatch").style.background = hex;
+  if (updateHexField !== false) $("cp-hex").value = hex.toUpperCase();
+  if (CP.input) {
+    CP.input.value = hex;
+    CP.input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  if (CP.btn) CP.btn.style.background = hex;
+}
+
+function cpDrag(el, fn) {
+  el.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    fn(e);
+    function mv(ev) { fn(ev); }
+    function up() {
+      document.removeEventListener("pointermove", mv);
+      document.removeEventListener("pointerup", up);
+    }
+    document.addEventListener("pointermove", mv);
+    document.addEventListener("pointerup", up);
+  });
+}
+
+cpDrag($("cp-sv"), function (e) {
+  var r = $("cp-sv").getBoundingClientRect();
+  CP.s = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  CP.v = 1 - Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  cpRender();
+});
+
+cpDrag($("cp-hue"), function (e) {
+  var r = $("cp-hue").getBoundingClientRect();
+  CP.h = Math.min(359.9, Math.max(0, ((e.clientX - r.left) / r.width) * 360));
+  cpRender();
+});
+
+$("cp-hex").oninput = function () {
+  var m = /^#?([0-9a-fA-F]{6})$/.exec(this.value.trim());
+  if (!m) return;
+  var hsv = hexToHsv("#" + m[1]);
+  CP.h = hsv.h; CP.s = hsv.s; CP.v = hsv.v;
+  cpRender(false);
+};
+
+if (window.EyeDropper) {
+  $("cp-eye").onclick = function () {
+    new window.EyeDropper().open().then(function (res) {
+      var hsv = hexToHsv(res.sRGBHex);
+      CP.h = hsv.h; CP.s = hsv.s; CP.v = hsv.v;
+      cpRender();
+    }).catch(function () {});
+  };
+} else {
+  $("cp-eye").style.display = "none";
+}
+
+function openCP(input, btn) {
+  CP.input = input;
+  CP.btn = btn;
+  var hsv = hexToHsv(input.value);
+  CP.h = hsv.h; CP.s = hsv.s; CP.v = hsv.v;
+  var cp = $("cp");
+  cp.classList.remove("hide");
+  var r = btn.getBoundingClientRect();
+  var left = r.left + window.scrollX;
+  var maxLeft = window.scrollX + document.documentElement.clientWidth - 268;
+  cp.style.left = Math.min(left, maxLeft) + "px";
+  cp.style.top = (r.bottom + window.scrollY + 8) + "px";
+  cpRender();
+}
+
+document.addEventListener("pointerdown", function (e) {
+  var cp = $("cp");
+  if (cp.classList.contains("hide")) return;
+  if (cp.contains(e.target)) return;
+  if (CP.btn && CP.btn.contains(e.target)) return;
+  cp.classList.add("hide");
+  CP.input = null;
+  CP.btn = null;
+});
+
+function initColorPickers() {
+  ["f-color", "f-color2", "f-colorbg", "g-c1", "g-c2"].forEach(function (id) {
+    var input = $(id);
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cp-btn" + (id === "g-c1" || id === "g-c2" ? " mini" : "");
+    btn.style.background = input.value;
+    btn.setAttribute("aria-label", "Elegir color");
+    btn.onclick = function () { openCP(input, btn); };
+    input.style.display = "none";
+    input.parentNode.insertBefore(btn, input.nextSibling);
+    CP_BTNS.push({ input: input, btn: btn });
+  });
+}
+
+function syncSwatches() {
+  CP_BTNS.forEach(function (p) { p.btn.style.background = p.input.value; });
+}
+
+initColorPickers();
 
 if (TOKEN) load(); else showLogin();
 </script>
