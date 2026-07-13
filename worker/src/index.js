@@ -39,6 +39,13 @@ async function rpc(env, fn, args) {
   return sb(env, `rpc/${fn}`, { method: "POST", body: args });
 }
 
+// el Storage de Supabase rechaza las claves nuevas (sb_secret_…) en Authorization;
+// van en apikey. Las claves JWT antiguas necesitan ambas cabeceras.
+function storageHeaders(env) {
+  const k = env.SUPABASE_SERVICE_KEY;
+  return k.startsWith("sb_") ? { apikey: k } : { apikey: k, Authorization: `Bearer ${k}` };
+}
+
 // ---------- CORS ----------
 
 function cors(origin, allowed) {
@@ -656,10 +663,7 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}`;
       const path = `${mInv[1]}/${inv.id}.pdf`;
       const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${path}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-          "Content-Type": "application/pdf",
-        },
+        headers: { ...storageHeaders(env), "Content-Type": "application/pdf" },
         body: bytes,
       });
       if (up.ok) {
@@ -683,7 +687,7 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}`;
     if (inv?.pdf_path) {
       await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${inv.pdf_path}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` },
+        headers: storageHeaders(env),
       }).catch(() => {});
     }
     await sb(env, `invoices?id=eq.${mInvOne[1]}`, { method: "DELETE" });
@@ -3178,7 +3182,7 @@ ${inject}</body></html>`;
         );
         if (!inv?.pdf_path) return new Response("Factura no encontrada", { status: 404 });
         const pdf = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${inv.pdf_path}`, {
-          headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` },
+          headers: storageHeaders(env),
         });
         if (!pdf.ok) return new Response("PDF no disponible", { status: 404 });
         return new Response(pdf.body, {
