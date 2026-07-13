@@ -454,6 +454,11 @@ async function handleAdminApi(request, env, url) {
     return json({ panel_token: token });
   }
 
+  // --- métricas globales del mes (pantalla de inicio) ---
+  if (url.pathname === "/admin/api/metrics" && request.method === "GET") {
+    return json(await rpc(env, "admin_metrics", {}));
+  }
+
   // --- documentos indexados de un chatbot ---
   const mDocs = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/documents$/);
   if (mDocs && request.method === "GET") {
@@ -630,6 +635,36 @@ const ADMIN_HTML = `<!doctype html>
   .doc{display:flex;justify-content:space-between;align-items:center;gap:10px;
     border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:7px;font-size:14px}
   .doc .meta{color:var(--mut);font-size:12.5px}
+  .ftabs{display:flex;gap:8px;margin:18px 0 4px;flex-wrap:wrap}
+  .ftabs button{border:1px solid var(--line);background:#fafaf8;border-radius:8px;padding:6px 12px;
+    font-size:13px;cursor:pointer}
+  .ftabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .ft{display:none}
+  .ft.on{display:block}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
+    padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;
+    z-index:60;pointer-events:none;max-width:90vw}
+  #toast.on{opacity:1}
+  #toast.on.errt{background:var(--err)}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .kpi{background:#fafaf8;border:1px solid var(--line);border-radius:12px;padding:14px 18px;
+    min-width:140px;flex:1}
+  .kpi b{display:block;font-size:24px}
+  .kpi span{color:var(--mut);font-size:13px}
+  table.home{width:100%;border-collapse:collapse}
+  table.home th,table.home td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px}
+  table.home th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  table.home tbody tr{cursor:pointer}
+  table.home tbody tr:hover td{background:#fafaf8}
+  #prev{border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:8px;background:#f7f7f5;
+    display:flex;flex-direction:column;gap:10px;max-width:340px}
+  #pv-head{display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;background:#111;color:#fff}
+  #pv-av{width:30px;height:30px;border-radius:15px;background:rgba(0,0,0,.18);display:flex;
+    align-items:center;justify-content:center;font-weight:600;flex:0 0 auto}
+  #pv-bub{background:#fff;border-radius:12px;border-bottom-left-radius:4px;padding:8px 12px;font-size:13px;max-width:85%;align-self:flex-start}
+  #pv-mine{border-radius:12px;border-bottom-right-radius:4px;padding:8px 12px;font-size:13px;max-width:85%;align-self:flex-end;background:#111;color:#fff}
+  #pv-btnrow{display:flex;justify-content:flex-end}
+  #pv-btn{width:44px;height:44px;border-radius:22px;background:#111}
 </style>
 </head>
 <body>
@@ -651,12 +686,28 @@ const ADMIN_HTML = `<!doctype html>
   </header>
   <div class="wrap">
     <aside>
+      <button id="home-btn" class="ghost" style="width:100%;margin-bottom:8px">📊 Inicio</button>
       <button id="new-client" class="primary">+ Nuevo cliente</button>
       <div id="tree"></div>
     </aside>
     <main id="main" class="hide">
 
       <p id="crumb" class="mut"></p>
+
+      <div class="card hide" id="v-home">
+        <h2>Resumen del mes</h2>
+        <p class="sub">Actividad de todos los chatbots en el mes en curso. Pulsa una fila para ir al chatbot.</p>
+        <div class="kpis">
+          <div class="kpi"><b id="k-q">–</b><span>preguntas</span></div>
+          <div class="kpi"><b id="k-r">–</b><span>respondidas con contexto</span></div>
+          <div class="kpi"><b id="k-l">–</b><span>leads</span></div>
+          <div class="kpi"><b id="k-b">–</b><span>chatbots activos</span></div>
+        </div>
+        <table class="home">
+          <thead><tr><th>Chatbot</th><th>Cliente</th><th>Preguntas</th><th>Leads</th><th>Sin respuesta</th><th>Estado</th></tr></thead>
+          <tbody id="home-body"></tbody>
+        </table>
+      </div>
 
       <div class="card hide" id="v-client">
         <h2 id="c-title">Cliente</h2>
@@ -727,42 +778,71 @@ const ADMIN_HTML = `<!doctype html>
           <div><label>Nombre (lo ve el usuario en el chat)</label><input id="f-name"></div>
           <div><label>Slug (identificador interno, sin espacios)</label><input id="f-slug"></div>
         </div>
-        <label>Instrucciones del bot (system prompt): quién es, qué puede y qué no puede decir</label>
-        <textarea id="f-prompt" rows="8"></textarea>
-        <label>Mensaje de bienvenida</label>
-        <input id="f-welcome">
-        <label>Preguntas sugeridas (una por línea)</label>
-        <textarea id="f-sugg" rows="3"></textarea>
-        <div class="row">
-          <div>
-            <label>Proveedor de IA</label>
-            <select id="f-provider">
-              <option value="anthropic">Anthropic (Claude)</option>
-              <option value="google">Google (Gemini)</option>
-            </select>
+        <div class="ftabs">
+          <button class="on" data-ft="ft-comp">Comportamiento</button>
+          <button data-ft="ft-ap">Apariencia</button>
+          <button data-ft="ft-leads">Leads</button>
+          <button data-ft="ft-seg">Seguridad y límites</button>
+        </div>
+        <div class="ft on" id="ft-comp">
+          <label>Instrucciones del bot (system prompt): quién es, qué puede y qué no puede decir</label>
+          <textarea id="f-prompt" rows="8"></textarea>
+          <label>Mensaje de bienvenida</label>
+          <input id="f-welcome">
+          <label>Preguntas sugeridas (una por línea)</label>
+          <textarea id="f-sugg" rows="3"></textarea>
+          <div class="row">
+            <div>
+              <label>Proveedor de IA</label>
+              <select id="f-provider">
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="google">Google (Gemini)</option>
+              </select>
+            </div>
+            <div>
+              <label>Modelo</label>
+              <input id="f-model" list="models">
+              <datalist id="models">
+                <option value="claude-sonnet-4-6"><option value="claude-sonnet-5">
+                <option value="claude-haiku-4-5"><option value="gemini-3.5-flash">
+                <option value="gemini-3.1-flash-lite"><option value="gemini-flash-latest">
+                <option value="gemini-flash-lite-latest">
+              </datalist>
+            </div>
           </div>
-          <div>
-            <label>Modelo</label>
-            <input id="f-model" list="models">
-            <datalist id="models">
-              <option value="claude-sonnet-4-6"><option value="claude-sonnet-5">
-              <option value="claude-haiku-4-5"><option value="gemini-3.5-flash">
-              <option value="gemini-3.1-flash-lite"><option value="gemini-flash-latest">
-              <option value="gemini-flash-lite-latest">
-            </datalist>
+        </div>
+        <div class="ft" id="ft-ap">
+          <label>Color principal del widget</label>
+          <input id="f-color" type="color" style="width:120px;height:42px;padding:4px">
+          <label>Vista previa en vivo</label>
+          <div id="prev">
+            <div id="pv-head">
+              <div id="pv-av">A</div>
+              <div>
+                <div id="pv-name" style="font-weight:600;font-size:14px">Asistente</div>
+                <div style="font-size:11px;opacity:.75">Suele responder al instante</div>
+              </div>
+            </div>
+            <div id="pv-bub">¡Hola!</div>
+            <div id="pv-mine">Tengo una duda</div>
+            <div id="pv-btnrow"><div id="pv-btn"></div></div>
           </div>
         </div>
-        <div class="row">
-          <div><label>Color principal del widget</label><input id="f-color" type="color"></div>
-          <div><label>Límite de mensajes al mes</label><input id="f-limit" type="number" min="0"></div>
+        <div class="ft" id="ft-leads">
+          <div class="row">
+            <div><label>Email para leads / handoff</label><input id="f-email" type="email"></div>
+            <div><label>Webhook de leads (Zapier, Make, CRM…)</label><input id="f-webhook" type="url"></div>
+          </div>
+          <p class="mut" style="margin-top:10px">El webhook recibe cada lead al momento; con Zapier o Make
+          puedes reenviarlo a email, hoja de cálculo o CRM sin programar.</p>
         </div>
-        <label>Dominios permitidos (uno por línea; el widget solo funciona desde estos)</label>
-        <textarea id="f-domains" rows="2"></textarea>
-        <div class="row">
-          <div><label>Email para leads / handoff</label><input id="f-email" type="email"></div>
-          <div><label>Webhook de leads (Zapier, Make, CRM…)</label><input id="f-webhook" type="url"></div>
+        <div class="ft" id="ft-seg">
+          <label>Dominios permitidos (uno por línea; el widget solo funciona desde estos)</label>
+          <textarea id="f-domains" rows="2"></textarea>
+          <label>Límite de mensajes al mes (al alcanzarlo, el bot responde un aviso fijo sin gastar IA)</label>
+          <input id="f-limit" type="number" min="0" style="max-width:200px">
+          <div class="check"><input id="f-active" type="checkbox"><label for="f-active" style="margin:0">Activo (desmárcalo para apagar este chatbot)</label></div>
         </div>
-        <div class="check"><input id="f-active" type="checkbox"><label for="f-active" style="margin:0">Activo (desmárcalo para apagar este chatbot)</label></div>
         <div class="actions">
           <button id="save" class="primary">Guardar</button>
           <button id="f-del" class="ghost small">Eliminar chatbot</button>
@@ -825,6 +905,8 @@ const ADMIN_HTML = `<!doctype html>
     </main>
   </div>
 </div>
+
+<div id="toast"></div>
 
 <script>
 var TOKEN = localStorage.getItem("cb_admin") || "";
@@ -903,9 +985,61 @@ function refreshSelection() {
   if (sel.type === "client" && !sel.isNew && findClient(sel.id)) return selClient(sel.id);
   if (sel.type === "project" && findProject(sel.id)) return selProject(sel.id);
   if (sel.type === "tenant" && !sel.isNew && findTenant(sel.id)) return selTenant(sel.id);
-  if (data.length) return selClient(data[0].id);
-  $("main").classList.add("hide");
+  return goHome();
 }
+
+function toast(msg, isErr) {
+  var t = $("toast");
+  t.textContent = msg;
+  t.className = isErr ? "on errt" : "on";
+  clearTimeout(t._h);
+  t._h = setTimeout(function () { t.className = ""; }, 2600);
+}
+
+function goHome() {
+  sel = { type: "home" };
+  renderTree();
+  crumb(["Inicio"]);
+  showCards(["v-home"]);
+  api("/admin/api/metrics").then(function (ms) {
+    if (!ms || ms.error) return;
+    var byId = {};
+    ms.forEach(function (m) { byId[m.tenant_id] = m; });
+    var q = 0, l = 0, un = 0, bots = 0, rows = [];
+    data.forEach(function (c) {
+      (c.projects || []).forEach(function (p) {
+        (p.tenants || []).forEach(function (t) {
+          var m = byId[t.id] || { questions: 0, leads: 0, unanswered: 0 };
+          q += m.questions; l += m.leads; un += m.unanswered;
+          if (t.active) bots++;
+          rows.push({ t: t, c: c, m: m });
+        });
+      });
+    });
+    $("k-q").textContent = q;
+    $("k-l").textContent = l;
+    $("k-r").textContent = q ? Math.max(0, Math.round((100 * (q - un)) / q)) + "%" : "–";
+    $("k-b").textContent = bots;
+    var tb = $("home-body");
+    tb.innerHTML = "";
+    if (!rows.length) {
+      tb.innerHTML = "<tr><td colspan='6' class='mut'>Todavía no hay chatbots. Crea tu primer cliente en el menú de la izquierda.</td></tr>";
+      return;
+    }
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      [r.t.name, r.c.name, r.m.questions, r.m.leads, r.m.unanswered, r.t.active ? "Activo" : "Apagado"]
+        .forEach(function (v) {
+          var td = document.createElement("td");
+          td.textContent = v;
+          tr.appendChild(td);
+        });
+      tr.onclick = function () { selTenant(r.t.id); };
+      tb.appendChild(tr);
+    });
+  });
+}
+$("home-btn").onclick = goHome;
 
 function treeBtn(label, cls, on, click) {
   var b = document.createElement("button");
@@ -931,7 +1065,7 @@ function renderTree() {
   });
 }
 
-var ALL_VIEWS = ["v-client", "v-client-projects", "v-project", "v-project-tools", "v-assist", "v-tenant", "integ", "ingest"];
+var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-project", "v-project-tools", "v-assist", "v-tenant", "integ", "ingest"];
 function showCards(ids) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
   $("main").classList.remove("hide");
@@ -987,8 +1121,9 @@ $("c-save").onclick = function () {
     ? api("/admin/api/clients", { method: "POST", body: JSON.stringify(d) })
     : api("/admin/api/clients/" + sel.id, { method: "PATCH", body: JSON.stringify(d) });
   req.then(function (r) {
-    if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; return; }
+    if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; toast(r.error, true); return; }
     sel = { type: "client", id: r.id, isNew: false };
+    toast("Cliente guardado ✓");
     load();
   });
 };
@@ -1005,8 +1140,9 @@ $("c-del").onclick = function () {
   );
   if (w !== "ELIMINAR") return;
   api("/admin/api/clients/" + sel.id, { method: "DELETE" }).then(function (r) {
-    if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; return; }
+    if (r.error) { $("c-msg").textContent = r.error; $("c-msg").className = "err"; toast(r.error, true); return; }
     sel = { type: null };
+    toast("Cliente eliminado");
     load();
   });
 };
@@ -1054,7 +1190,8 @@ $("p-save").onclick = function () {
   var d = { name: $("p-name").value.trim(), description: $("p-desc").value.trim() };
   if (!d.name) { $("p-msg").textContent = "El nombre es obligatorio."; $("p-msg").className = "err"; return; }
   api("/admin/api/projects/" + sel.id, { method: "PATCH", body: JSON.stringify(d) }).then(function (r) {
-    if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; return; }
+    if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; toast(r.error, true); return; }
+    toast("Proyecto guardado ✓");
     load();
   });
 };
@@ -1069,8 +1206,9 @@ $("p-del").onclick = function () {
   );
   if (w !== "ELIMINAR") return;
   api("/admin/api/projects/" + sel.id, { method: "DELETE" }).then(function (r) {
-    if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; return; }
+    if (r.error) { $("p-msg").textContent = r.error; $("p-msg").className = "err"; toast(r.error, true); return; }
     sel = f ? { type: "client", id: f.client.id } : { type: null };
+    toast("Proyecto eliminado");
     load();
   });
 };
@@ -1126,9 +1264,54 @@ function selTenant(id, projectId) {
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
   $("g-report").textContent = ""; $("g-msg").textContent = "";
   $("g-files").value = ""; $("g-upmsg").textContent = "";
+  resetFtabs();
+  updPrev();
   if (t) { renderInteg(t); loadDocs(); }
   showCards(t ? ["v-assist", "v-tenant", "integ", "ingest"] : ["v-assist", "v-tenant"]);
 }
+
+[].forEach.call(document.querySelectorAll(".ftabs button"), function (b) {
+  b.onclick = function () {
+    [].forEach.call(document.querySelectorAll(".ftabs button"), function (x) { x.classList.remove("on"); });
+    [].forEach.call(document.querySelectorAll(".ft"), function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    $(b.dataset.ft).classList.add("on");
+  };
+});
+
+function resetFtabs() {
+  [].forEach.call(document.querySelectorAll(".ftabs button"), function (x, i) {
+    x.classList.toggle("on", i === 0);
+  });
+  [].forEach.call(document.querySelectorAll(".ft"), function (x) {
+    x.classList.toggle("on", x.id === "ft-comp");
+  });
+}
+
+function contrastFor(hex) {
+  var m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "#fff";
+  var n = parseInt(m[1], 16);
+  var l = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return l > 0.6 ? "#1a1a1a" : "#fff";
+}
+
+function updPrev() {
+  var c = $("f-color").value || "#111111";
+  var t = contrastFor(c);
+  var name = $("f-name").value.trim() || "Asistente";
+  $("pv-head").style.background = c;
+  $("pv-head").style.color = t;
+  $("pv-av").textContent = name.charAt(0).toUpperCase();
+  $("pv-name").textContent = name;
+  $("pv-bub").textContent = $("f-welcome").value.trim() || "¡Hola!";
+  $("pv-mine").style.background = c;
+  $("pv-mine").style.color = t;
+  $("pv-btn").style.background = c;
+}
+$("f-color").oninput = updPrev;
+$("f-name").oninput = updPrev;
+$("f-welcome").oninput = updPrev;
 
 function loadDocs() {
   var box = $("doc-list");
@@ -1216,8 +1399,9 @@ $("save").onclick = function () {
     ? api("/admin/api/tenants", { method: "POST", body: JSON.stringify(d) })
     : api("/admin/api/tenants/" + sel.id, { method: "PATCH", body: JSON.stringify(d) });
   req.then(function (r) {
-    if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; return; }
+    if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; toast(r.error, true); return; }
     sel = { type: "tenant", id: r.id, isNew: false };
+    toast("Chatbot guardado ✓");
     load();
   }).catch(function () {
     $("save-msg").textContent = "No se ha podido guardar."; $("save-msg").className = "err";
@@ -1234,8 +1418,9 @@ $("f-del").onclick = function () {
   );
   if (w !== "ELIMINAR") return;
   api("/admin/api/tenants/" + sel.id, { method: "DELETE" }).then(function (r) {
-    if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; return; }
+    if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; toast(r.error, true); return; }
     sel = f ? { type: "project", id: f.project.id } : { type: null };
+    toast("Chatbot eliminado");
     load();
   });
 };
