@@ -647,7 +647,7 @@ async function guideFor(env, publicKey, pKey) {
 function pdfLatin1(s) {
   return String(s)
     .replace(/[—–]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/…/g, "...")
-    .replace(/[^ -ÿ]/g, "?");
+    .replace(/[^\x00-\xff]/g, "?");
 }
 
 function pdfEscape(s) {
@@ -1152,9 +1152,10 @@ const ADMIN_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Administración — chatbots</title>
+<title>ExpoBot — Estudio</title>
 <style>
-  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5;--acc:#111;--ok:#0a7a4b;--err:#b3261e}
+  :root{--ink:#191926;--mut:#75758a;--line:#e6e6f0;--bg:#f6f7fb;--acc:#6d5ef1;--acc2:#38bdf8;
+    --grad:linear-gradient(135deg,#6d5ef1,#38bdf8);--ok:#0a7a4b;--err:#b3261e}
   *{box-sizing:border-box;margin:0}
   body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
   .hide{display:none!important}
@@ -1166,23 +1167,29 @@ const ADMIN_HTML = `<!doctype html>
   label{display:block;font-size:13px;color:var(--mut);margin:14px 0 4px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
   @media(max-width:640px){.row{grid-template-columns:1fr}}
-  .primary{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 18px}
+  .primary{background:var(--grad);color:#fff;border:0;border-radius:10px;padding:10px 18px;
+    box-shadow:0 2px 12px rgba(109,94,241,.35)}
   .ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px}
   .small{font-size:13px;padding:6px 12px}
   .mut{color:var(--mut);font-size:13px}
   .ok{color:var(--ok);font-size:13px}
   .err{color:var(--err);font-size:13px}
-  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .login .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px;
-    width:380px;max-width:100%}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.02em}
+  .brand svg{width:32px;height:32px;flex:0 0 auto}
+  .brand span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand em{font:400 12.5px system-ui,sans-serif;color:var(--mut);font-style:normal;margin-left:2px}
+  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:var(--grad)}
+  .login .card{background:#fff;border:0;border-radius:20px;padding:34px;
+    width:390px;max-width:100%;box-shadow:0 24px 80px rgba(20,10,80,.35)}
   .login h1{font-size:18px;margin-bottom:6px}
   .login input{margin:14px 0 10px}
   .login button{width:100%}
-  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;display:flex;
-    justify-content:space-between;align-items:center}
-  header h1{font-size:17px}
-  .wrap{display:grid;grid-template-columns:260px 1fr;gap:20px;max-width:1120px;margin:0 auto;
+  header{background:#fff;border-bottom:1px solid var(--line);padding:12px 24px;display:flex;
+    justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
+  .wrap{display:grid;grid-template-columns:250px 1fr;gap:20px;max-width:1420px;margin:0 auto;
     padding:20px 16px}
+  #edit-col{min-width:0}
   @media(max-width:760px){.wrap{grid-template-columns:1fr}}
   aside .primary{width:100%;margin-bottom:12px}
   #tree button,#proj-list button,#bot-list button{display:block;width:100%;text-align:left;
@@ -1245,14 +1252,56 @@ const ADMIN_HTML = `<!doctype html>
   #pv-mine{border-radius:12px;border-bottom-right-radius:4px;padding:8px 12px;font-size:13px;max-width:85%;align-self:flex-end;background:#111;color:#fff}
   #pv-btnrow{display:flex;justify-content:flex-end}
   #pv-btn{width:44px;height:44px;border-radius:22px;background:#111}
+  #main.with-canvas{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:20px;align-items:start}
+  #main.with-canvas #crumb{grid-column:1 / -1;margin-bottom:0}
+  #canvas-panel{min-width:0}
+  #cv-sticky{position:sticky;top:74px}
+  #cv-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
+    font-weight:600;font-size:14px}
+  #cv-frame{background:linear-gradient(180deg,#eceef8,#dde2f2);border:1px solid var(--line);
+    border-radius:18px;padding:16px;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+  #cv-widget{width:100%;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;
+    background:#fff;box-shadow:0 12px 40px rgba(20,20,60,.18)}
+  #cv-h{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#111;color:#fff}
+  #cv-av{width:32px;height:32px;border-radius:16px;background:rgba(0,0,0,.18);display:flex;
+    align-items:center;justify-content:center;font-weight:700;overflow:hidden;flex:0 0 auto}
+  #cv-av img{width:100%;height:100%;object-fit:cover}
+  #cv-name{font-weight:600;font-size:14px;line-height:1.25}
+  #cv-sub{font-size:11px;opacity:.75;line-height:1.25}
+  #cv-log{padding:14px;display:flex;flex-direction:column;gap:9px;min-height:190px;
+    background-size:cover;background-position:center}
+  .cv-b{background:#f2f2f0;color:#1a1a1a;border-radius:12px;border-bottom-left-radius:4px;
+    padding:8px 12px;font-size:13px;max-width:85%;align-self:flex-start}
+  .cv-m{border-radius:12px;border-bottom-right-radius:4px;padding:8px 12px;font-size:13px;
+    max-width:85%;align-self:flex-end;background:#111;color:#fff}
+  #cv-sug{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  #cv-sug span{border:1px solid #ddd;border-radius:14px;padding:4px 10px;font-size:11.5px;
+    background:#fff;color:#333}
+  #cv-foot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #eee;align-items:center}
+  #cv-in{flex:1;border:1px solid #ddd;border-radius:9px;padding:9px 11px;font-size:13px;color:#999;
+    background:#fff;white-space:nowrap;overflow:hidden}
+  #cv-send{width:38px;height:38px;border-radius:9px;background:#111;display:flex;align-items:center;
+    justify-content:center;flex:0 0 auto;font-weight:600}
+  #cv-brand{text-align:center;font-size:10.5px;color:#999;padding:0 0 6px;background:#fff}
+  #cv-btnrow{display:flex}
+  #cv-btn{height:52px;min-width:52px;border-radius:26px;background:#111;display:flex;gap:8px;
+    align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:0 14px}
+  @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px}}
+  .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:fit-content}
+  .seg button{border:0;background:#fff;padding:8px 16px;font-size:13.5px;cursor:pointer;color:#555}
+  .seg button.on{background:var(--acc);color:#fff}
+  .gradrow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .gradrow button{width:58px;height:42px;border:2px solid var(--line);border-radius:10px;cursor:pointer;padding:0}
+  .gradrow button.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
 </style>
 </head>
 <body>
 
 <div id="login" class="login hide">
   <div class="card">
-    <h1>Administración de chatbots</h1>
-    <p class="mut">Introduce el token de administración (el secreto ADMIN_TOKEN del Worker).</p>
+    <div class="brand" style="margin-bottom:12px"><svg viewBox="0 0 32 32"><defs><linearGradient id="xg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5ef1"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect x="2" y="3" width="28" height="21" rx="8" fill="url(#xg1)"/><path d="M9 24v6l7-6z" fill="url(#xg1)"/><circle cx="12" cy="13.5" r="2.6" fill="#fff"/><circle cx="20" cy="13.5" r="2.6" fill="#fff"/></svg><span>ExpoBot</span></div>
+    <h1>Bienvenido a tu estudio</h1>
+    <p class="mut">Introduce tu clave de acceso para gestionar tus clientes y sus asistentes.</p>
     <input id="tok" type="password" placeholder="Token" autocomplete="current-password">
     <button id="enter" class="primary">Entrar</button>
     <p id="login-err" class="err"></p>
@@ -1261,7 +1310,7 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="app" class="hide">
   <header>
-    <h1>Plataforma de chatbots</h1>
+    <div class="brand"><svg viewBox="0 0 32 32"><defs><linearGradient id="xg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d5ef1"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect x="2" y="3" width="28" height="21" rx="8" fill="url(#xg2)"/><path d="M9 24v6l7-6z" fill="url(#xg2)"/><circle cx="12" cy="13.5" r="2.6" fill="#fff"/><circle cx="20" cy="13.5" r="2.6" fill="#fff"/></svg><span>ExpoBot</span><em>estudio de asistentes IA</em></div>
     <button id="logout" class="ghost small">Salir</button>
   </header>
   <div class="wrap">
@@ -1273,6 +1322,8 @@ const ADMIN_HTML = `<!doctype html>
     <main id="main" class="hide">
 
       <p id="crumb" class="mut"></p>
+
+      <div id="edit-col">
 
       <div class="card hide" id="v-home">
         <h2>Resumen del mes</h2>
@@ -1396,7 +1447,7 @@ const ADMIN_HTML = `<!doctype html>
         <p class="sub">Los cambios se aplican al guardar. El bot los usa en la siguiente conversación.</p>
         <div class="row">
           <div><label>Nombre (lo ve el usuario en el chat)</label><input id="f-name"></div>
-          <div><label>Slug (identificador interno, sin espacios)</label><input id="f-slug"></div>
+          <div><label>Nombre interno (se rellena solo; no lo verá nadie)</label><input id="f-slug"></div>
         </div>
         <div class="ftabs">
           <button class="on" data-ft="ft-comp">Comportamiento</button>
@@ -1405,7 +1456,7 @@ const ADMIN_HTML = `<!doctype html>
           <button data-ft="ft-seg">Seguridad y límites</button>
         </div>
         <div class="ft on" id="ft-comp">
-          <label>Instrucciones del bot (system prompt): quién es, qué puede y qué no puede decir</label>
+          <label>Personalidad e instrucciones del bot: quién es, qué puede y qué no puede decir</label>
           <textarea id="f-prompt" rows="8"></textarea>
           <label>Mensaje de bienvenida</label>
           <input id="f-welcome">
@@ -1517,8 +1568,27 @@ const ADMIN_HTML = `<!doctype html>
                 <option value="auto">Automático (según el sistema del visitante)</option>
               </select></div>
           </div>
-          <label>Fondo del área de mensajes (URL de imagen o degradado CSS; vacío = liso)</label>
-          <input id="f-bgimg" placeholder="https://cliente.com/fondo.jpg — o — linear-gradient(180deg,#ffffff,#eef2fa)">
+          <label>Fondo del área de mensajes</label>
+          <div class="seg" id="bg-seg">
+            <button type="button" data-m="solid" class="on">Color sólido</button>
+            <button type="button" data-m="grad">Degradado</button>
+            <button type="button" data-m="img">Imagen</button>
+          </div>
+          <div id="bg-solid" style="margin-top:8px">
+            <p class="mut">Se usa el color «Fondo de la ventana de chat» de arriba.</p>
+          </div>
+          <div id="bg-grad" class="hide" style="margin-top:8px">
+            <label style="margin-top:0">Colores del degradado</label>
+            <div style="display:flex;gap:8px">
+              <input id="g-c1" type="color" value="#6d8bf1" style="width:58px;height:42px;padding:3px">
+              <input id="g-c2" type="color" value="#c9f0ff" style="width:58px;height:42px;padding:3px">
+            </div>
+            <label>Estilo</label>
+            <div class="gradrow" id="g-styles"></div>
+          </div>
+          <div id="bg-img" class="hide" style="margin-top:8px">
+            <input id="f-bgimg" placeholder="Pega la URL de una imagen (https://…)">
+          </div>
           <label style="margin-top:18px;font-weight:600;color:var(--ink)">Textos de la interfaz (para otros idiomas o tonos)</label>
           <div class="row">
             <div><label>Campo de escritura</label><input id="f-tplaceholder" placeholder="Escribe tu pregunta…"></div>
@@ -1537,19 +1607,8 @@ const ADMIN_HTML = `<!doctype html>
             <label for="f-sound" style="margin:0">Sonido sutil al aparecer la invitación (si el navegador lo permite)</label></div>
           <label>CSS personalizado (avanzado; se inyecta tal cual en la web del cliente)</label>
           <textarea id="f-css" rows="3" placeholder=".cb-btn{ } .cb-panel{ } .cb-msg.bot{ } …"></textarea>
-          <label>Vista previa en vivo</label>
-          <div id="prev">
-            <div id="pv-head">
-              <div id="pv-av">A</div>
-              <div>
-                <div id="pv-name" style="font-weight:600;font-size:14px">Asistente</div>
-                <div id="pv-sub" style="font-size:11px;opacity:.75">Suele responder al instante</div>
-              </div>
-            </div>
-            <div id="pv-bub">¡Hola!</div>
-            <div id="pv-mine">Tengo una duda</div>
-            <div id="pv-btnrow"><div id="pv-btn"></div></div>
-          </div>
+          <p class="mut" style="margin-top:16px">👁 Todos los cambios se ven al momento en la
+          <b>vista en vivo</b> de la derecha.</p>
         </div>
         <div class="ft" id="ft-leads">
           <div class="row">
@@ -1656,6 +1715,32 @@ const ADMIN_HTML = `<!doctype html>
         </div>
         <div id="g-report" class="mut" style="margin-top:10px"></div>
       </div>
+
+      </div>
+
+      <aside id="canvas-panel" class="hide">
+        <div id="cv-sticky">
+          <div id="cv-bar"><span>👁 Vista en vivo</span>
+            <button id="cv-dark" class="ghost small" type="button">🌙 Oscuro</button></div>
+          <div id="cv-frame">
+            <div id="cv-widget">
+              <div id="cv-h"><div id="cv-av">A</div>
+                <div><div id="cv-name">Asistente</div><div id="cv-sub">Suele responder al instante</div></div></div>
+              <div id="cv-log">
+                <div class="cv-b" id="cv-welcome">¡Hola!</div>
+                <div class="cv-m" id="cv-user">Tengo una duda</div>
+                <div class="cv-b" id="cv-reply">¡Claro! Cuéntame y te ayudo 😊</div>
+                <div id="cv-sug"></div>
+              </div>
+              <div id="cv-foot"><div id="cv-in">Escribe tu pregunta…</div><div id="cv-send"></div></div>
+              <div id="cv-brand" class="hide"></div>
+            </div>
+            <div id="cv-btnrow"><div id="cv-btn"></div></div>
+          </div>
+          <p class="mut" style="margin-top:10px;font-size:12px">Así se verá el chat en la web del
+          cliente. Cambia cualquier opción y lo verás aquí al instante. Recuerda pulsar Guardar.</p>
+        </div>
+      </aside>
 
     </main>
   </div>
@@ -1823,6 +1908,9 @@ function renderTree() {
 var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "integ", "ingest"];
 function showCards(ids) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
+  var canvas = ids.indexOf("v-tenant") >= 0;
+  $("canvas-panel").classList.toggle("hide", !canvas);
+  $("main").classList.toggle("with-canvas", canvas);
   $("main").classList.remove("hide");
 }
 
@@ -2142,7 +2230,22 @@ function selTenant(id, projectId) {
   $("f-tdelay").value = th.teaser_delay || 4;
   $("f-size").value = th.size || "estandar";
   $("f-dark").value = th.dark || "off";
-  $("f-bgimg").value = th.bg_image || "";
+  slugTouched = !isNew;
+  var bgi = th.bg_image || "";
+  $("f-bgimg").value = "";
+  if (/gradient\(/.test(bgi)) {
+    var gcols = bgi.match(/#[0-9a-fA-F]{6}/g) || [];
+    if (gcols[0]) $("g-c1").value = gcols[0];
+    if (gcols.length > 1) $("g-c2").value = gcols[gcols.length - 1];
+    gradStyle = bgi.indexOf("radial") >= 0 ? 3 : bgi.indexOf("180deg") >= 0 ? 1
+      : bgi.indexOf("90deg") >= 0 ? 2 : bgi.indexOf("45%") >= 0 ? 4 : 0;
+    setBgMode("grad");
+  } else if (bgi) {
+    $("f-bgimg").value = bgi;
+    setBgMode("img");
+  } else {
+    setBgMode("solid");
+  }
   $("f-tplaceholder").value = th.t_placeholder || "";
   $("f-tsend").value = th.t_send || "";
   $("f-terror").value = th.t_error || "";
@@ -2310,58 +2413,183 @@ function loadFont(f) {
   document.head.appendChild(lk);
 }
 
+var cvDark = false;
+var bgMode = "solid";
+var gradStyle = 0;
+var GRADS = [
+  function (a, b) { return "linear-gradient(135deg," + a + "," + b + ")"; },
+  function (a, b) { return "linear-gradient(180deg," + a + "," + b + ")"; },
+  function (a, b) { return "linear-gradient(90deg," + a + "," + b + ")"; },
+  function (a, b) { return "radial-gradient(circle at 30% 25%," + a + "," + b + ")"; },
+  function (a, b) { return "linear-gradient(135deg," + a + " 0%," + a + " 45%," + b + " 100%)"; },
+];
+
+function buildGrad() { return GRADS[gradStyle]($("g-c1").value, $("g-c2").value); }
+
+function bgValue() {
+  if (bgMode === "grad") return buildGrad();
+  if (bgMode === "img") return $("f-bgimg").value.trim();
+  return "";
+}
+
+function renderGradStyles() {
+  var box = $("g-styles");
+  box.innerHTML = "";
+  GRADS.forEach(function (g, i) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.style.background = g($("g-c1").value, $("g-c2").value);
+    if (i === gradStyle) b.classList.add("on");
+    b.onclick = function () { gradStyle = i; renderGradStyles(); updPrev(); };
+    box.appendChild(b);
+  });
+}
+
+function setBgMode(m) {
+  bgMode = m;
+  [].forEach.call(document.querySelectorAll("#bg-seg button"), function (x) {
+    x.classList.toggle("on", x.dataset.m === m);
+  });
+  $("bg-solid").classList.toggle("hide", m !== "solid");
+  $("bg-grad").classList.toggle("hide", m !== "grad");
+  $("bg-img").classList.toggle("hide", m !== "img");
+  if (m === "grad") renderGradStyles();
+  updPrev();
+}
+[].forEach.call(document.querySelectorAll("#bg-seg button"), function (b) {
+  b.onclick = function () { setBgMode(b.dataset.m); };
+});
+
+$("cv-dark").onclick = function () {
+  cvDark = !cvDark;
+  $("cv-dark").textContent = cvDark ? "☀️ Claro" : "🌙 Oscuro";
+  updPrev();
+};
+
+var slugTouched = false;
+$("f-slug").addEventListener("input", function () { slugTouched = true; });
+$("f-name").addEventListener("input", function () {
+  if (sel.type === "tenant" && sel.isNew && !slugTouched) {
+    $("f-slug").value = $("f-name").value.trim().toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+});
+
 function updPrev() {
   var c = $("f-color").value || "#111111";
   var t = contrastFor(c);
-  var c2 = $("f-color2").value || "#f2f2f0";
+  var c2 = cvDark ? "#2a2a2e" : ($("f-color2").value || "#f2f2f0");
+  var c2t = cvDark ? "#ececec" : contrastFor(c2);
+  var cbg = cvDark ? "#17171a" : ($("f-colorbg").value || "#ffffff");
   var name = $("f-name").value.trim() || "Asistente";
-  var rad = $("f-radius").value;
+  var rad = parseInt($("f-radius").value, 10) || 0;
   var sh = $("f-shadow").value;
   var font = $("f-font").value;
   loadFont(font);
   $("f-radius-v").textContent = rad;
-  var prev = $("prev");
-  prev.style.background = $("f-colorbg").value || "#ffffff";
-  prev.style.fontFamily = fontStack(font);
-  prev.style.boxShadow = sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.35)" : "0 12px 48px rgba(0,0,0,.15)";
-  $("pv-head").style.background = c;
-  $("pv-head").style.color = t;
-  $("pv-head").style.borderRadius = rad + "px";
-  $("pv-av").textContent = name.charAt(0).toUpperCase();
-  $("pv-name").textContent = name;
-  $("pv-sub").textContent = $("f-subtitle").value.trim() || "Suele responder al instante";
-  $("pv-bub").textContent = $("f-welcome").value.trim() || "¡Hola!";
-  $("pv-bub").style.background = c2;
-  $("pv-bub").style.color = contrastFor(c2);
-  $("pv-bub").style.borderRadius = rad + "px";
-  $("pv-mine").style.background = c;
-  $("pv-mine").style.color = t;
-  $("pv-mine").style.borderRadius = rad + "px";
-  var pb = $("pv-btn");
+
+  var w = $("cv-widget");
+  w.style.fontFamily = fontStack(font);
+  w.style.background = cbg;
+  w.style.borderRadius = Math.min(rad + 4, 28) + "px";
+  w.style.boxShadow = sh === "ninguna" ? "none" :
+    sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.4)" : "0 12px 40px rgba(20,20,60,.18)";
+
+  $("cv-h").style.background = c;
+  $("cv-h").style.color = t;
+  var logo = $("f-logo").value.trim();
+  var av = $("cv-av");
+  if (logo) {
+    av.innerHTML = '<img src="' + logo.replace(/"/g, "") + '" alt="">';
+  } else {
+    av.textContent = name.charAt(0).toUpperCase();
+  }
+  $("cv-name").textContent = name;
+  $("cv-sub").textContent = $("f-subtitle").value.trim() || "Suele responder al instante";
+
+  var bg = bgValue();
+  $("cv-log").style.background = bg
+    ? (bg.indexOf("gradient") >= 0 ? bg : 'url("' + bg.replace(/"/g, "") + '") center/cover')
+    : "transparent";
+
+  [].forEach.call(document.querySelectorAll(".cv-b"), function (b) {
+    b.style.background = c2;
+    b.style.color = c2t;
+    b.style.borderRadius = rad + "px";
+    b.style.borderBottomLeftRadius = "4px";
+  });
+  $("cv-welcome").textContent = $("f-welcome").value.trim() || "¡Hola! ¿En qué puedo ayudarte?";
+  var um = $("cv-user");
+  um.style.background = c;
+  um.style.color = t;
+  um.style.borderRadius = rad + "px";
+  um.style.borderBottomRightRadius = "4px";
+
+  var sug = $("cv-sug");
+  sug.innerHTML = "";
+  lines($("f-sugg").value).slice(0, 2).forEach(function (q) {
+    var s = document.createElement("span");
+    s.textContent = q;
+    if (cvDark) {
+      s.style.background = "#232327";
+      s.style.color = "#ddd";
+      s.style.borderColor = "#3a3a40";
+    }
+    sug.appendChild(s);
+  });
+
+  $("cv-foot").style.borderTopColor = cvDark ? "#333" : "#eee";
+  var inp = $("cv-in");
+  inp.textContent = $("f-tplaceholder").value.trim() || "Escribe tu pregunta…";
+  inp.style.background = cvDark ? "#232327" : "#fff";
+  inp.style.color = cvDark ? "#aaa" : "#999";
+  inp.style.borderColor = cvDark ? "#3a3a40" : "#ddd";
+  inp.style.borderRadius = Math.round(rad * 0.72 + 4) + "px";
+
+  var snd = $("cv-send");
+  snd.style.background = c;
+  snd.style.color = t;
+  snd.style.borderRadius = Math.round(rad * 0.72 + 4) + "px";
+  if (SEND_ICONS[iconSendSel]) {
+    snd.innerHTML = '<svg viewBox="0 0 24 24" style="width:17px;height:17px;fill:none;stroke:' + t +
+      ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' + SEND_ICONS[iconSendSel] + "</svg>";
+  } else {
+    snd.textContent = $("f-tsend").value.trim() || "→";
+    snd.style.fontSize = "14px";
+  }
+
+  var brand = $("f-brand").value.trim();
+  $("cv-brand").classList.toggle("hide", !brand);
+  $("cv-brand").textContent = brand ? "Impulsado por " + brand : "";
+  $("cv-brand").style.background = cbg;
+  $("cv-brand").style.color = cvDark ? "#777" : "#999";
+
   var shape = $("f-btnshape").value;
+  var pb = $("cv-btn");
   pb.style.background = c;
-  pb.style.display = "flex";
-  pb.style.alignItems = "center";
-  pb.style.justifyContent = "center";
-  pb.style.borderRadius = shape === "redondeado" ? "12px" : "22px";
-  pb.style.width = shape === "pastilla" ? "auto" : "44px";
-  pb.style.padding = shape === "pastilla" ? "0 14px" : "0";
-  pb.innerHTML = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:' + t +
+  pb.style.borderRadius = shape === "redondeado" ? Math.min(rad + 4, 18) + "px" : "26px";
+  pb.innerHTML = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:' + t +
     ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' +
     (BTN_ICONS[iconBtnSel] || BTN_ICONS.burbuja) + "</svg>";
   if (shape === "pastilla") {
     var lbl = document.createElement("span");
     lbl.textContent = $("f-btnlabel").value.trim() || "Chat";
-    lbl.style.cssText = "color:" + t + ";font:600 13px system-ui,sans-serif;margin-left:6px";
+    lbl.style.cssText = "color:" + t + ";font:600 14px system-ui,sans-serif";
     pb.appendChild(lbl);
   }
 }
-["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel"].forEach(function (id) {
+["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
+ "f-tplaceholder", "f-tsend", "f-brand", "f-sugg", "f-logo", "f-bgimg"].forEach(function (id) {
   $(id).oninput = updPrev;
 });
 ["f-font", "f-shadow", "f-btnshape"].forEach(function (id) {
   $(id).onchange = updPrev;
 });
+["g-c1", "g-c2"].forEach(function (id) {
+  $(id).oninput = function () { renderGradStyles(); updPrev(); };
+});
+
 
 // ----- asistente de diseño -----
 
@@ -2446,7 +2674,15 @@ function applyDesign(o) {
   $("f-radius").value = o.theme.radius;
   $("f-shadow").value = o.theme.shadow;
   if (o.theme.subtitle) $("f-subtitle").value = o.theme.subtitle;
-  $("f-bgimg").value = o.theme.bg_image || "";
+  if (o.theme.bg_image) {
+    var gcols = o.theme.bg_image.match(/#[0-9a-fA-F]{6}/g) || [];
+    if (gcols[0]) $("g-c1").value = gcols[0];
+    if (gcols.length > 1) $("g-c2").value = gcols[gcols.length - 1];
+    gradStyle = 0;
+    setBgMode("grad");
+  } else {
+    setBgMode("solid");
+  }
   $("f-dark").value = o.theme.dark || "off";
   updPrev();
   toast("Diseño aplicado: revísalo en la vista previa y pulsa Guardar.");
@@ -2540,7 +2776,7 @@ function collect() {
       teaser_delay: parseInt($("f-tdelay").value, 10) || 4,
       size: $("f-size").value,
       dark: $("f-dark").value,
-      bg_image: $("f-bgimg").value.trim(),
+      bg_image: bgValue(),
       t_placeholder: $("f-tplaceholder").value.trim(),
       t_send: $("f-tsend").value.trim(),
       t_error: $("f-terror").value.trim(),
@@ -3565,7 +3801,7 @@ export default {
           `<div style="position:fixed;top:0;left:0;right:0;z-index:2147482998;background:#111;color:#fff;` +
           `font:600 13px/1.4 system-ui,sans-serif;padding:9px 16px;text-align:center">` +
           `DEMOSTRACIÓN · Así se verá el asistente de ${h(tenant.name)} en su web · ` +
-          `El chat funciona de verdad: pruébelo · ¿Le gusta? Se activa en su web en 5 minutos</div>` +
+          `El chat funciona de verdad: pruébelo · Se activa en 5 minutos · Creado con ExpoBot</div>` +
           `<script src="${url.origin}/widget.js?v=${Date.now()}" data-key="${h(key)}" data-api="${url.origin}" data-open="2500"></script>`;
 
         if (page) {
