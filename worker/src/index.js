@@ -479,6 +479,141 @@ function pick(obj, keys) {
   return out;
 }
 
+// firmas de plataformas web y guías de integración del snippet
+function detectPlatform(html) {
+  const x = html.toLowerCase();
+  if (x.includes("wp-content") || x.includes("wp-includes")) return "wordpress";
+  if (x.includes("cdn.shopify.com") || x.includes("shopify")) return "shopify";
+  if (x.includes("wixstatic.com") || x.includes("wix.com")) return "wix";
+  if (x.includes("squarespace")) return "squarespace";
+  if (x.includes("webflow")) return "webflow";
+  if (x.includes("prestashop")) return "prestashop";
+  if (x.includes("joomla")) return "joomla";
+  if (x.includes("drupal")) return "drupal";
+  if (x.includes("_next/") || x.includes("__next")) return "nextjs";
+  if (x.includes("_nuxt")) return "nuxt";
+  if (x.includes("___gatsby")) return "gatsby";
+  return "html";
+}
+
+const GUIDES = {
+  wordpress: {
+    name: "WordPress",
+    steps: [
+      "Entra en el escritorio de WordPress del cliente (su-web.com/wp-admin).",
+      "Instala y activa el plugin gratuito «WPCode» (o «Insert Headers and Footers»).",
+      "Ve a Code Snippets → Header & Footer y pega el código en la caja «Footer».",
+      "Guarda y recarga la web: el botón del chat aparecerá abajo.",
+    ],
+    note: "Alternativa sin plugins: pegar el código en el footer.php del tema hijo, justo antes de </body>.",
+  },
+  shopify: {
+    name: "Shopify",
+    steps: [
+      "Admin de Shopify → Tienda online → Temas.",
+      "En el tema activo: ⋯ → Editar código.",
+      "Abre el archivo layout/theme.liquid.",
+      "Pega el código justo antes de la etiqueta </body> y guarda.",
+    ],
+    note: "",
+  },
+  wix: {
+    name: "Wix",
+    steps: [
+      "Panel de Wix → Ajustes → sección Avanzado → «Código personalizado».",
+      "Pulsa «+ Añadir código personalizado» y pega el código.",
+      "Aplícalo a «Todas las páginas» y colócalo en «Fin de página (body)».",
+      "Guarda y publica el sitio.",
+    ],
+    note: "Wix solo permite código personalizado en sus planes de pago con dominio propio.",
+  },
+  squarespace: {
+    name: "Squarespace",
+    steps: [
+      "Panel → Ajustes → Avanzado → «Inyección de código».",
+      "Pega el código en la caja «Pie de página» (Footer).",
+      "Guarda.",
+    ],
+    note: "Requiere el plan Business de Squarespace o superior.",
+  },
+  webflow: {
+    name: "Webflow",
+    steps: [
+      "Project Settings → pestaña «Custom Code».",
+      "Pega el código en «Footer Code».",
+      "Guarda y vuelve a publicar el sitio.",
+    ],
+    note: "",
+  },
+  prestashop: {
+    name: "PrestaShop",
+    steps: [
+      "Pega el código en el archivo footer.tpl del tema activo, antes de </body>.",
+      "Limpia la caché: Parámetros avanzados → Rendimiento → Vaciar caché.",
+    ],
+    note: "Si no tocan código, cualquier módulo de «HTML personalizado en footer» sirve.",
+  },
+  joomla: {
+    name: "Joomla",
+    steps: [
+      "Extensiones → Plantillas → edita la plantilla activa.",
+      "Pega el código en index.php antes de </body> (o usa un módulo «Custom HTML» en la posición del pie).",
+    ],
+    note: "",
+  },
+  drupal: {
+    name: "Drupal",
+    steps: [
+      "Pega el código en la plantilla html.html.twig del tema antes de </body>, o usa un bloque de HTML completo en la región del pie.",
+      "Vacía la caché de Drupal.",
+    ],
+    note: "",
+  },
+  nextjs: {
+    name: "Next.js (React) — web a medida",
+    steps: [
+      "Pásale el código al desarrollador de la web.",
+      "En app/layout.tsx (o pages/_document.js) debe añadirlo con el componente <Script> de next/script con strategy=\"afterInteractive\", o pegarlo tal cual antes de </body>.",
+      "Desplegar la web.",
+    ],
+    note: "",
+  },
+  nuxt: {
+    name: "Nuxt (Vue) — web a medida",
+    steps: [
+      "Pásale el código al desarrollador de la web.",
+      "En nuxt.config, añadir el script en app.head.script (con defer), o pegarlo en la plantilla raíz antes de </body>.",
+      "Desplegar la web.",
+    ],
+    note: "",
+  },
+  gatsby: {
+    name: "Gatsby (React) — web a medida",
+    steps: [
+      "Pásale el código al desarrollador de la web.",
+      "Añadirlo en gatsby-ssr.js (setPostBodyComponents) o en el componente de layout, antes de </body>.",
+      "Desplegar la web.",
+    ],
+    note: "",
+  },
+  html: {
+    name: "Web a medida (HTML/JavaScript)",
+    steps: [
+      "Quien mantenga la web debe pegar el código justo antes de la etiqueta </body>, en la plantilla común o en cada página donde deba verse el chat.",
+      "Subir el cambio. No hay paso 3.",
+    ],
+    note: "",
+  },
+  desconocida: {
+    name: "No se ha podido leer la web",
+    steps: [
+      "No pasa nada: el código funciona en cualquier web.",
+      "Quien la mantenga debe pegarlo justo antes de la etiqueta </body> (o en la sección de «código personalizado del pie» si es un gestor tipo WordPress/Wix).",
+    ],
+    note: "La web bloquea la lectura automática (protección anti-robots), pero eso no afecta a la integración.",
+  },
+};
+
 async function handleAdminApi(request, env, url) {
   if (url.pathname === "/admin/api/tenants" && request.method === "GET") {
     const tenants = await sb(
@@ -617,6 +752,33 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
       body: { tenant_id: mFaq[1], questions },
     });
     return json({ token: row.token, status: row.status, created_at: row.created_at });
+  }
+
+  // --- guía de integración: detecta la plataforma de la web del cliente ---
+  const mGuide = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/integration-guide$/);
+  if (mGuide && request.method === "GET") {
+    const [t] = await sb(env, `tenants?id=eq.${mGuide[1]}&select=allowed_domains`);
+    if (!t) return json({ error: "tenant no encontrado" }, 404);
+    const domain = (t.allowed_domains || [])[0];
+    if (!domain) {
+      return json({ error: "este chatbot no tiene dominio: añádelo en «Seguridad y límites» y guarda" }, 400);
+    }
+    let html = null;
+    try {
+      const r = await fetch(`https://${domain}`, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+          Accept: "text/html",
+        },
+      });
+      if (r.ok) html = (await r.text()).slice(0, 500000);
+    } catch (err) {
+      // sin acceso: cae a la guía genérica
+    }
+    const key = html ? detectPlatform(html) : "desconocida";
+    const g = GUIDES[key] || GUIDES.html;
+    return json({ key, platform: g.name, steps: g.steps, note: g.note || "", domain });
   }
 
   // --- asistente de diseño: 3 propuestas visuales a partir de la web del cliente ---
@@ -1314,6 +1476,18 @@ const ADMIN_HTML = `<!doctype html>
         <label>Snippet del widget (pegar en la web del cliente cuando dé el visto bueno)</label>
         <div class="copyrow"><textarea id="i-snippet" rows="3" readonly></textarea>
           <button class="ghost small" data-copy="i-snippet">Copiar</button></div>
+        <div class="actions" style="margin-top:6px">
+          <button id="ig-run" class="ghost small">🔍 ¿Cómo se integra en su web?</button>
+          <span id="ig-msg" class="mut"></span>
+        </div>
+        <div id="ig-box" class="hide" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:8px">
+          <div id="ig-title" style="font-weight:600;margin-bottom:6px"></div>
+          <ol id="ig-steps" style="padding-left:20px;font-size:14px"></ol>
+          <p id="ig-note" class="mut" style="margin-top:8px"></p>
+          <div class="actions">
+            <button id="ig-copy" class="ghost small">Copiar instrucciones + código (para enviar al cliente)</button>
+          </div>
+        </div>
         <label>Panel del cliente (conversaciones, leads, preguntas sin respuesta)</label>
         <div class="copyrow"><input id="i-panel" readonly>
           <button class="ghost small" data-copy="i-panel">Copiar</button>
@@ -1871,6 +2045,7 @@ function selTenant(id, projectId) {
   $("save-msg").textContent = "";
   $("a-brief").value = ""; $("a-msg").textContent = "";
   $("ds-brief").value = ""; $("ds-msg").textContent = ""; $("ds-options").innerHTML = "";
+  $("ig-box").classList.add("hide"); $("ig-msg").textContent = ""; IG_LAST = null;
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
   $("g-report").textContent = ""; $("g-msg").textContent = "";
   $("g-files").value = ""; $("g-upmsg").textContent = "";
@@ -2329,6 +2504,40 @@ $("rot-panel").onclick = function () {
 
 $("i-open").onclick = function () { window.open($("i-panel").value, "_blank"); };
 $("i-demo-open").onclick = function () { window.open($("i-demo").value, "_blank"); };
+
+// ----- guía de integración -----
+
+var IG_LAST = null;
+
+$("ig-run").onclick = function () {
+  if (!curTenant()) return;
+  $("ig-msg").textContent = "Analizando la web del cliente…";
+  $("ig-msg").className = "mut";
+  api("/admin/api/tenants/" + sel.id + "/integration-guide").then(function (r) {
+    if (r.error) { $("ig-msg").textContent = r.error; $("ig-msg").className = "err"; return; }
+    IG_LAST = r;
+    $("ig-msg").textContent = "";
+    $("ig-box").classList.remove("hide");
+    $("ig-title").textContent = "Plataforma detectada: " + r.platform + (r.domain ? " — " + r.domain : "");
+    var ol = $("ig-steps");
+    ol.innerHTML = "";
+    (r.steps || []).forEach(function (st) {
+      var li = document.createElement("li");
+      li.textContent = st;
+      ol.appendChild(li);
+    });
+    $("ig-note").textContent = r.note || "";
+  }).catch(function () { $("ig-msg").textContent = "Error al analizar."; $("ig-msg").className = "err"; });
+};
+
+$("ig-copy").onclick = function () {
+  if (!IG_LAST) return;
+  var txt = "Instrucciones para integrar el asistente virtual en la web (" + IG_LAST.platform + "):\\n\\n" +
+    (IG_LAST.steps || []).map(function (st, i) { return (i + 1) + ". " + st; }).join("\\n") +
+    (IG_LAST.note ? "\\n\\nNota: " + IG_LAST.note : "") +
+    "\\n\\nEste es el código a pegar:\\n\\n" + $("i-snippet").value + "\\n";
+  navigator.clipboard.writeText(txt).then(function () { toast("Instrucciones copiadas ✓"); });
+};
 
 document.querySelectorAll("[data-copy]").forEach(function (b) {
   b.onclick = function () {
