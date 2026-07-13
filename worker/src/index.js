@@ -279,6 +279,174 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
   };
 }
 
+// ---------- panel del cliente (solo lectura) ----------
+
+async function getTenantByPanelToken(env, token) {
+  if (!token || !token.startsWith("pt_")) return null;
+  const rows = await sb(env, `tenants?panel_token=eq.${encodeURIComponent(token)}&select=*`);
+  const t = rows?.[0];
+  return t && t.active ? t : null;
+}
+
+const PANEL_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Panel del asistente</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5}
+  *{box-sizing:border-box;margin:0}
+  body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:18px 24px}
+  h1{font-size:18px;font-weight:600}
+  .sub{color:var(--mut);font-size:13px}
+  main{max-width:960px;margin:0 auto;padding:24px 16px}
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:150px;flex:1}
+  .stat b{display:block;font-size:24px}
+  .stat span{color:var(--mut);font-size:13px}
+  nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  nav button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 16px;cursor:pointer;font-size:14px}
+  nav button.on{background:#111;color:#fff;border-color:#111}
+  section{display:none}
+  section.on{display:block}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+  th{background:#fafaf8;color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:0}
+  .mut{color:var(--mut);font-size:13px}
+  .conv{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+  .conv>button{width:100%;text-align:left;background:none;border:0;padding:12px 16px;cursor:pointer;font:inherit;display:flex;justify-content:space-between;gap:12px}
+  .conv .meta{color:var(--mut);font-size:13px;white-space:nowrap}
+  .msgs{display:none;border-top:1px solid var(--line);padding:14px 16px}
+  .conv.open .msgs{display:block}
+  .m{width:fit-content;max-width:80%;padding:8px 12px;border-radius:12px;margin-bottom:8px;white-space:pre-wrap;font-size:14px}
+  .m.user{background:#e8eefc;margin-left:auto}
+  .m.assistant{background:#f2f2f0}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="name">Cargando…</h1>
+  <div class="sub">Conversaciones, leads y huecos de contenido del asistente</div>
+</header>
+<main>
+  <div class="stats">
+    <div class="stat"><b id="s-convs">–</b><span>conversaciones</span></div>
+    <div class="stat"><b id="s-msgs">–</b><span>preguntas recibidas</span></div>
+    <div class="stat"><b id="s-rate">–</b><span>respondidas con contexto</span></div>
+    <div class="stat"><b id="s-leads">–</b><span>leads</span></div>
+  </div>
+  <nav>
+    <button class="on" data-tab="t-leads">Leads</button>
+    <button data-tab="t-convs">Conversaciones</button>
+    <button data-tab="t-gaps">Preguntas sin respuesta</button>
+  </nav>
+  <section id="t-leads" class="on">
+    <table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th></tr></thead>
+      <tbody id="leads-body"></tbody>
+    </table>
+  </section>
+  <section id="t-convs"><div id="convs"></div></section>
+  <section id="t-gaps">
+    <p class="mut" style="margin-bottom:10px">Preguntas para las que el asistente no encontró información.
+    Son la lista de tareas para ampliar el contenido.</p>
+    <table>
+      <thead><tr><th>Fecha</th><th>Pregunta</th></tr></thead>
+      <tbody id="gaps-body"></tbody>
+    </table>
+  </section>
+</main>
+<script>
+var token = new URLSearchParams(location.search).get("token") || "";
+
+function esc(t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; }
+function fmt(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+document.querySelectorAll("nav button").forEach(function (b) {
+  b.onclick = function () {
+    document.querySelectorAll("nav button").forEach(function (x) { x.classList.remove("on"); });
+    document.querySelectorAll("section").forEach(function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    document.getElementById(b.dataset.tab).classList.add("on");
+  };
+});
+
+fetch("/panel/data?token=" + encodeURIComponent(token))
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
+    if (d.error) { document.getElementById("name").textContent = "Enlace no válido"; return; }
+    var convs = d.conversations || [], leads = d.leads || [];
+    document.getElementById("name").textContent = d.name;
+
+    var gaps = [], userMsgs = 0, answered = 0, assistantMsgs = 0;
+    convs.forEach(function (c) {
+      var ms = c.messages || [];
+      ms.forEach(function (m, i) {
+        if (m.role === "user") userMsgs++;
+        if (m.role === "assistant") {
+          assistantMsgs++;
+          if (m.was_answered !== false) answered++;
+          else {
+            var q = null;
+            for (var j = i - 1; j >= 0; j--) if (ms[j].role === "user") { q = ms[j]; break; }
+            gaps.push({ q: q ? q.content : "(pregunta no registrada)", at: m.created_at });
+          }
+        }
+      });
+    });
+
+    document.getElementById("s-convs").textContent = convs.length;
+    document.getElementById("s-msgs").textContent = userMsgs;
+    document.getElementById("s-leads").textContent = leads.length;
+    document.getElementById("s-rate").textContent =
+      assistantMsgs ? Math.round((100 * answered) / assistantMsgs) + "%" : "–";
+
+    document.getElementById("leads-body").innerHTML = leads.length
+      ? leads.map(function (l) {
+          return "<tr><td>" + fmt(l.created_at) + "</td><td>" + esc(l.kind) + "</td><td>" + esc(l.name) +
+            (l.company ? "<div class='mut'>" + esc(l.company) + "</div>" : "") + "</td><td>" + esc(l.email) +
+            (l.phone ? "<div class='mut'>" + esc(l.phone) + "</div>" : "") + "</td><td>" + esc(l.message) + "</td></tr>";
+        }).join("")
+      : "<tr><td colspan='5' class='mut'>Todavía no hay leads.</td></tr>";
+
+    var cv = document.getElementById("convs");
+    if (!convs.length) cv.innerHTML = "<p class='mut'>Todavía no hay conversaciones.</p>";
+    convs.forEach(function (c) {
+      var ms = c.messages || [];
+      var first = "";
+      for (var i = 0; i < ms.length; i++) if (ms[i].role === "user") { first = ms[i].content; break; }
+      var box = document.createElement("div");
+      box.className = "conv";
+      box.innerHTML =
+        "<button><span>" + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
+        "<span class='meta'>" + ms.length + " mensajes · " + fmt(c.last_message_at) + "</span></button>" +
+        "<div class='msgs'>" + ms.map(function (m) {
+          return "<div class='m " + (m.role === "user" ? "user" : "assistant") + "'>" + esc(m.content) + "</div>";
+        }).join("") + "</div>";
+      box.querySelector("button").onclick = function () { box.classList.toggle("open"); };
+      cv.appendChild(box);
+    });
+
+    document.getElementById("gaps-body").innerHTML = gaps.length
+      ? gaps.map(function (g) {
+          return "<tr><td>" + fmt(g.at) + "</td><td>" + esc(g.q) + "</td></tr>";
+        }).join("")
+      : "<tr><td colspan='2' class='mut'>Ninguna: el asistente ha encontrado contexto para todo lo que le han preguntado.</td></tr>";
+  })
+  .catch(function () {
+    document.getElementById("name").textContent = "No se ha podido cargar el panel";
+  });
+</script>
+</body>
+</html>`;
+
 // ---------- handler principal ----------
 
 export default {
@@ -486,6 +654,37 @@ export default {
         }
 
         return json({ indexed: report });
+      }
+
+      // --- panel del cliente ---
+      if (url.pathname === "/panel") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return new Response("Enlace no válido", { status: 401 });
+        return new Response(PANEL_HTML, {
+          headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
+        });
+      }
+
+      if (url.pathname === "/panel/data") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        const [conversations, leads] = await Promise.all([
+          sb(
+            env,
+            `conversations?tenant_id=eq.${tenant.id}` +
+              `&select=id,page_url,created_at,last_message_at,messages(role,content,was_answered,created_at)` +
+              `&order=last_message_at.desc&messages.order=created_at.asc&limit=100`
+          ),
+          sb(
+            env,
+            `leads?tenant_id=eq.${tenant.id}` +
+              `&select=kind,name,email,phone,company,message,status,created_at` +
+              `&order=created_at.desc&limit=200`
+          ),
+        ]);
+        return json({ name: tenant.name, conversations, leads }, 200, {
+          "Cache-Control": "no-store",
+        });
       }
 
       return json({ error: "no encontrado" }, 404);

@@ -23,7 +23,7 @@ mismo proveedor que el Worker, un tercero menos en la factura.
 ## Estructura
 
 ```
-worker/src/index.js   Motor. Endpoints: /api/config, /api/chat, /admin/ingest
+worker/src/index.js   Motor. Endpoints: /api/config, /api/chat, /admin/ingest, /panel
 worker/wrangler.toml  Binding AI. Los secretos van con `wrangler secret put`
 widget/widget.js      Widget embebible, vanilla JS, sin dependencias
 README.md             Despliegue, indexación, alta de clientes, consultas SQL
@@ -70,7 +70,8 @@ Pendiente inmediato:
 4. Probar el circuito de punta a punta.
 
 Backlog: aplicar `monthly_message_limit`, rate limiting por IP, reindexado con Cron
-Trigger, streaming de respuestas, panel de admin.
+Trigger, streaming de respuestas, panel de admin (el de cliente ya existe: `/panel`
+con `tenants.panel_token`).
 
 ## Dato sin resolver
 

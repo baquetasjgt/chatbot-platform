@@ -119,6 +119,30 @@ Notas sobre Gemini:
   fechas que no estén en el contexto): la regla "no inventar" es la número 1 del bot
   y los modelos más baratos son más propensos a saltársela.
 
+## 5. Panel del cliente
+
+Cada tenant tiene un panel de solo lectura con sus conversaciones, sus leads y las
+preguntas que el bot no supo responder (las últimas 100 conversaciones y 200 leads):
+
+```
+https://TU-WORKER.workers.dev/panel?token=PANEL_TOKEN
+```
+
+El token sale de la base de datos:
+
+```sql
+select panel_token from tenants where slug = 'fisioexpo';
+```
+
+Ese enlace es lo único que le pasas al cliente. Solo ve sus datos: el token resuelve
+el tenant y todas las consultas filtran por él, igual que en el chat. Si el enlace se
+filtra, se rota y listo:
+
+```sql
+update tenants set panel_token = 'pt_' || encode(gen_random_bytes(16), 'hex')
+where slug = 'fisioexpo';
+```
+
 ## Consultas útiles
 
 ```sql
@@ -148,4 +172,4 @@ que puedes enseñarle al cliente cada mes para justificar la cuota.
 - Rate limiting por IP en el Worker
 - Reindexado automático con un Cron Trigger
 - Streaming de la respuesta (ahora llega de golpe)
-- Panel de admin
+- Panel de admin para ti (el panel de cliente ya existe: `/panel`)
