@@ -476,6 +476,62 @@ async function handleAdminApi(request, env, url) {
     return json({ ok: true });
   }
 
+  // --- formulario de FAQ para el cliente ---
+  const mFaq = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/faq-form$/);
+  if (mFaq && request.method === "GET") {
+    const rows = await sb(
+      env,
+      `faq_forms?tenant_id=eq.${mFaq[1]}&select=token,status,created_at,submitted_at`
+    );
+    return json(rows?.[0] || {});
+  }
+  if (mFaq && request.method === "POST") {
+    if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
+    const [t] = await sb(env, `tenants?id=eq.${mFaq[1]}&select=name,system_prompt`);
+    if (!t) return json({ error: "tenant no encontrado" }, 404);
+
+    const instructions = `Eres consultor de contenido para chatbots de atención al público. Genera las preguntas frecuentes que el dueño de este negocio debería responder para alimentar a su chatbot. Devuelve SOLO un objeto JSON: {"questions":["...","..."]}
+
+Entre 10 y 14 preguntas, en español, concretas y de respuesta factual (precios, horarios, condiciones, proceso de compra o reserva, ubicación, contacto, plazos, garantías, métodos de pago...). Formúlalas como las haría un visitante real de la web. Evita preguntas genéricas o de respuesta obvia.
+
+Negocio: ${t.name}
+Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}`;
+
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: instructions }] }],
+          generationConfig: { maxOutputTokens: 2000, responseMimeType: "application/json" },
+        }),
+      }
+    );
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+    const out = await res.json();
+    const text = (out.candidates?.[0]?.content?.parts || [])
+      .filter((p) => p.text && !p.thought)
+      .map((p) => p.text)
+      .join("");
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return json({ error: "la IA no devolvió preguntas válidas; vuelve a intentarlo" }, 502);
+    }
+    const questions = (parsed.questions || []).slice(0, 20).map((q) => ({ q: String(q), a: "" }));
+    if (!questions.length) return json({ error: "la IA no devolvió preguntas; vuelve a intentarlo" }, 502);
+
+    // un formulario por chatbot: regenerar sustituye al anterior (enlace nuevo)
+    await sb(env, `faq_forms?tenant_id=eq.${mFaq[1]}`, { method: "DELETE" });
+    const [row] = await sb(env, "faq_forms", {
+      method: "POST",
+      body: { tenant_id: mFaq[1], questions },
+    });
+    return json({ token: row.token, status: row.status, created_at: row.created_at });
+  }
+
   // --- clientes ---
   if (url.pathname === "/admin/api/clients" && request.method === "GET") {
     const rows = await sb(
@@ -927,6 +983,18 @@ const ADMIN_HTML = `<!doctype html>
         <label>Documentos indexados — incluye los que suba el cliente desde su panel</label>
         <div id="doc-list" class="mut">Cargando…</div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+        <label>Formulario de preguntas frecuentes para el cliente</label>
+        <p id="faq-box" class="mut" style="margin-bottom:8px">La IA propone las preguntas típicas del
+        negocio; le envías el enlace al cliente, las responde (puede añadir o quitar) y al enviar
+        quedan indexadas en el bot automáticamente.</p>
+        <div class="copyrow hide" id="faq-linkrow"><input id="faq-link" readonly>
+          <button class="ghost small" data-copy="faq-link">Copiar</button>
+          <button id="faq-open" class="ghost small">Abrir</button></div>
+        <div class="actions" style="margin-top:8px">
+          <button id="faq-gen" class="ghost small">Generar formulario con IA</button>
+          <span id="faq-msg" class="mut"></span>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <label>Subir archivos (PDF, TXT, MD, CSV, HTML, imágenes…)</label>
         <input id="g-files" type="file" multiple
           accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
@@ -1324,9 +1392,48 @@ function selTenant(id, projectId) {
   $("g-files").value = ""; $("g-upmsg").textContent = "";
   resetFtabs();
   updPrev();
-  if (t) { renderInteg(t); loadDocs(); }
+  if (t) { renderInteg(t); loadDocs(); loadFaq(); }
   showCards(t ? ["v-assist", "v-tenant", "integ", "ingest"] : ["v-assist", "v-tenant"]);
 }
+
+function loadFaq() {
+  $("faq-msg").textContent = "";
+  api("/admin/api/tenants/" + sel.id + "/faq-form").then(function (f) {
+    var has = f && f.token;
+    $("faq-linkrow").classList.toggle("hide", !has);
+    if (!has) {
+      $("faq-box").textContent = "La IA propone las preguntas típicas del negocio; le envías el enlace al cliente, las responde (puede añadir o quitar) y al enviar quedan indexadas en el bot automáticamente.";
+      return;
+    }
+    $("faq-link").value = location.origin + "/faq?token=" + f.token;
+    var when = function (iso) {
+      return new Date(iso).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    };
+    $("faq-box").textContent = f.status === "enviado"
+      ? "✓ Enviado por el cliente el " + when(f.submitted_at) + ". Sus respuestas están indexadas (mira la lista de documentos); con el mismo enlace puede actualizarlas."
+      : "Pendiente: enlace creado el " + when(f.created_at) + " — el cliente aún no lo ha enviado.";
+  }).catch(function () {});
+}
+
+$("faq-gen").onclick = function () {
+  var t = curTenant();
+  if (!t) return;
+  if (!$("faq-linkrow").classList.contains("hide") &&
+      !confirm("Ya hay un formulario para este chatbot. ¿Generar uno nuevo? El enlace anterior dejará de funcionar.")) return;
+  $("faq-msg").textContent = "Generando preguntas con IA… unos segundos.";
+  $("faq-msg").className = "mut";
+  api("/admin/api/tenants/" + sel.id + "/faq-form", { method: "POST" }).then(function (r) {
+    if (r.error) { $("faq-msg").textContent = r.error; $("faq-msg").className = "err"; return; }
+    $("faq-msg").textContent = "Formulario creado ✓ Copia el enlace y envíaselo al cliente.";
+    $("faq-msg").className = "ok";
+    toast("Formulario de FAQ creado ✓");
+    loadFaq();
+  }).catch(function () {
+    $("faq-msg").textContent = "Error al generar."; $("faq-msg").className = "err";
+  });
+};
+
+$("faq-open").onclick = function () { window.open($("faq-link").value, "_blank"); };
 
 [].forEach.call(document.querySelectorAll(".ftabs button"), function (b) {
   b.onclick = function () {
@@ -1665,6 +1772,163 @@ $("g-upload").onclick = function () {
 };
 
 if (TOKEN) load(); else showLogin();
+</script>
+</body>
+</html>`;
+
+// ---------- formulario de preguntas frecuentes (lo rellena el cliente) ----------
+
+const FAQ_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Preguntas frecuentes de tu asistente</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5;--err:#b3261e;--ok:#0a7a4b}
+  *{box-sizing:border-box;margin:0}
+  body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:20px 24px}
+  h1{font-size:19px}
+  .sub{color:var(--mut);font-size:14px;margin-top:4px;max-width:640px}
+  main{max-width:720px;margin:0 auto;padding:24px 16px 60px}
+  .banner{background:#eef6f0;border:1px solid #cde5d4;color:#0a5c39;border-radius:12px;
+    padding:12px 16px;margin-bottom:18px;font-size:14px}
+  .item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+  label{display:block;font-size:12.5px;color:var(--mut);margin-bottom:4px}
+  input,textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:10px;
+    padding:9px 12px;background:#fff;color:var(--ink)}
+  input:focus,textarea:focus{outline:0;border-color:#999}
+  textarea{resize:vertical}
+  .item input{font-weight:600;border:0;padding:0 0 8px;border-radius:0;border-bottom:1px dashed transparent}
+  .item input:focus{border-bottom-color:#ccc}
+  .del{background:none;border:0;color:#b3261e;font-size:13px;cursor:pointer;padding:6px 0 0;opacity:.8}
+  .del:hover{opacity:1}
+  .btn{background:#111;color:#fff;border:0;border-radius:10px;padding:12px 22px;cursor:pointer;font:inherit;font-size:15px}
+  .ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 16px;cursor:pointer;font:inherit}
+  .foot{display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap}
+  .mut{color:var(--mut);font-size:13px}
+  .err{color:var(--err);font-size:14px}
+  .ok{color:var(--ok);font-size:14px}
+  .done{background:#fff;border:1px solid var(--line);border-radius:16px;padding:44px 28px;text-align:center}
+  .done h2{margin-bottom:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Preguntas frecuentes</h1>
+  <p class="sub">Tu asistente virtual responderá a los visitantes con lo que escribas aquí.
+  Contesta las preguntas que apliquen, borra las que no, y añade las que falten.
+  Cuanto más concreto (precios, horarios, plazos, contacto), mejor responderá.</p>
+</header>
+<main>
+  <div id="banner" class="banner" style="display:none"></div>
+  <div id="list"></div>
+  <div class="foot">
+    <button id="addq" class="ghost">+ Añadir otra pregunta</button>
+  </div>
+  <div class="foot">
+    <button id="send" class="btn">Enviar respuestas</button>
+    <span id="msg" class="mut"></span>
+  </div>
+</main>
+<script>
+var token = new URLSearchParams(location.search).get("token") || "";
+var items = [];
+
+function rowFor(item) {
+  var box = document.createElement("div");
+  box.className = "item";
+  var lq = document.createElement("label");
+  lq.textContent = "Pregunta";
+  var q = document.createElement("input");
+  q.value = item.q || "";
+  q.placeholder = "Escribe la pregunta…";
+  q.oninput = function () { item.q = q.value; };
+  var la = document.createElement("label");
+  la.textContent = "Respuesta";
+  la.style.marginTop = "6px";
+  var a = document.createElement("textarea");
+  a.rows = 3;
+  a.value = item.a || "";
+  a.placeholder = "Escribe aquí la respuesta… (si no aplica, borra la pregunta)";
+  a.oninput = function () { item.a = a.value; };
+  var del = document.createElement("button");
+  del.className = "del";
+  del.textContent = "Eliminar esta pregunta";
+  del.onclick = function () {
+    items.splice(items.indexOf(item), 1);
+    box.remove();
+  };
+  box.appendChild(lq); box.appendChild(q); box.appendChild(la); box.appendChild(a); box.appendChild(del);
+  return box;
+}
+
+function renderAll() {
+  var list = document.getElementById("list");
+  list.innerHTML = "";
+  items.forEach(function (i) { list.appendChild(rowFor(i)); });
+}
+
+document.getElementById("addq").onclick = function () {
+  var item = { q: "", a: "" };
+  items.push(item);
+  var r = rowFor(item);
+  document.getElementById("list").appendChild(r);
+  r.querySelector("input").focus();
+  r.scrollIntoView({ block: "center" });
+};
+
+document.getElementById("send").onclick = function () {
+  var ready = items.filter(function (i) { return i.q.trim() && i.a.trim(); });
+  var msg = document.getElementById("msg");
+  if (!ready.length) {
+    msg.textContent = "Responde al menos una pregunta antes de enviar.";
+    msg.className = "err";
+    return;
+  }
+  msg.textContent = "Enviando…"; msg.className = "mut";
+  document.getElementById("send").disabled = true;
+  fetch("/faq/submit?token=" + encodeURIComponent(token), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items: items }),
+  }).then(function (r) { return r.json(); }).then(function (r) {
+    if (r.error) {
+      msg.textContent = r.error; msg.className = "err";
+      document.getElementById("send").disabled = false;
+      return;
+    }
+    document.querySelector("main").innerHTML =
+      '<div class="done"><h2>¡Gracias!</h2><p>Tus respuestas ya forman parte del asistente.</p>' +
+      '<p class="mut" style="margin-top:8px">Puedes volver a este enlace cuando quieras para actualizarlas.</p></div>';
+  }).catch(function () {
+    msg.textContent = "No se ha podido enviar. Inténtalo de nuevo."; msg.className = "err";
+    document.getElementById("send").disabled = false;
+  });
+};
+
+fetch("/faq/data?token=" + encodeURIComponent(token))
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
+    if (d.error) {
+      document.querySelector("main").innerHTML = '<p class="err">Enlace no válido o caducado.</p>';
+      return;
+    }
+    document.getElementById("title").textContent = "Preguntas frecuentes — " + d.name;
+    items = (d.questions || []).map(function (x) { return { q: x.q || "", a: x.a || "" }; });
+    if (!items.length) items = [{ q: "", a: "" }];
+    if (d.status === "enviado") {
+      var b = document.getElementById("banner");
+      b.style.display = "block";
+      b.textContent = "Ya enviaste este formulario. Puedes revisar o cambiar las respuestas y volver a enviarlo: se actualizará el asistente.";
+    }
+    renderAll();
+  })
+  .catch(function () {
+    document.querySelector("main").innerHTML = '<p class="err">No se ha podido cargar el formulario.</p>';
+  });
 </script>
 </body>
 </html>`;
@@ -2298,6 +2562,59 @@ ${inject}</body></html>`;
           return json({ error: "envía entre 1 y 10 archivos" }, 400);
         }
         return json({ indexed: await indexUploadedFiles(env, tenant.id, files) });
+      }
+
+      // --- formulario de FAQ: página, datos y envío ---
+      if (url.pathname === "/faq") {
+        const tk = url.searchParams.get("token") || "";
+        const rows = await sb(env, `faq_forms?token=eq.${encodeURIComponent(tk)}&select=id`);
+        if (!rows?.length) return new Response("Enlace no válido", { status: 401 });
+        return new Response(FAQ_HTML, {
+          headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
+        });
+      }
+
+      if (url.pathname === "/faq/data") {
+        const tk = url.searchParams.get("token") || "";
+        const rows = await sb(
+          env,
+          `faq_forms?token=eq.${encodeURIComponent(tk)}&select=questions,status,tenants(name)`
+        );
+        if (!rows?.length) return json({ error: "enlace no válido" }, 401);
+        return json(
+          { name: rows[0].tenants?.name, questions: rows[0].questions, status: rows[0].status },
+          200,
+          { "Cache-Control": "no-store" }
+        );
+      }
+
+      if (url.pathname === "/faq/submit" && request.method === "POST") {
+        const tk = url.searchParams.get("token") || "";
+        const rows = await sb(env, `faq_forms?token=eq.${encodeURIComponent(tk)}&select=id,tenant_id`);
+        if (!rows?.length) return json({ error: "enlace no válido" }, 401);
+        const { items = [] } = await request.json();
+        const clean = items
+          .map((i) => ({
+            q: String(i.q || "").trim().slice(0, 300),
+            a: String(i.a || "").trim().slice(0, 2000),
+          }))
+          .filter((i) => i.q && i.a)
+          .slice(0, 60);
+        if (!clean.length) return json({ error: "responde al menos una pregunta" }, 400);
+
+        const content = clean.map((i) => `Pregunta: ${i.q}\nRespuesta: ${i.a}`).join("\n\n");
+        const res = await indexDocument(env, rows[0].tenant_id, {
+          source_type: "text",
+          title: "Preguntas frecuentes (formulario del cliente)",
+          content,
+        });
+        if (!res.ok) return json({ error: res.reason }, 400);
+
+        await sb(env, `faq_forms?id=eq.${rows[0].id}`, {
+          method: "PATCH",
+          body: { questions: clean, status: "enviado", submitted_at: new Date().toISOString() },
+        });
+        return json({ ok: true, chunks: res.chunks });
       }
 
       // --- marcar estado de un lead desde el panel del cliente ---
