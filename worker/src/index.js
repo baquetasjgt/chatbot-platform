@@ -1084,6 +1084,39 @@ const ADMIN_HTML = `<!doctype html>
             <div><label>Segundos hasta la invitación</label>
               <input id="f-tdelay" type="number" min="1" max="60" value="4" style="max-width:120px"></div>
           </div>
+          <div class="row">
+            <div><label>Tamaño del widget</label>
+              <select id="f-size">
+                <option value="compacto">Compacto</option>
+                <option value="estandar" selected>Estándar</option>
+                <option value="amplio">Amplio</option>
+              </select></div>
+            <div><label>Modo oscuro</label>
+              <select id="f-dark">
+                <option value="off">Desactivado</option>
+                <option value="auto">Automático (según el sistema del visitante)</option>
+              </select></div>
+          </div>
+          <label>Fondo del área de mensajes (URL de imagen o degradado CSS; vacío = liso)</label>
+          <input id="f-bgimg" placeholder="https://cliente.com/fondo.jpg — o — linear-gradient(180deg,#ffffff,#eef2fa)">
+          <label style="margin-top:18px;font-weight:600;color:var(--ink)">Textos de la interfaz (para otros idiomas o tonos)</label>
+          <div class="row">
+            <div><label>Campo de escritura</label><input id="f-tplaceholder" placeholder="Escribe tu pregunta…"></div>
+            <div><label>Botón de enviar</label><input id="f-tsend" placeholder="→"></div>
+          </div>
+          <div class="row">
+            <div><label>Mensaje de error de conexión</label><input id="f-terror" placeholder="No he podido conectar…"></div>
+            <div><label>Texto de la burbuja de invitación (vacío = la bienvenida)</label><input id="f-tteaser"></div>
+          </div>
+          <label style="margin-top:18px;font-weight:600;color:var(--ink)">Marca en el pie («Impulsado por…»)</label>
+          <div class="row">
+            <div><label>Tu marca (vacío = sin pie)</label><input id="f-brand" placeholder="Tu Agencia"></div>
+            <div><label>Enlace de la marca (opcional)</label><input id="f-brandurl" type="url" placeholder="https://tuagencia.com"></div>
+          </div>
+          <div class="check"><input id="f-sound" type="checkbox">
+            <label for="f-sound" style="margin:0">Sonido sutil al aparecer la invitación (si el navegador lo permite)</label></div>
+          <label>CSS personalizado (avanzado; se inyecta tal cual en la web del cliente)</label>
+          <textarea id="f-css" rows="3" placeholder=".cb-btn{ } .cb-panel{ } .cb-msg.bot{ } …"></textarea>
           <label>Vista previa en vivo</label>
           <div id="prev">
             <div id="pv-head">
@@ -1668,6 +1701,17 @@ function selTenant(id, projectId) {
   $("f-logo").value = th.logo_url || "";
   $("f-teaser").checked = th.teaser !== false;
   $("f-tdelay").value = th.teaser_delay || 4;
+  $("f-size").value = th.size || "estandar";
+  $("f-dark").value = th.dark || "off";
+  $("f-bgimg").value = th.bg_image || "";
+  $("f-tplaceholder").value = th.t_placeholder || "";
+  $("f-tsend").value = th.t_send || "";
+  $("f-terror").value = th.t_error || "";
+  $("f-tteaser").value = th.t_teaser || "";
+  $("f-brand").value = th.brand_name || "";
+  $("f-brandurl").value = th.brand_url || "";
+  $("f-sound").checked = !!th.sound;
+  $("f-css").value = th.custom_css || "";
   $("save-msg").textContent = "";
   $("a-brief").value = ""; $("a-msg").textContent = "";
   $("g-urls").value = ""; $("g-title").value = ""; $("g-content").value = "";
@@ -1882,6 +1926,17 @@ function collect() {
       logo_url: $("f-logo").value.trim(),
       teaser: $("f-teaser").checked,
       teaser_delay: parseInt($("f-tdelay").value, 10) || 4,
+      size: $("f-size").value,
+      dark: $("f-dark").value,
+      bg_image: $("f-bgimg").value.trim(),
+      t_placeholder: $("f-tplaceholder").value.trim(),
+      t_send: $("f-tsend").value.trim(),
+      t_error: $("f-terror").value.trim(),
+      t_teaser: $("f-tteaser").value.trim(),
+      brand_name: $("f-brand").value.trim(),
+      brand_url: $("f-brandurl").value.trim(),
+      sound: $("f-sound").checked,
+      custom_css: $("f-css").value.slice(0, 5000),
     },
   };
   var lim = parseInt($("f-limit").value, 10);

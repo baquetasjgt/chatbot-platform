@@ -17,23 +17,32 @@
   var teaser = null;
   var cfg = { primary_color: "#111", name: "Asistente", welcome_message: "¡Hola!", suggested_questions: [], theme: {} };
   var TH = {};
+  var TXT = {};
   var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var darkMq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
   var GOOGLE_FONTS = ["Inter", "Poppins", "Roboto", "Montserrat", "Lato"];
+  var SIZES = {
+    compacto: { w: 330, h: 470, b: 48 },
+    estandar: { w: 380, h: 560, b: 56 },
+    amplio: { w: 440, h: 640, b: 64 },
+  };
 
   var css = `
-  .cb-btn{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;border:0;
-    background:var(--cb);cursor:pointer;z-index:2147483000;display:flex;align-items:center;
-    justify-content:center;box-shadow:var(--cbshb,0 4px 16px rgba(0,0,0,.18));transition:transform .18s}
+  .cb-btn{position:fixed;bottom:24px;right:24px;width:var(--cbbtn,56px);height:var(--cbbtn,56px);
+    border-radius:50%;border:0;background:var(--cb);cursor:pointer;z-index:2147483000;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--cbshb,0 4px 16px rgba(0,0,0,.18));transition:transform .18s}
   .cb-btn:hover{transform:scale(1.06)}
   .cb-btn.cb-left{left:24px;right:auto}
-  .cb-btn svg{width:26px;height:26px;fill:none;stroke:var(--cbt,#fff);stroke-width:1.8;stroke-linecap:round}
-  .cb-panel{position:fixed;bottom:92px;right:24px;width:380px;max-width:calc(100vw - 32px);
-    height:560px;max-height:calc(100vh - 130px);background:var(--cbg,#fff);
-    border-radius:var(--cbrl,16px);z-index:2147483000;
+  .cb-btn svg{width:46%;height:46%;fill:none;stroke:var(--cbt,#fff);stroke-width:1.8;stroke-linecap:round}
+  .cb-panel{position:fixed;bottom:calc(var(--cbbtn,56px) + 36px);right:24px;width:var(--cbw,380px);
+    max-width:calc(100vw - 32px);height:var(--cbh,560px);max-height:calc(100vh - 130px);
+    background:var(--cbg,#fff);border-radius:var(--cbrl,16px);z-index:2147483000;
     display:none;flex-direction:column;overflow:hidden;box-shadow:var(--cbsh,0 12px 48px rgba(0,0,0,.2));
     font:15px/1.55 var(--cbf,system-ui,-apple-system,"Segoe UI",sans-serif);color:#1a1a1a}
   .cb-panel.on{display:flex}
   .cb-panel.cb-left{left:24px;right:auto}
+  .cb-panel.cb-dark{background:#17171a;color:#ececec}
   .cb-head{background:var(--cb);color:var(--cbt,#fff);padding:13px 16px;display:flex;
     align-items:center;gap:11px;flex:0 0 auto}
   .cb-av{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.18);display:flex;
@@ -44,9 +53,11 @@
   .cb-close{background:0;border:0;color:var(--cbt,#fff);font-size:22px;cursor:pointer;line-height:1;
     opacity:.8;margin-left:auto}
   .cb-close:hover{opacity:1}
-  .cb-log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+  .cb-log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;
+    background:var(--cbbg,transparent);background-size:cover;background-position:center}
   .cb-msg{max-width:85%;padding:10px 14px;border-radius:var(--cbr,14px);white-space:pre-wrap;word-wrap:break-word}
   .cb-msg.bot{background:var(--cb2,#f2f2f0);color:var(--cb2t,#1a1a1a);align-self:flex-start;border-bottom-left-radius:4px}
+  .cb-dark .cb-msg.bot{background:#2a2a2e;color:#ececec}
   .cb-msg.me{background:var(--cb);color:var(--cbt,#fff);align-self:flex-end;border-bottom-right-radius:4px}
   .cb-msg.md{white-space:normal}
   .cb-msg.md a{color:inherit;text-decoration:underline}
@@ -56,23 +67,31 @@
   .cb-sug{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 12px}
   .cb-sug button{background:var(--cbg,#fff);border:1px solid #ddd;border-radius:16px;padding:7px 12px;
     font-size:13px;cursor:pointer;color:#333;font-family:inherit}
+  .cb-dark .cb-sug button{background:#232327;border-color:#3a3a40;color:#ddd}
   .cb-sug button:hover{border-color:var(--cb)}
   .cb-foot{display:flex;gap:8px;padding:12px;border-top:1px solid #eee;flex:0 0 auto}
+  .cb-dark .cb-foot{border-top-color:#333}
   .cb-foot input{flex:1;border:1px solid #ddd;border-radius:calc(var(--cbr,14px)*.72 + 4px);
     padding:11px 13px;font-size:15px;outline:0;font-family:inherit;background:#fff;color:#1a1a1a}
+  .cb-dark .cb-foot input{background:#232327;border-color:#3a3a40;color:#ececec}
   .cb-foot input:focus{border-color:var(--cb)}
   .cb-foot button{background:var(--cb);color:var(--cbt,#fff);border:0;
-    border-radius:calc(var(--cbr,14px)*.72 + 4px);padding:0 16px;cursor:pointer}
+    border-radius:calc(var(--cbr,14px)*.72 + 4px);padding:0 16px;cursor:pointer;font-family:inherit}
   .cb-foot button:disabled{opacity:.45;cursor:default}
+  .cb-brand{flex:0 0 auto;text-align:center;font-size:11px;color:#999;padding:0 0 7px}
+  .cb-brand a{color:#999;text-decoration:none}
+  .cb-brand a:hover{text-decoration:underline}
   .cb-dots span{display:inline-block;width:6px;height:6px;margin-right:3px;border-radius:3px;
     background:#bbb;animation:cbd 1.2s infinite}
   .cb-dots span:nth-child(2){animation-delay:.18s}
   .cb-dots span:nth-child(3){animation-delay:.36s}
   @keyframes cbd{0%,60%,100%{opacity:.3}30%{opacity:1}}
-  .cb-tease{position:fixed;bottom:92px;right:24px;max-width:272px;background:#fff;color:#1a1a1a;
-    border:1px solid #e5e5e2;border-radius:var(--cbr,14px);border-bottom-right-radius:4px;
-    padding:12px 34px 12px 14px;font:14px/1.5 var(--cbf,system-ui,-apple-system,"Segoe UI",sans-serif);
+  .cb-tease{position:fixed;bottom:calc(var(--cbbtn,56px) + 36px);right:24px;max-width:272px;
+    background:#fff;color:#1a1a1a;border:1px solid #e5e5e2;border-radius:var(--cbr,14px);
+    border-bottom-right-radius:4px;padding:12px 34px 12px 14px;
+    font:14px/1.5 var(--cbf,system-ui,-apple-system,"Segoe UI",sans-serif);
     box-shadow:var(--cbshb,0 8px 28px rgba(0,0,0,.16));cursor:pointer;z-index:2147483000;animation:cbtin .3s ease}
+  .cb-tease.cb-dark{background:#232327;color:#ececec;border-color:#3a3a40}
   .cb-tease.cb-left{left:24px;right:auto;border-bottom-right-radius:var(--cbr,14px);border-bottom-left-radius:4px}
   @keyframes cbtin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .cb-tease .cb-tx{position:absolute;top:5px;right:7px;background:0;border:0;color:#999;
@@ -104,7 +123,6 @@
     return d.innerHTML;
   }
 
-  // markdown mínimo: negritas, enlaces, viñetas y saltos de línea
   function md(t) {
     var x = esc(t);
     x = x.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
@@ -129,8 +147,25 @@
     return "'" + f + "',system-ui,sans-serif";
   }
 
+  function isDark() {
+    return TH.dark === "auto" && darkMq && darkMq.matches;
+  }
+
+  function applyDark() {
+    var d = isDark();
+    panel.classList.toggle("cb-dark", d);
+    if (teaser) teaser.classList.toggle("cb-dark", d);
+  }
+
   function applyTheme() {
     TH = cfg.theme || {};
+    TXT = {
+      placeholder: TH.t_placeholder || "Escribe tu pregunta…",
+      send: TH.t_send || "→",
+      error: TH.t_error || "No he podido conectar. Vuelve a intentarlo o escríbenos por email.",
+      teaser: TH.t_teaser || cfg.welcome_message,
+      subtitle: TH.subtitle || "Suele responder al instante",
+    };
     var r = document.documentElement.style;
     r.setProperty("--cb", cfg.primary_color);
     r.setProperty("--cbt", textColorFor(cfg.primary_color));
@@ -144,6 +179,16 @@
     var sh = TH.shadow || "suave";
     r.setProperty("--cbsh", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.35)" : "0 12px 48px rgba(0,0,0,.2)");
     r.setProperty("--cbshb", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 6px 22px rgba(0,0,0,.32)" : "0 4px 16px rgba(0,0,0,.18)");
+    var sz = SIZES[TH.size] || SIZES.estandar;
+    r.setProperty("--cbw", sz.w + "px");
+    r.setProperty("--cbh", sz.h + "px");
+    r.setProperty("--cbbtn", sz.b + "px");
+    var bg = (TH.bg_image || "").trim();
+    if (bg) {
+      r.setProperty("--cbbg", bg.indexOf("gradient") >= 0 ? bg : 'url("' + bg.replace(/"/g, "") + '")');
+    } else {
+      r.removeProperty("--cbbg");
+    }
     if (GOOGLE_FONTS.indexOf(TH.font) >= 0 && !document.getElementById("cb-font")) {
       var lk = document.createElement("link");
       lk.id = "cb-font";
@@ -155,21 +200,60 @@
     btn.classList.toggle("cb-left", left);
     panel.classList.toggle("cb-left", left);
     if (teaser) teaser.classList.toggle("cb-left", left);
+    applyDark();
+    if (TH.custom_css && !document.getElementById("cb-custom")) {
+      var cs = document.createElement("style");
+      cs.id = "cb-custom";
+      cs.textContent = String(TH.custom_css).slice(0, 5000);
+      document.head.appendChild(cs);
+    }
+  }
+
+  if (darkMq && darkMq.addEventListener) darkMq.addEventListener("change", applyDark);
+
+  function playPing() {
+    try {
+      var ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") return; // el navegador exige interacción previa
+      var play = function (freq, at) {
+        var o = ac.createOscillator();
+        var g = ac.createGain();
+        o.type = "sine";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ac.currentTime + at);
+        g.gain.exponentialRampToValueAtTime(0.04, ac.currentTime + at + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + at + 0.25);
+        o.connect(g).connect(ac.destination);
+        o.start(ac.currentTime + at);
+        o.stop(ac.currentTime + at + 0.3);
+      };
+      play(830, 0);
+      play(1108, 0.12);
+    } catch (e) {}
   }
 
   function render() {
     var avatar = TH.logo_url
       ? '<img src="' + esc(TH.logo_url) + '" alt="">'
       : esc((cfg.name || "A").charAt(0).toUpperCase());
+    var brand = "";
+    if (TH.brand_name) {
+      brand = '<div class="cb-brand">' +
+        (TH.brand_url
+          ? '<a href="' + esc(TH.brand_url) + '" target="_blank" rel="noopener">Impulsado por ' + esc(TH.brand_name) + "</a>"
+          : "Impulsado por " + esc(TH.brand_name)) +
+        "</div>";
+    }
     panel.innerHTML =
       '<div class="cb-head"><div class="cb-av">' + avatar + '</div>' +
       '<div><div class="cb-hname">' + esc(cfg.name) + '</div>' +
-      '<div class="cb-hsub">' + esc(TH.subtitle || "Suele responder al instante") + '</div></div>' +
+      '<div class="cb-hsub">' + esc(TXT.subtitle) + '</div></div>' +
       '<button class="cb-close" aria-label="Cerrar chat">&times;</button></div>' +
       '<div class="cb-log" id="cb-log"></div>' +
       '<div class="cb-sug" id="cb-sug"></div>' +
-      '<div class="cb-foot"><input id="cb-in" placeholder="Escribe tu pregunta…" ' +
-      'aria-label="Tu pregunta" autocomplete="off"><button id="cb-send" aria-label="Enviar">→</button></div>';
+      '<div class="cb-foot"><input id="cb-in" placeholder="' + esc(TXT.placeholder) + '" ' +
+      'aria-label="Tu pregunta" autocomplete="off"><button id="cb-send" aria-label="Enviar">' +
+      esc(TXT.send) + "</button></div>" + brand;
 
     panel.querySelector(".cb-close").onclick = toggle;
     panel.querySelector("#cb-send").onclick = send;
@@ -275,7 +359,7 @@
       })
       .catch(function () {
         wait.remove();
-        add("bot", "No he podido conectar. Vuelve a intentarlo o escríbenos por email.");
+        add("bot", TXT.error);
       })
       .finally(function () {
         busy = false;
@@ -291,9 +375,11 @@
   function showTeaser() {
     if (open || teaser || sessionStorage.getItem("cb_teased")) return;
     teaser = document.createElement("div");
-    teaser.className = "cb-tease" + (TH.position === "izquierda" ? " cb-left" : "");
+    teaser.className = "cb-tease" +
+      (TH.position === "izquierda" ? " cb-left" : "") +
+      (isDark() ? " cb-dark" : "");
     teaser.setAttribute("role", "button");
-    teaser.innerHTML = '<button class="cb-tx" aria-label="Cerrar aviso">&times;</button>' + esc(cfg.welcome_message);
+    teaser.innerHTML = '<button class="cb-tx" aria-label="Cerrar aviso">&times;</button>' + esc(TXT.teaser);
     teaser.onclick = function (e) {
       var closeOnly = e.target && e.target.className === "cb-tx";
       hideTeaser();
@@ -301,6 +387,7 @@
     };
     document.body.appendChild(teaser);
     sessionStorage.setItem("cb_teased", "1");
+    if (TH.sound) playPing();
   }
 
   function toggle() {
