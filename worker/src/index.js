@@ -268,12 +268,16 @@ async function callClaude(env, tenant, messages, contextBlock) {
       max_tokens: 800,
       system,
       messages,
-      tools: [LEAD_TOOL],
+      tools: leadCaptureEnabled(tenant) ? [LEAD_TOOL] : [],
     }),
   });
 
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   return res.json();
+}
+
+function leadCaptureEnabled(tenant) {
+  return !(tenant.features && tenant.features.leads === false);
 }
 
 async function runClaude(env, tenant, history, message, contextBlock, saveLead) {
@@ -333,17 +337,19 @@ async function callGemini(env, tenant, contents, contextBlock) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents,
-        tools: [
-          {
-            functionDeclarations: [
+        tools: leadCaptureEnabled(tenant)
+          ? [
               {
-                name: LEAD_TOOL.name,
-                description: LEAD_TOOL.description,
-                parameters: LEAD_TOOL.input_schema,
+                functionDeclarations: [
+                  {
+                    name: LEAD_TOOL.name,
+                    description: LEAD_TOOL.description,
+                    parameters: LEAD_TOOL.input_schema,
+                  },
+                ],
               },
-            ],
-          },
-        ],
+            ]
+          : [],
         generationConfig: {
           maxOutputTokens: 2000,
           thinkingConfig: { thinkingLevel: "low" },
@@ -637,8 +643,9 @@ const TENANT_FIELDS = [
   "slug", "name", "active", "system_prompt", "provider", "model",
   "welcome_message", "suggested_questions", "primary_color", "allowed_domains",
   "handoff_email", "lead_webhook_url", "monthly_message_limit", "project_id", "theme",
+  "panel_enabled", "panel_features", "features",
 ];
-const CLIENT_FIELDS = ["name", "contact_name", "email", "phone", "notes"];
+const CLIENT_FIELDS = ["name", "contact_name", "email", "phone", "notes", "portal_enabled"];
 const PROJECT_FIELDS = ["client_id", "name", "description"];
 
 function pick(obj, keys) {
@@ -951,6 +958,40 @@ async function handleAdminApi(request, env, url) {
   // --- métricas globales del mes (pantalla de inicio) ---
   if (url.pathname === "/admin/api/metrics" && request.method === "GET") {
     return json(await rpc(env, "admin_metrics", {}));
+  }
+
+  // --- duplicar un chatbot (misma config, slug y claves nuevos) ---
+  const mDup = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/duplicate$/);
+  if (mDup && request.method === "POST") {
+    const [t] = await sb(env, `tenants?id=eq.${mDup[1]}&select=*`);
+    if (!t) return json({ error: "tenant no encontrado" }, 404);
+    const suffix = randomHex(2);
+    const copy = pick(t, TENANT_FIELDS);
+    copy.slug = `${t.slug}-copia-${suffix}`.slice(0, 60);
+    copy.name = `${t.name} (copia)`;
+    copy.active = false;
+    const [nt] = await sb(env, "tenants", { method: "POST", body: copy });
+    const key = `pk_${nt.slug}_${randomHex(12)}`;
+    await sb(env, "tenant_keys", { method: "POST", body: { tenant_id: nt.id, public_key: key } });
+    return json({ id: nt.id });
+  }
+
+  // --- leads de todos los clientes (vista global) ---
+  if (url.pathname === "/admin/api/leads" && request.method === "GET") {
+    const rows = await sb(
+      env,
+      `leads?select=id,kind,name,email,phone,company,message,status,created_at,tenants(name,project_id)` +
+        `&order=created_at.desc&limit=500`
+    );
+    return json(rows);
+  }
+  const mLead = url.pathname.match(/^\/admin\/api\/leads\/([0-9a-f-]{36})$/);
+  if (mLead && request.method === "PATCH") {
+    const { status } = await request.json();
+    if (!["nuevo", "contactado"].includes(status)) return json({ error: "estado no válido" }, 400);
+    const rows = await sb(env, `leads?id=eq.${mLead[1]}`, { method: "PATCH", body: { status } });
+    if (!rows?.length) return json({ error: "lead no encontrado" }, 404);
+    return json({ ok: true });
   }
 
   // --- documentos indexados de un chatbot ---
@@ -1269,6 +1310,14 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
     });
     return json({ password: pw, email: c.email });
   }
+  if (mPass && request.method === "DELETE") {
+    const rows = await sb(env, `clients?id=eq.${mPass[1]}`, {
+      method: "PATCH",
+      body: { portal_password_hash: null },
+    });
+    if (!rows?.length) return json({ error: "cliente no encontrado" }, 404);
+    return json({ ok: true });
+  }
 
   // --- facturas del cliente (admin) ---
   const mInv = url.pathname.match(/^\/admin\/api\/clients\/([0-9a-f-]{36})\/invoices$/);
@@ -1428,6 +1477,7 @@ const ADMIN_HTML = `<!doctype html>
   .brand svg{width:34px;height:30px;flex:0 0 auto}
   .brand span{color:var(--ink)}
   .brand span b{color:var(--acc);font-weight:800}
+  .brand svg.bub{width:.82em;height:.6em;display:inline;vertical-align:-2%;margin:0 .5px}
   .brand em{font:400 12.5px system-ui,sans-serif;color:var(--mut);font-style:normal;margin-left:2px}
   .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
     background:var(--grad)}
@@ -1519,8 +1569,8 @@ const ADMIN_HTML = `<!doctype html>
   #cv-av img{width:100%;height:100%;object-fit:cover}
   #cv-name{font-weight:600;font-size:14px;line-height:1.25}
   #cv-sub{font-size:11px;opacity:.75;line-height:1.25}
-  #cv-log{padding:14px;display:flex;flex-direction:column;gap:9px;min-height:190px;
-    background-size:cover;background-position:center}
+  #cv-log{padding:14px;display:flex;flex-direction:column;gap:9px;min-height:190px;max-height:380px;
+    overflow-y:auto;background-size:cover;background-position:center}
   .cv-b{background:#f2f2f0;color:#1a1a1a;border-radius:12px;border-bottom-left-radius:4px;
     padding:8px 12px;font-size:13px;max-width:85%;align-self:flex-start}
   .cv-m{border-radius:12px;border-bottom-right-radius:4px;padding:8px 12px;font-size:13px;
@@ -1530,9 +1580,11 @@ const ADMIN_HTML = `<!doctype html>
     background:#fff;color:#333}
   #cv-foot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #eee;align-items:center}
   #cv-in{flex:1;border:1px solid #ddd;border-radius:9px;padding:9px 11px;font-size:13px;color:#999;
-    background:#fff;white-space:nowrap;overflow:hidden}
+    background:#fff;font-family:inherit;min-width:0;outline:0}
   #cv-send{width:38px;height:38px;border-radius:9px;background:#111;display:flex;align-items:center;
-    justify-content:center;flex:0 0 auto;font-weight:600}
+    justify-content:center;flex:0 0 auto;font-weight:600;cursor:pointer}
+  #cv-sug span{cursor:pointer}
+  .cv-typing{opacity:.65}
   #cv-brand{text-align:center;font-size:10.5px;color:#999;padding:0 0 6px;background:#fff}
   #cv-btnrow{display:flex}
   #cv-btn{height:52px;min-width:52px;border-radius:26px;background:#111;display:flex;gap:8px;
@@ -1549,6 +1601,23 @@ const ADMIN_HTML = `<!doctype html>
   .chk.done .chk-ic{background:#e3f6e9;color:#1d9e4b}
   .chk button{margin-left:auto;white-space:nowrap}
   #crumb a{text-decoration:none;font-weight:600;color:var(--acc)}
+  #ck{position:fixed;inset:0;background:rgba(16,24,43,.45);z-index:90;display:flex;
+    align-items:flex-start;justify-content:center;padding-top:12vh}
+  #ck-box{background:#fff;border-radius:14px;width:540px;max-width:92vw;
+    box-shadow:0 24px 80px rgba(0,0,0,.3);overflow:hidden}
+  #ck-in{width:100%;border:0;outline:0;padding:15px 18px;font:inherit;font-size:16px;
+    border-bottom:1px solid var(--line);border-radius:0}
+  #ck-list{max-height:320px;overflow-y:auto;padding:6px}
+  #ck-list button{display:flex;gap:8px;width:100%;text-align:left;border:0;background:none;
+    border-radius:8px;padding:10px 12px;font:inherit;align-items:center}
+  #ck-list button.sel{background:var(--bg)}
+  #ck-list button .mut{margin-left:auto;white-space:nowrap}
+  #menu-btn{display:none}
+  @media(max-width:760px){
+    aside{display:none}
+    aside.open{display:block}
+    #menu-btn{display:inline-block;margin-right:8px}
+  }
   .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:fit-content}
   .seg button{border:0;background:#fff;padding:8px 16px;font-size:13.5px;cursor:pointer;color:#555}
   .seg button.on{background:var(--acc);color:#fff}
@@ -1582,7 +1651,7 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="login" class="login hide">
   <div class="card">
-    <div class="brand" style="margin-bottom:12px"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
+    <div class="brand" style="margin-bottom:12px"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>B<svg class="bub" viewBox="0 12 64 46"><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/></svg>t</b></span></div>
     <h1>Bienvenido a tu estudio</h1>
     <p class="mut">Introduce tu clave de acceso para gestionar tus clientes y sus asistentes.</p>
     <input id="tok" type="password" placeholder="Token" autocomplete="current-password">
@@ -1593,12 +1662,17 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="app" class="hide">
   <header>
-    <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span><em>estudio de asistentes IA</em></div>
-    <button id="logout" class="ghost small">Salir</button>
+    <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>B<svg class="bub" viewBox="0 12 64 46"><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/></svg>t</b></span><em>estudio de asistentes IA</em></div>
+    <div>
+      <button id="menu-btn" class="ghost small">☰ Menú</button>
+      <button id="search-btn" class="ghost small" title="Ctrl+K">🔍 Buscar</button>
+      <button id="logout" class="ghost small" style="margin-left:8px">Salir</button>
+    </div>
   </header>
   <div class="wrap">
     <aside>
       <button id="home-btn" class="ghost" style="width:100%;margin-bottom:8px">📊 Inicio</button>
+      <button id="leads-btn" class="ghost" style="width:100%;margin-bottom:8px">📥 Leads</button>
       <button id="new-client" class="primary">+ Nuevo cliente</button>
       <div id="tree"></div>
     </aside>
@@ -1656,8 +1730,25 @@ const ADMIN_HTML = `<!doctype html>
           <thead><tr><th>Chatbot</th><th>Cliente</th><th>Preguntas</th><th>Leads</th><th>Sin respuesta</th><th>Estado</th></tr></thead>
           <tbody id="home-body"></tbody>
         </table>
+        <label style="margin-top:20px">📥 Últimos leads
+          <button id="home-leads-all" class="ghost small" style="margin-left:8px">Ver todos</button></label>
+        <div id="home-leads" class="mut">Cargando…</div>
         <label style="margin-top:20px">🩺 Salud del motor — últimos errores registrados</label>
         <div id="home-errors" class="mut">Cargando…</div>
+      </div>
+
+      <div class="card hide" id="v-leads">
+        <h2>📥 Leads de todos los clientes</h2>
+        <p class="sub">Los contactos que han captado todos los chatbots, del más reciente al más antiguo.</p>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <select id="gl-filter" style="max-width:260px"><option value="">Todos los chatbots</option></select>
+          <button id="gl-csv" class="ghost small">Descargar CSV</button>
+          <span id="gl-msg" class="mut"></span>
+        </div>
+        <div style="overflow-x:auto"><table class="home" style="min-width:720px">
+          <thead><tr><th>Fecha</th><th>Chatbot</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th><th>Estado</th></tr></thead>
+          <tbody id="gl-body"></tbody>
+        </table></div>
       </div>
 
       <div class="card hide" id="v-client">
@@ -1697,8 +1788,12 @@ const ADMIN_HTML = `<!doctype html>
         En su portal ve todos sus proyectos, sus herramientas y su facturación.</p>
         <div class="copyrow"><input id="portal-url" readonly>
           <button class="ghost small" data-copy="portal-url">Copiar</button></div>
+        <div class="check"><input id="c-portal-on" type="checkbox">
+          <label for="c-portal-on" style="margin:0">Acceso al portal activo
+          (si lo desactivas, el cliente no podrá entrar aunque tenga contraseña)</label></div>
         <div class="actions">
           <button id="portal-pass" class="ghost small">Generar contraseña nueva</button>
+          <button id="portal-revoke" class="ghost small">Revocar contraseña</button>
           <span id="portal-msg" class="mut"></span>
         </div>
         <p id="portal-pass-out" class="mut" style="margin-top:8px"></p>
@@ -1957,9 +2052,19 @@ const ADMIN_HTML = `<!doctype html>
           <label>Límite de mensajes al mes (al alcanzarlo, el bot responde un aviso fijo sin gastar IA)</label>
           <input id="f-limit" type="number" min="0" style="max-width:200px">
           <div class="check"><input id="f-active" type="checkbox"><label for="f-active" style="margin:0">Activo (desmárcalo para apagar este chatbot)</label></div>
+          <div class="check"><input id="f-featleads" type="checkbox"><label for="f-featleads" style="margin:0">Captura de leads (si lo desactivas, el bot solo responde preguntas, sin pedir datos de contacto)</label></div>
+          <label style="margin-top:18px">Panel del cliente de este chatbot</label>
+          <div class="check"><input id="f-panelon" type="checkbox"><label for="f-panelon" style="margin:0">Panel del cliente accesible (si lo desactivas, su enlace deja de funcionar)</label></div>
+          <p class="mut" style="margin:8px 0 4px">Qué puede ver y hacer el cliente en su panel:</p>
+          <div class="check"><input id="f-pfleads" type="checkbox"><label for="f-pfleads" style="margin:0">Leads</label></div>
+          <div class="check"><input id="f-pfconvs" type="checkbox"><label for="f-pfconvs" style="margin:0">Conversaciones</label></div>
+          <div class="check"><input id="f-pfgaps" type="checkbox"><label for="f-pfgaps" style="margin:0">Preguntas sin respuesta</label></div>
+          <div class="check"><input id="f-pfuploads" type="checkbox"><label for="f-pfuploads" style="margin:0">Subir contenido</label></div>
+          <div class="check"><input id="f-pftest" type="checkbox"><label for="f-pftest" style="margin:0">Probar el bot</label></div>
         </div>
         <div class="actions">
           <button id="save" class="primary">Guardar</button>
+          <button id="f-dup" class="ghost small">Duplicar chatbot</button>
           <button id="f-del" class="ghost small">Eliminar chatbot</button>
           <span id="save-msg"></span>
         </div>
@@ -2079,13 +2184,14 @@ const ADMIN_HTML = `<!doctype html>
                 <div class="cv-b" id="cv-reply">¡Claro! Cuéntame y te ayudo 😊</div>
                 <div id="cv-sug"></div>
               </div>
-              <div id="cv-foot"><div id="cv-in">Escribe tu pregunta…</div><div id="cv-send"></div></div>
+              <div id="cv-foot"><input id="cv-in" placeholder="Escribe tu pregunta…"><div id="cv-send"></div></div>
               <div id="cv-brand" class="hide"></div>
             </div>
             <div id="cv-btnrow"><div id="cv-btn"></div></div>
           </div>
-          <p class="mut" style="margin-top:10px;font-size:12px">Así se verá el chat en la web del
-          cliente. Cambia cualquier opción y lo verás aquí al instante. Recuerda pulsar Guardar.</p>
+          <p class="mut" style="margin-top:10px;font-size:12px">Vista en vivo del diseño <b>y chat real</b>:
+          escribe abajo y el bot responde de verdad con su contenido. Responde con la última versión
+          guardada — pulsa Guardar antes de probar cambios de instrucciones.</p>
         </div>
       </aside>
 
@@ -2094,6 +2200,13 @@ const ADMIN_HTML = `<!doctype html>
 </div>
 
 <div id="toast"></div>
+
+<div id="ck" class="hide">
+  <div id="ck-box">
+    <input id="ck-in" placeholder="Busca un cliente, proyecto o chatbot…">
+    <div id="ck-list"></div>
+  </div>
+</div>
 
 <div id="cp" class="hide">
   <div id="cp-sv"><div id="cp-svc"></div></div>
@@ -2182,6 +2295,7 @@ function refreshSelection() {
   if (sel.type === "client" && !sel.isNew && findClient(sel.id)) return selClient(sel.id);
   if (sel.type === "project" && findProject(sel.id)) return selProject(sel.id);
   if (sel.type === "tenant" && !sel.isNew && findTenant(sel.id)) return selTenant(sel.id);
+  if (sel.type === "leads") return goLeads();
   return goHome();
 }
 
@@ -2236,6 +2350,32 @@ function goHome() {
       tb.appendChild(tr);
     });
   });
+  api("/admin/api/leads").then(function (rows) {
+    var box = $("home-leads");
+    if (!rows || rows.error) { box.textContent = "No disponible."; return; }
+    if (!rows.length) { box.textContent = "Sin leads todavía."; return; }
+    box.innerHTML = "";
+    box.className = "";
+    rows.slice(0, 5).forEach(function (r) {
+      var d = document.createElement("div");
+      d.className = "doc";
+      var l = document.createElement("div");
+      var t1 = document.createElement("div");
+      t1.textContent = (r.name || "(sin nombre)") + (r.company ? " · " + r.company : "") +
+        " — " + [r.email, r.phone].filter(Boolean).join(" · ");
+      t1.style.fontWeight = "600";
+      var m = document.createElement("div");
+      m.className = "meta";
+      m.textContent = new Date(r.created_at).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) +
+        (r.tenants ? " · " + r.tenants.name : "") + (r.message ? " · " + r.message : "");
+      l.appendChild(t1);
+      l.appendChild(m);
+      d.appendChild(l);
+      d.style.cursor = "pointer";
+      d.onclick = goLeads;
+      box.appendChild(d);
+    });
+  }).catch(function () { $("home-leads").textContent = "No disponible."; });
   api("/admin/api/errors").then(function (errs) {
     var box = $("home-errors");
     if (!errs || errs.error) { box.textContent = "No disponible."; return; }
@@ -2259,6 +2399,184 @@ function goHome() {
   }).catch(function () {});
 }
 $("home-btn").onclick = goHome;
+
+// ----- leads globales -----
+
+var GL_ROWS = [];
+function goLeads() {
+  if (!guardNav()) return;
+  sel = { type: "leads" };
+  renderTree();
+  crumb(["Leads"]);
+  showCards(["v-leads"]);
+  $("gl-body").innerHTML = "<tr><td colspan='7' class='mut'>Cargando…</td></tr>";
+  api("/admin/api/leads").then(function (rows) {
+    if (rows.error) { $("gl-body").innerHTML = ""; $("gl-msg").textContent = rows.error; return; }
+    GL_ROWS = rows;
+    var seen = {};
+    var fl = $("gl-filter");
+    fl.innerHTML = "<option value=''>Todos los chatbots</option>";
+    rows.forEach(function (r) {
+      var n = r.tenants ? r.tenants.name : "";
+      if (n && !seen[n]) {
+        seen[n] = 1;
+        var o = document.createElement("option");
+        o.value = n;
+        o.textContent = n;
+        fl.appendChild(o);
+      }
+    });
+    renderGlobalLeads();
+  }).catch(function () { $("gl-msg").textContent = "No se han podido cargar."; });
+}
+
+function renderGlobalLeads() {
+  var f = $("gl-filter").value;
+  var tb = $("gl-body");
+  tb.innerHTML = "";
+  var rows = GL_ROWS.filter(function (r) { return !f || (r.tenants && r.tenants.name === f); });
+  $("gl-msg").textContent = rows.length ? rows.length + (rows.length === 1 ? " lead" : " leads") : "";
+  if (!rows.length) {
+    tb.innerHTML = "<tr><td colspan='7' class='mut'>Sin leads todavía. Cuando los bots capten contactos, aparecerán aquí.</td></tr>";
+    return;
+  }
+  rows.forEach(function (r) {
+    var tr = document.createElement("tr");
+    function td(v) { var d = document.createElement("td"); d.textContent = v || ""; return d; }
+    tr.appendChild(td(new Date(r.created_at).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })));
+    tr.appendChild(td(r.tenants ? r.tenants.name : ""));
+    tr.appendChild(td(r.kind));
+    tr.appendChild(td((r.name || "") + (r.company ? " · " + r.company : "")));
+    tr.appendChild(td([r.email, r.phone].filter(Boolean).join(" · ")));
+    tr.appendChild(td(r.message));
+    var st = document.createElement("td");
+    if (r.status === "contactado") {
+      st.textContent = "✓ contactado";
+      st.className = "ok";
+    } else {
+      var b = document.createElement("button");
+      b.className = "ghost small";
+      b.textContent = "Marcar contactado";
+      b.onclick = function (e) {
+        e.stopPropagation();
+        api("/admin/api/leads/" + r.id, { method: "PATCH", body: JSON.stringify({ status: "contactado" }) })
+          .then(function (x) {
+            if (x.error) { toast(x.error, true); return; }
+            r.status = "contactado";
+            renderGlobalLeads();
+          });
+      };
+      st.appendChild(b);
+    }
+    tr.appendChild(st);
+    tb.appendChild(tr);
+  });
+}
+
+$("gl-filter").onchange = renderGlobalLeads;
+
+$("gl-csv").onclick = function () {
+  var f = $("gl-filter").value;
+  var rows = GL_ROWS.filter(function (r) { return !f || (r.tenants && r.tenants.name === f); });
+  var head = ["fecha", "chatbot", "tipo", "nombre", "empresa", "email", "telefono", "mensaje", "estado"];
+  var csv = [head.join(";")].concat(rows.map(function (r) {
+    return [r.created_at, r.tenants ? r.tenants.name : "", r.kind, r.name, r.company, r.email, r.phone, r.message, r.status]
+      .map(function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; })
+      .join(";");
+  })).join("\\n");
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "leads-expobot.csv";
+  a.click();
+};
+
+$("leads-btn").onclick = goLeads;
+$("home-leads-all").onclick = function (e) { e.stopPropagation(); goLeads(); };
+
+// ----- buscador Ctrl+K -----
+
+var CK_ITEMS = [], CK_SEL = 0;
+
+function ckBuild() {
+  CK_ITEMS = [];
+  data.forEach(function (c) {
+    CK_ITEMS.push({ label: c.name, kind: "Cliente", go: function () { selClient(c.id); } });
+    (c.projects || []).forEach(function (p) {
+      CK_ITEMS.push({ label: p.name, sub: c.name, kind: "Proyecto", go: function () { selProject(p.id); } });
+      (p.tenants || []).forEach(function (t) {
+        CK_ITEMS.push({ label: t.name, sub: c.name, kind: "Chatbot", go: function () { selTenant(t.id); } });
+      });
+    });
+  });
+}
+
+function ckMatches() {
+  var q = $("ck-in").value.trim().toLowerCase();
+  return CK_ITEMS.filter(function (i) {
+    return !q || (i.label + " " + (i.sub || "")).toLowerCase().indexOf(q) >= 0;
+  }).slice(0, 12);
+}
+
+function ckRender() {
+  var box = $("ck-list");
+  box.innerHTML = "";
+  var ms = ckMatches();
+  if (CK_SEL >= ms.length) CK_SEL = 0;
+  if (!ms.length) {
+    box.innerHTML = "<p class='mut' style='padding:10px 12px'>Sin resultados.</p>";
+    return;
+  }
+  ms.forEach(function (m, i) {
+    var b = document.createElement("button");
+    if (i === CK_SEL) b.className = "sel";
+    var ic = m.kind === "Cliente" ? "👤 " : m.kind === "Proyecto" ? "📁 " : "💬 ";
+    var l = document.createElement("span");
+    l.textContent = ic + m.label + (m.sub ? " — " + m.sub : "");
+    var k = document.createElement("span");
+    k.className = "mut";
+    k.textContent = m.kind;
+    b.appendChild(l);
+    b.appendChild(k);
+    b.onclick = function () { ckClose(); m.go(); };
+    box.appendChild(b);
+  });
+}
+
+function ckOpen() {
+  ckBuild();
+  CK_SEL = 0;
+  $("ck").classList.remove("hide");
+  $("ck-in").value = "";
+  ckRender();
+  $("ck-in").focus();
+}
+
+function ckClose() { $("ck").classList.add("hide"); }
+
+$("ck-in").addEventListener("input", function () { CK_SEL = 0; ckRender(); });
+$("ck-in").addEventListener("keydown", function (e) {
+  var ms = ckMatches();
+  if (e.key === "ArrowDown") { CK_SEL = Math.min(CK_SEL + 1, ms.length - 1); ckRender(); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { CK_SEL = Math.max(CK_SEL - 1, 0); ckRender(); e.preventDefault(); }
+  else if (e.key === "Enter") { if (ms[CK_SEL]) { ckClose(); ms[CK_SEL].go(); } }
+  else if (e.key === "Escape") ckClose();
+});
+$("ck").onclick = function (e) { if (e.target === $("ck")) ckClose(); };
+$("search-btn").onclick = ckOpen;
+document.addEventListener("keydown", function (e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); ckOpen(); }
+});
+
+// ----- menú lateral en móvil -----
+
+$("menu-btn").onclick = function () {
+  document.querySelector("aside").classList.toggle("open");
+};
+document.querySelector("aside").addEventListener("click", function (e) {
+  if (e.target.tagName === "BUTTON" && window.innerWidth <= 760) {
+    document.querySelector("aside").classList.remove("open");
+  }
+});
 
 function treeBtn(label, cls, on, click) {
   var b = document.createElement("button");
@@ -2284,7 +2602,7 @@ function renderTree() {
   });
 }
 
-var ALL_VIEWS = ["v-home", "v-wizard", "v-check", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "v-exam", "integ", "ingest"];
+var ALL_VIEWS = ["v-home", "v-leads", "v-wizard", "v-check", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "v-exam", "integ", "ingest"];
 function showCards(ids, keepTabs) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
   if (!keepTabs) $("bot-tabs").classList.add("hide");
@@ -2353,6 +2671,7 @@ function selClient(id) {
   if (c) {
     renderProjects(c);
     $("portal-url").value = location.origin + "/acceso";
+    $("c-portal-on").checked = c.portal_enabled !== false;
     $("portal-pass-out").textContent = c.portal_password_hash
       ? "El cliente ya tiene contraseña. Genera una nueva solo si la ha perdido (la anterior dejará de valer)."
       : "Este cliente aún no tiene contraseña: genera una y envíasela junto con el enlace de acceso.";
@@ -2466,6 +2785,34 @@ $("portal-pass").onclick = function () {
       "Envíale estos datos (la contraseña solo se muestra ahora): " + r.email + "  /  " + r.password;
     $("portal-pass-out").className = "ok";
     toast("Contraseña generada ✓");
+  });
+};
+
+$("c-portal-on").onchange = function () {
+  if (sel.type !== "client" || sel.isNew) return;
+  var on = $("c-portal-on").checked;
+  api("/admin/api/clients/" + sel.id, {
+    method: "PATCH",
+    body: JSON.stringify({ portal_enabled: on }),
+  }).then(function (r) {
+    if (r.error) { toast(r.error, true); return; }
+    var c = findClient(sel.id);
+    if (c) c.portal_enabled = on;
+    toast(on ? "Acceso al portal activado ✓" : "Acceso al portal desactivado");
+  });
+};
+
+$("portal-revoke").onclick = function () {
+  var c = findClient(sel.id);
+  if (!c || !c.portal_password_hash) { toast("Este cliente no tiene contraseña que revocar."); return; }
+  if (!confirm("La contraseña actual de " + c.name + " dejará de valer y no podrá entrar al portal " +
+    "hasta que generes una nueva. ¿Revocar?")) return;
+  api("/admin/api/clients/" + sel.id + "/portal-password", { method: "DELETE" }).then(function (r) {
+    if (r.error) { toast(r.error, true); return; }
+    c.portal_password_hash = null;
+    $("portal-pass-out").textContent = "Contraseña revocada: el cliente ya no puede entrar. Genera una nueva cuando quieras.";
+    $("portal-pass-out").className = "mut";
+    toast("Contraseña revocada ✓");
   });
 };
 
@@ -2588,6 +2935,7 @@ $("c-save").onclick = function () {
     phone: $("c-phone").value.trim() || null,
     notes: $("c-notes").value,
   };
+  if (!sel.isNew) d.portal_enabled = $("c-portal-on").checked;
   if (!d.name) { $("c-msg").textContent = "El nombre es obligatorio."; $("c-msg").className = "err"; return; }
   var req = sel.isNew
     ? api("/admin/api/clients", { method: "POST", body: JSON.stringify(d) })
@@ -2750,6 +3098,15 @@ function selTenant(id, projectId) {
   $("f-email").value = isNew ? "" : t.handoff_email || "";
   $("f-webhook").value = isNew ? "" : t.lead_webhook_url || "";
   $("f-active").checked = isNew ? true : !!t.active;
+  var feats = (t && t.features) || {};
+  $("f-featleads").checked = feats.leads !== false;
+  $("f-panelon").checked = !t || t.panel_enabled !== false;
+  var pf = (t && t.panel_features) || {};
+  $("f-pfleads").checked = pf.leads !== false;
+  $("f-pfconvs").checked = pf.convs !== false;
+  $("f-pfgaps").checked = pf.gaps !== false;
+  $("f-pfuploads").checked = pf.uploads !== false;
+  $("f-pftest").checked = pf.test !== false;
   var th = (t && t.theme) || {};
   $("f-color2").value = th.secondary_color || "#f2f2f0";
   $("f-colorbg").value = th.bg_color || "#ffffff";
@@ -2801,6 +3158,7 @@ function selTenant(id, projectId) {
   $("g-report").textContent = ""; $("g-msg").textContent = "";
   $("g-files").value = ""; $("g-upmsg").textContent = "";
   resetFtabs();
+  if (!sameTenant) cvResetChat();
   updPrev();
   $("ex-msg").textContent = ""; $("ex-score").textContent = ""; $("ex-list").innerHTML = "";
   $("gap-msg").textContent = ""; $("gap-list").innerHTML = "";
@@ -3137,6 +3495,74 @@ $("cv-dark").onclick = function () {
   updPrev();
 };
 
+// ----- chat real dentro del canvas -----
+
+var CV_SESSION = "";
+var CV_HISTORY = [];
+var CV_BUSY = false;
+
+function cvResetChat() {
+  CV_SESSION = "adm_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  CV_HISTORY = [];
+  CV_BUSY = false;
+  [].forEach.call(document.querySelectorAll("#cv-log .cv-dyn"), function (x) { x.remove(); });
+  $("cv-user").classList.remove("hide");
+  $("cv-reply").classList.remove("hide");
+  $("cv-in").value = "";
+}
+
+function cvBubble(cls, text) {
+  var d = document.createElement("div");
+  d.className = cls + " cv-dyn";
+  d.textContent = text;
+  $("cv-log").insertBefore(d, $("cv-sug"));
+  $("cv-log").scrollTop = $("cv-log").scrollHeight;
+  return d;
+}
+
+function cvSend(text) {
+  var q = (text || $("cv-in").value).trim();
+  if (!q || CV_BUSY) return;
+  var t = curTenant();
+  if (!t) { toast("Guarda primero el chatbot para poder chatear con él.", true); return; }
+  var key = activeKey(t);
+  if (!key) { toast("Este chatbot no tiene una clave activa.", true); return; }
+  $("cv-user").classList.add("hide");
+  $("cv-reply").classList.add("hide");
+  $("cv-in").value = "";
+  CV_BUSY = true;
+  cvBubble("cv-m", q);
+  updPrev();
+  var typing = cvBubble("cv-b cv-typing", "Escribiendo…");
+  fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      key: key,
+      session_id: CV_SESSION,
+      message: q,
+      page_url: "expobot-admin-preview",
+      history: CV_HISTORY,
+    }),
+  }).then(function (r) { return r.json(); }).then(function (r) {
+    CV_BUSY = false;
+    typing.classList.remove("cv-typing");
+    typing.textContent = r.reply || r.error || "(sin respuesta)";
+    CV_HISTORY.push({ role: "user", content: q });
+    CV_HISTORY.push({ role: "assistant", content: typing.textContent });
+    CV_HISTORY = CV_HISTORY.slice(-12);
+    updPrev();
+    $("cv-log").scrollTop = $("cv-log").scrollHeight;
+  }).catch(function () {
+    CV_BUSY = false;
+    typing.classList.remove("cv-typing");
+    typing.textContent = "Error al conectar. Prueba otra vez.";
+  });
+}
+
+$("cv-send").onclick = function () { cvSend(); };
+$("cv-in").addEventListener("keydown", function (e) { if (e.key === "Enter") cvSend(); });
+
 var slugTouched = false;
 $("f-slug").addEventListener("input", function () { slugTouched = true; });
 $("f-name").addEventListener("input", function () {
@@ -3191,17 +3617,19 @@ function updPrev() {
     b.style.borderBottomLeftRadius = "4px";
   });
   $("cv-welcome").textContent = $("f-welcome").value.trim() || "¡Hola! ¿En qué puedo ayudarte?";
-  var um = $("cv-user");
-  um.style.background = c;
-  um.style.color = t;
-  um.style.borderRadius = rad + "px";
-  um.style.borderBottomRightRadius = "4px";
+  [].forEach.call(document.querySelectorAll(".cv-m"), function (um) {
+    um.style.background = c;
+    um.style.color = t;
+    um.style.borderRadius = rad + "px";
+    um.style.borderBottomRightRadius = "4px";
+  });
 
   var sug = $("cv-sug");
   sug.innerHTML = "";
   lines($("f-sugg").value).slice(0, 2).forEach(function (q) {
     var s = document.createElement("span");
     s.textContent = q;
+    s.onclick = function () { cvSend(q); };
     if (cvDark) {
       s.style.background = "#232327";
       s.style.color = "#ddd";
@@ -3212,9 +3640,9 @@ function updPrev() {
 
   $("cv-foot").style.borderTopColor = cvDark ? "#333" : "#eee";
   var inp = $("cv-in");
-  inp.textContent = $("f-tplaceholder").value.trim() || "Escribe tu pregunta…";
+  inp.placeholder = $("f-tplaceholder").value.trim() || "Escribe tu pregunta…";
   inp.style.background = cvDark ? "#232327" : "#fff";
-  inp.style.color = cvDark ? "#aaa" : "#999";
+  inp.style.color = cvDark ? "#eee" : "#333";
   inp.style.borderColor = cvDark ? "#3a3a40" : "#ddd";
   inp.style.borderRadius = Math.round(rad * 0.72 + 4) + "px";
 
@@ -3438,6 +3866,15 @@ function collect() {
     handoff_email: $("f-email").value.trim() || null,
     lead_webhook_url: $("f-webhook").value.trim() || null,
     active: $("f-active").checked,
+    features: { leads: $("f-featleads").checked },
+    panel_enabled: $("f-panelon").checked,
+    panel_features: {
+      leads: $("f-pfleads").checked,
+      convs: $("f-pfconvs").checked,
+      gaps: $("f-pfgaps").checked,
+      uploads: $("f-pfuploads").checked,
+      test: $("f-pftest").checked,
+    },
     theme: {
       secondary_color: $("f-color2").value,
       bg_color: $("f-colorbg").value,
@@ -3509,6 +3946,21 @@ $("f-del").onclick = function () {
     sel = f ? { type: "project", id: f.project.id } : { type: null };
     dirty = false;
     toast("Chatbot eliminado");
+    load();
+  });
+};
+
+$("f-dup").onclick = function () {
+  if (sel.isNew) return;
+  var f = findTenant(sel.id);
+  if (!confirm("Se creará una copia de «" + (f ? f.tenant.name : "este chatbot") +
+    "» en el mismo proyecto, apagada y con claves nuevas. Se copia la configuración y el diseño, " +
+    "no el contenido indexado ni las conversaciones. ¿Duplicar?")) return;
+  api("/admin/api/tenants/" + sel.id + "/duplicate", { method: "POST" }).then(function (r) {
+    if (r.error) { toast(r.error, true); return; }
+    dirty = false;
+    sel = { type: "tenant", id: r.id, isNew: false };
+    toast("Chatbot duplicado ✓ Estás viendo la copia.");
     load();
   });
 };
@@ -3977,6 +4429,7 @@ const PORTAL_HTML = `<!doctype html>
   .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;letter-spacing:-.02em}
   .brand svg{width:30px;height:27px;flex:0 0 auto}
   .brand b{color:var(--acc);font-weight:800}
+  .brand svg.bub{width:.82em;height:.6em;display:inline;vertical-align:-2%;margin:0 .5px}
   footer{text-align:center;color:var(--mut);font-size:12.5px;padding:10px 0 26px}
   footer b{color:var(--acc)}
   .ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px}
@@ -4012,7 +4465,7 @@ const PORTAL_HTML = `<!doctype html>
 
 <div id="login" class="login hide">
   <div class="card">
-    <div class="brand" style="margin-bottom:14px"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
+    <div class="brand" style="margin-bottom:14px"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>B<svg class="bub" viewBox="0 12 64 46"><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/></svg>t</b></span></div>
     <h2>Portal de cliente</h2>
     <p class="sub">Accede con el email y la contraseña que te hemos facilitado.</p>
     <label>Email</label>
@@ -4029,7 +4482,7 @@ const PORTAL_HTML = `<!doctype html>
 <div id="app" class="hide">
   <header>
     <div style="display:flex;align-items:center;gap:14px">
-      <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
+      <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>B<svg class="bub" viewBox="0 12 64 46"><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/></svg>t</b></span></div>
       <h1 id="c-name" style="font-weight:600;color:var(--mut);font-size:15px">Portal</h1>
     </div>
     <button id="logout" class="ghost small">Salir</button>
@@ -4153,14 +4606,16 @@ function load() {
           st.textContent = t.active ? "Chatbot · activo" : "Chatbot · apagado";
           left.appendChild(nm);
           left.appendChild(st);
-          var open = document.createElement("button");
-          open.className = "ghost small";
-          open.textContent = "Abrir panel";
-          open.onclick = function () {
-            window.open("/panel?token=" + encodeURIComponent(t.panel_token), "_blank");
-          };
           row.appendChild(left);
-          row.appendChild(open);
+          if (t.panel_enabled !== false) {
+            var open = document.createElement("button");
+            open.className = "ghost small";
+            open.textContent = "Abrir panel";
+            open.onclick = function () {
+              window.open("/panel?token=" + encodeURIComponent(t.panel_token), "_blank");
+            };
+            row.appendChild(open);
+          }
           card.appendChild(row);
         });
         box.appendChild(card);
@@ -4394,7 +4849,7 @@ async function getTenantByPanelToken(env, token) {
   if (!token || !token.startsWith("pt_")) return null;
   const rows = await sb(env, `tenants?panel_token=eq.${encodeURIComponent(token)}&select=*`);
   const t = rows?.[0];
-  return t && t.active ? t : null;
+  return t && t.active && t.panel_enabled !== false ? t : null;
 }
 
 const PANEL_HTML = `<!doctype html>
@@ -4414,6 +4869,7 @@ const PANEL_HTML = `<!doctype html>
   .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:-.02em}
   .brand svg{width:28px;height:25px;flex:0 0 auto}
   .brand b{color:var(--acc);font-weight:800}
+  .brand svg.bub{width:.82em;height:.6em;display:inline;vertical-align:-2%;margin:0 .5px}
   .brand-sep{width:1px;height:26px;background:var(--line)}
   h1{font-size:17px;font-weight:600}
   .sub{color:var(--mut);font-size:13px}
@@ -4460,7 +4916,7 @@ const PANEL_HTML = `<!doctype html>
 </head>
 <body>
 <header>
-  <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>Bot</b></span></div>
+  <div class="brand"><svg viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg><span>Expo<b>B<svg class="bub" viewBox="0 12 64 46"><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/></svg>t</b></span></div>
   <div class="brand-sep"></div>
   <div>
     <h1><span id="dot"></span><span id="name">Cargando…</span></h1>
@@ -4554,7 +5010,22 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     var convs = d.conversations || [], leads = d.leads || [];
     document.getElementById("name").textContent = d.name;
     if (d.primary_color) document.getElementById("dot").style.background = d.primary_color;
-    if (d.public_key) {
+    var FEAT = d.features || {};
+    var featTab = { leads: "t-leads", convs: "t-convs", gaps: "t-gaps", uploads: "t-add", test: "t-test" };
+    var hiddenFirst = false;
+    Object.keys(featTab).forEach(function (k) {
+      if (FEAT[k] === false) {
+        var sec = document.getElementById(featTab[k]);
+        var btn = document.querySelector('nav button[data-tab="' + featTab[k] + '"]');
+        if (sec) sec.remove();
+        if (btn) { if (btn.classList.contains("on")) hiddenFirst = true; btn.remove(); }
+      }
+    });
+    if (hiddenFirst) {
+      var first = document.querySelector("nav button");
+      if (first) first.onclick();
+    }
+    if (FEAT.test !== false && d.public_key) {
       var ws = document.createElement("script");
       ws.id = "cb-widget-script";
       ws.src = "/widget.js?v=" + Date.now();
@@ -5047,6 +5518,9 @@ ${inject}</body></html>`;
       if (url.pathname === "/panel/upload" && request.method === "POST") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
         if (!tenant) return json({ error: "token no válido" }, 401);
+        if (tenant.panel_features?.uploads === false) {
+          return json({ error: "la subida de documentos está desactivada en este panel" }, 403);
+        }
         const { files = [] } = await request.json();
         if (!files.length || files.length > 10) {
           return json({ error: "envía entre 1 y 10 archivos" }, 400);
@@ -5066,11 +5540,14 @@ ${inject}</body></html>`;
         if (!email || !password) return json({ error: "faltan el email o la contraseña" }, 400);
         const rows = await sb(
           env,
-          `clients?email=ilike.${encodeURIComponent(email.trim())}&select=id,portal_password_hash`
+          `clients?email=ilike.${encodeURIComponent(email.trim())}&select=id,portal_password_hash,portal_enabled`
         );
         const c = rows?.[0];
         if (!c || !c.portal_password_hash || !(await verifyPassword(password, c.portal_password_hash))) {
           return json({ error: "email o contraseña incorrectos" }, 401);
+        }
+        if (c.portal_enabled === false) {
+          return json({ error: "el acceso al portal está desactivado; contacta con nosotros" }, 403);
         }
         return json({ token: await makePortalToken(env, c.id) });
       }
@@ -5086,9 +5563,10 @@ ${inject}</body></html>`;
         if (!cid) return json({ error: "sesión caducada" }, 401);
         const [client] = await sb(
           env,
-          `clients?id=eq.${cid}&select=name,email,payment_method,projects(id,name,description,tenants(name,active,panel_token))`
+          `clients?id=eq.${cid}&select=name,email,payment_method,portal_enabled,projects(id,name,description,tenants(name,active,panel_token,panel_enabled))`
         );
         if (!client) return json({ error: "sesión caducada" }, 401);
+        if (client.portal_enabled === false) return json({ error: "el acceso al portal está desactivado" }, 403);
         const invoices = await sb(
           env,
           `invoices?client_id=eq.${cid}&select=id,number,concept,amount_cents,currency,issued_at,status,pdf_path&order=issued_at.desc,created_at.desc`
@@ -5310,6 +5788,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
             name: tenant.name,
             primary_color: tenant.primary_color,
             public_key: keys?.[keys.length - 1]?.public_key || null,
+            features: tenant.panel_features || {},
             conversations,
             leads,
             activity,
