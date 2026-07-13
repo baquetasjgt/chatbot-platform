@@ -1037,7 +1037,17 @@ export default {
         await sb(env, "messages", {
           method: "POST",
           body: [
-            { tenant_id: tenant.id, conversation_id: conv.id, role: "user", content: message },
+            // ambas filas con las mismas claves: PostgREST lo exige en inserts múltiples
+            {
+              tenant_id: tenant.id,
+              conversation_id: conv.id,
+              role: "user",
+              content: message,
+              sources: [],
+              input_tokens: null,
+              output_tokens: null,
+              was_answered: null,
+            },
             {
               tenant_id: tenant.id,
               conversation_id: conv.id,
