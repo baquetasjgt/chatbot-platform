@@ -302,9 +302,12 @@
 
     panel.querySelector(".cb-close").onclick = toggle;
     panel.querySelector("#cb-send").onclick = send;
-    panel.querySelector("#cb-in").onkeydown = function (e) {
+    var inp = panel.querySelector("#cb-in");
+    inp.onkeydown = function (e) {
       if (e.key === "Enter") send();
     };
+    inp.onfocus = function () { setTimeout(fitMobile, 250); };
+    inp.onblur = function () { setTimeout(fitMobile, 250); };
 
     add("bot", cfg.welcome_message);
 
@@ -439,30 +442,52 @@
     return window.innerWidth <= 480;
   }
 
-  // en móvil: la ventana ocupa el alto visible real (teclado incluido)
-  // y la página de detrás no se desplaza mientras el chat está abierto
+  // iOS desplaza la zona visible cuando abre el teclado: el panel debe
+  // encogerse a su alto Y seguirla (offsetTop), no solo encogerse
   function fitMobile() {
-    if (!isMobile()) {
+    var vv = window.visualViewport;
+    if (!isMobile() || !open || !vv) {
       panel.style.height = "";
+      panel.style.top = "";
+      panel.style.bottom = "";
       return;
     }
-    if (open && window.visualViewport) {
-      panel.style.height = Math.round(window.visualViewport.height) + "px";
-      setTimeout(scrollLog, 60);
-    } else {
-      panel.style.height = "";
-    }
+    panel.style.top = Math.round(vv.offsetTop) + "px";
+    panel.style.bottom = "auto";
+    panel.style.height = Math.round(vv.height) + "px";
+    setTimeout(scrollLog, 60);
   }
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", fitMobile);
+    window.visualViewport.addEventListener("scroll", fitMobile);
   }
   window.addEventListener("resize", fitMobile);
 
+  // bloqueo de la página al estilo iOS: se fija en su posición actual
+  // (overflow:hidden a secas no basta en Safari) y se restaura al cerrar
+  var savedScroll = 0;
   function lockPage(on) {
     if (!isMobile()) on = false;
-    document.documentElement.style.overflow = on ? "hidden" : "";
-    document.body.style.overflow = on ? "hidden" : "";
+    var b = document.body.style;
+    if (on) {
+      savedScroll = window.scrollY || window.pageYOffset || 0;
+      b.position = "fixed";
+      b.top = -savedScroll + "px";
+      b.left = "0";
+      b.right = "0";
+      b.width = "100%";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      b.position = "";
+      b.top = "";
+      b.left = "";
+      b.right = "";
+      b.width = "";
+      document.documentElement.style.overflow = "";
+      if (savedScroll) window.scrollTo(0, savedScroll);
+      savedScroll = 0;
+    }
   }
 
   function toggle() {
