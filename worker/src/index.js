@@ -953,6 +953,11 @@ const ADMIN_HTML = `<!doctype html>
   table.home th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
   table.home tbody tr{cursor:pointer}
   table.home tbody tr:hover td{background:#fafaf8}
+  .icopick{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+  .icopick button{width:46px;height:46px;border:1px solid var(--line);border-radius:10px;background:#fff;
+    display:flex;align-items:center;justify-content:center;font:600 13px system-ui,sans-serif;color:#555}
+  .icopick button.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+  .icopick svg{width:22px;height:22px;fill:none;stroke:#333;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   #ds-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px}
   .dsopt{border:1px solid var(--line);border-radius:14px;padding:14px}
   .dsopt .dshead{display:flex;align-items:center;gap:8px;padding:8px 11px;font-size:12.5px;font-weight:600}
@@ -1214,6 +1219,20 @@ const ADMIN_HTML = `<!doctype html>
             <div><label>Segundos hasta la invitación</label>
               <input id="f-tdelay" type="number" min="1" max="60" value="4" style="max-width:120px"></div>
           </div>
+          <label>Icono del botón del chat</label>
+          <div class="icopick" id="pick-btn"></div>
+          <div class="row">
+            <div><label>Forma del botón</label>
+              <select id="f-btnshape">
+                <option value="circulo">Círculo</option>
+                <option value="redondeado">Cuadrado redondeado</option>
+                <option value="pastilla">Pastilla con texto</option>
+              </select></div>
+            <div><label>Texto de la pastilla (si eliges esa forma)</label>
+              <input id="f-btnlabel" placeholder="Chat"></div>
+          </div>
+          <label>Icono del botón de enviar («Abc» = usa el texto configurado abajo)</label>
+          <div class="icopick" id="pick-send"></div>
           <div class="row">
             <div><label>Tamaño del widget</label>
               <select id="f-size">
@@ -1844,6 +1863,11 @@ function selTenant(id, projectId) {
   $("f-brandurl").value = th.brand_url || "";
   $("f-sound").checked = !!th.sound;
   $("f-css").value = th.custom_css || "";
+  iconBtnSel = th.icon_btn || "burbuja";
+  iconSendSel = th.icon_send || "";
+  $("f-btnshape").value = th.btn_shape || "circulo";
+  $("f-btnlabel").value = th.btn_label || "";
+  renderIconPicks();
   $("save-msg").textContent = "";
   $("a-brief").value = ""; $("a-msg").textContent = "";
   $("ds-brief").value = ""; $("ds-msg").textContent = ""; $("ds-options").innerHTML = "";
@@ -1930,6 +1954,63 @@ function fontStack(f) {
   return "'" + f + "',system-ui,sans-serif";
 }
 
+// ----- iconos elegibles del widget -----
+
+var BTN_ICONS = {
+  burbuja: '<path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/>',
+  puntos: '<path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/><path stroke-width="2.4" d="M8.6 11.5h.01M12 11.5h.01M15.4 11.5h.01"/>',
+  auricular: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  interrogacion: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path stroke-width="2.4" d="M12 17h.01"/>',
+  rayo: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  robot: '<rect x="5" y="8" width="14" height="11" rx="2"/><path d="M12 8V5"/><circle cx="12" cy="3.5" r="1.2"/><path stroke-width="2.4" d="M9 12.8h.01M15 12.8h.01"/><path d="M9.5 16h5"/>',
+};
+var SEND_ICONS = {
+  flecha: '<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
+  avion: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+  play: '<path d="M6 4l14 8-14 8V4z"/>',
+};
+var iconBtnSel = "burbuja";
+var iconSendSel = "";
+
+function svgIcon(path) {
+  return '<svg viewBox="0 0 24 24">' + path + "</svg>";
+}
+
+function buildPick(elId, map, selected, allowText, cb) {
+  var box = $(elId);
+  box.innerHTML = "";
+  if (allowText) {
+    var tb = document.createElement("button");
+    tb.type = "button";
+    tb.textContent = "Abc";
+    if (selected === "") tb.classList.add("on");
+    tb.onclick = function () { cb(""); };
+    box.appendChild(tb);
+  }
+  Object.keys(map).forEach(function (k) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.title = k;
+    b.innerHTML = svgIcon(map[k]);
+    if (selected === k) b.classList.add("on");
+    b.onclick = function () { cb(k); };
+    box.appendChild(b);
+  });
+}
+
+function renderIconPicks() {
+  buildPick("pick-btn", BTN_ICONS, iconBtnSel, false, function (k) {
+    iconBtnSel = k;
+    renderIconPicks();
+    updPrev();
+  });
+  buildPick("pick-send", SEND_ICONS, iconSendSel, true, function (k) {
+    iconSendSel = k;
+    renderIconPicks();
+    updPrev();
+  });
+}
+
 function loadFont(f) {
   if (["Inter", "Poppins", "Roboto", "Montserrat", "Lato"].indexOf(f) < 0) return;
   if (document.getElementById("gf-" + f)) return;
@@ -1967,12 +2048,29 @@ function updPrev() {
   $("pv-mine").style.background = c;
   $("pv-mine").style.color = t;
   $("pv-mine").style.borderRadius = rad + "px";
-  $("pv-btn").style.background = c;
+  var pb = $("pv-btn");
+  var shape = $("f-btnshape").value;
+  pb.style.background = c;
+  pb.style.display = "flex";
+  pb.style.alignItems = "center";
+  pb.style.justifyContent = "center";
+  pb.style.borderRadius = shape === "redondeado" ? "12px" : "22px";
+  pb.style.width = shape === "pastilla" ? "auto" : "44px";
+  pb.style.padding = shape === "pastilla" ? "0 14px" : "0";
+  pb.innerHTML = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:' + t +
+    ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' +
+    (BTN_ICONS[iconBtnSel] || BTN_ICONS.burbuja) + "</svg>";
+  if (shape === "pastilla") {
+    var lbl = document.createElement("span");
+    lbl.textContent = $("f-btnlabel").value.trim() || "Chat";
+    lbl.style.cssText = "color:" + t + ";font:600 13px system-ui,sans-serif;margin-left:6px";
+    pb.appendChild(lbl);
+  }
 }
-["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome"].forEach(function (id) {
+["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel"].forEach(function (id) {
   $(id).oninput = updPrev;
 });
-["f-font", "f-shadow"].forEach(function (id) {
+["f-font", "f-shadow", "f-btnshape"].forEach(function (id) {
   $(id).onchange = updPrev;
 });
 
@@ -2162,6 +2260,10 @@ function collect() {
       brand_url: $("f-brandurl").value.trim(),
       sound: $("f-sound").checked,
       custom_css: $("f-css").value.slice(0, 5000),
+      icon_btn: iconBtnSel,
+      icon_send: iconSendSel,
+      btn_shape: $("f-btnshape").value,
+      btn_label: $("f-btnlabel").value.trim(),
     },
   };
   var lim = parseInt($("f-limit").value, 10);
