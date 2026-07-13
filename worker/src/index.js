@@ -153,6 +153,132 @@ async function callClaude(env, tenant, messages, contextBlock) {
   return res.json();
 }
 
+async function runClaude(env, tenant, history, message, contextBlock, saveLead) {
+  const msgs = [...history, { role: "user", content: message }];
+  let reply = await callClaude(env, tenant, msgs, contextBlock);
+
+  const toolUse = reply.content.find((b) => b.type === "tool_use");
+  if (toolUse) {
+    await saveLead(toolUse.input);
+    msgs.push({ role: "assistant", content: reply.content });
+    msgs.push({
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: toolUse.id,
+          content: "Lead guardado. Confirma al usuario que el equipo le contactará pronto.",
+        },
+      ],
+    });
+    reply = await callClaude(env, tenant, msgs, contextBlock);
+  }
+
+  const text = reply.content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+
+  return {
+    text,
+    usage: {
+      input_tokens: reply.usage?.input_tokens,
+      output_tokens: reply.usage?.output_tokens,
+    },
+  };
+}
+
+// ---------- llamada a Gemini ----------
+
+async function callGemini(env, tenant, contents, contextBlock) {
+  if (!env.GEMINI_API_KEY) throw new Error("Falta el secreto GEMINI_API_KEY");
+
+  const system =
+    tenant.system_prompt +
+    "\n\nCONTEXTO (única fuente de verdad; si la respuesta no está aquí, dilo y ofrece el contacto):\n\n" +
+    (contextBlock || "[No se ha encontrado información relevante para esta pregunta.]");
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${tenant.model}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents,
+        tools: [
+          {
+            functionDeclarations: [
+              {
+                name: LEAD_TOOL.name,
+                description: LEAD_TOOL.description,
+                parameters: LEAD_TOOL.input_schema,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 2000,
+          thinkingConfig: { thinkingLevel: "low" },
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+async function runGemini(env, tenant, history, message, contextBlock, saveLead) {
+  const contents = [
+    ...history.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    { role: "user", parts: [{ text: message }] },
+  ];
+  let reply = await callGemini(env, tenant, contents, contextBlock);
+  let cand = reply.candidates?.[0];
+
+  const call = cand?.content?.parts?.find((p) => p.functionCall);
+  if (call) {
+    await saveLead(call.functionCall.args);
+    // el content vuelve tal cual: Gemini 3 exige conservar las thought signatures
+    contents.push(cand.content);
+    contents.push({
+      role: "user",
+      parts: [
+        {
+          functionResponse: {
+            name: call.functionCall.name,
+            response: { result: "Lead guardado. Confirma al usuario que el equipo le contactará pronto." },
+          },
+        },
+      ],
+    });
+    reply = await callGemini(env, tenant, contents, contextBlock);
+    cand = reply.candidates?.[0];
+  }
+
+  const text = (cand?.content?.parts || [])
+    .filter((p) => p.text && !p.thought)
+    .map((p) => p.text)
+    .join("\n")
+    .trim();
+
+  return {
+    text,
+    usage: {
+      input_tokens: reply.usageMetadata?.promptTokenCount,
+      output_tokens: reply.usageMetadata?.candidatesTokenCount,
+    },
+  };
+}
+
 // ---------- handler principal ----------
 
 export default {
@@ -223,14 +349,8 @@ export default {
           .map((h, i) => `[${i + 1}] ${h.title || ""} (${h.source_url || ""})\n${h.content}`)
           .join("\n\n---\n\n");
 
-        // generación
-        const msgs = [...history.slice(-8), { role: "user", content: message }];
-        let reply = await callClaude(env, tenant, msgs, contextBlock);
-
-        // si Claude decide guardar un lead, lo persistimos y le devolvemos el resultado
-        const toolUse = reply.content.find((b) => b.type === "tool_use");
-        if (toolUse) {
-          const l = toolUse.input;
+        // si el modelo decide guardar un lead, lo persistimos y le devolvemos el resultado
+        const saveLead = async (l) => {
           await sb(env, "leads", {
             method: "POST",
             body: {
@@ -252,26 +372,18 @@ export default {
               body: JSON.stringify({ tenant: tenant.slug, ...l }),
             }).catch(() => {});
           }
+        };
 
-          msgs.push({ role: "assistant", content: reply.content });
-          msgs.push({
-            role: "user",
-            content: [
-              {
-                type: "tool_result",
-                tool_use_id: toolUse.id,
-                content: "Lead guardado. Confirma al usuario que el equipo le contactará pronto.",
-              },
-            ],
-          });
-          reply = await callClaude(env, tenant, msgs, contextBlock);
-        }
-
-        const text = reply.content
-          .filter((b) => b.type === "text")
-          .map((b) => b.text)
-          .join("\n")
-          .trim();
+        // generación (proveedor y modelo configurables por tenant)
+        const run = tenant.provider === "google" ? runGemini : runClaude;
+        const { text, usage } = await run(
+          env,
+          tenant,
+          history.slice(-8),
+          message,
+          contextBlock,
+          saveLead
+        );
 
         const sources = [
           ...new Set((hits || []).map((h) => h.source_url).filter(Boolean)),
@@ -287,8 +399,8 @@ export default {
               role: "assistant",
               content: text,
               sources,
-              input_tokens: reply.usage?.input_tokens,
-              output_tokens: reply.usage?.output_tokens,
+              input_tokens: usage.input_tokens,
+              output_tokens: usage.output_tokens,
               was_answered: (hits || []).length > 0,
             },
           ],

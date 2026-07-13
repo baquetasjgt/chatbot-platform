@@ -8,3 +8,4 @@ binding = "AI"
 
 # Secretos (con `wrangler secret put`, nunca aquí):
 #   SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, ADMIN_TOKEN
+#   GEMINI_API_KEY (solo si algún tenant usa provider = 'google')

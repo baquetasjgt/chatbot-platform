@@ -1,7 +1,8 @@
 # Plataforma de chatbots — fase 1
 
-Motor multi-tenant: un Worker de Cloudflare, una base Supabase con pgvector, Claude para
-generar y bge-m3 (Workers AI) para los embeddings. Cliente cero: FISIOEXPO.
+Motor multi-tenant: un Worker de Cloudflare, una base Supabase con pgvector, Claude o
+Gemini para generar (elegible por cliente) y bge-m3 (Workers AI) para los embeddings.
+Cliente cero: FISIOEXPO.
 
 ## Estado
 
@@ -21,6 +22,7 @@ wrangler secret put SUPABASE_URL           # https://xgkmddmnxikgeonbfxch.supaba
 wrangler secret put SUPABASE_SERVICE_KEY   # Supabase > Settings > API > service_role
 wrangler secret put ANTHROPIC_API_KEY      # console.anthropic.com
 wrangler secret put ADMIN_TOKEN            # inventa una cadena larga y aleatoria
+wrangler secret put GEMINI_API_KEY         # aistudio.google.com — solo si algún tenant usa Gemini
 
 wrangler deploy
 ```
@@ -79,8 +81,9 @@ visible en el HTML, y no pasa nada: solo funciona desde los dominios de la lista
 ## 4. Dar de alta un cliente nuevo (esto es el negocio)
 
 ```sql
-insert into tenants (slug, name, system_prompt, welcome_message, allowed_domains, handoff_email)
-values ('cliente-b', 'Cliente B', '...', '¡Hola!', array['clienteb.com'], 'info@clienteb.com');
+insert into tenants (slug, name, system_prompt, welcome_message, allowed_domains, handoff_email, provider, model)
+values ('cliente-b', 'Cliente B', '...', '¡Hola!', array['clienteb.com'], 'info@clienteb.com',
+        'google', 'gemini-3.5-flash');
 
 insert into tenant_keys (tenant_id, public_key)
 select id, 'pk_clienteb_' || encode(gen_random_bytes(12), 'hex')
@@ -89,6 +92,30 @@ from tenants where slug = 'cliente-b';
 
 Luego indexas sus URLs y le pasas el snippet. Sin desplegar nada. Ese es el objetivo:
 un cliente nuevo son dos inserts y un curl.
+
+### Proveedor y modelo por cliente
+
+Cada tenant elige proveedor de generación (`provider`) y modelo (`model`). Si no
+indicas nada, el default es `anthropic` + `claude-sonnet-4-6`. Para cambiarlo después:
+
+```sql
+update tenants set provider = 'google', model = 'gemini-3.5-flash' where slug = 'cliente-b';
+```
+
+| `provider`  | `model` (opciones razonables) | Cuándo |
+|-------------|-------------------------------|--------|
+| `anthropic` | `claude-sonnet-4-6` (default), `claude-sonnet-5`, `claude-haiku-4-5` | Prima la fiabilidad (no inventar precios ni fechas) |
+| `google`    | `gemini-3.5-flash` (GA, recomendado), `gemini-flash-latest`, `gemini-flash-lite-latest` | Prima el coste por mensaje |
+
+Notas sobre Gemini:
+
+- Usa modelos de la familia 3.x: los Gemini 2.0 se apagaron en junio de 2026 y el
+  Worker pide `thinkingLevel: "low"`, que es un parámetro de esa familia.
+- La lista de modelos cambia rápido; la referencia viva es
+  <https://ai.google.dev/gemini-api/docs/models>.
+- Antes de poner Gemini a un cliente real, pruébalo con preguntas trampa (precios y
+  fechas que no estén en el contexto): la regla "no inventar" es la número 1 del bot
+  y los modelos más baratos son más propensos a saltársela.
 
 ## Consultas útiles
 

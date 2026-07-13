@@ -13,7 +13,8 @@ Cliente cero: FISIOEXPO (salón profesional de fisioterapia, IFEMA Madrid).
 
 - **Cloudflare Worker** — motor: recuperación + generación + captura de leads
 - **Supabase + pgvector** — conocimiento, conversaciones, leads (proyecto `chatbot-platform`, ref `xgkmddmnxikgeonbfxch`, eu-west-1)
-- **Claude API** — generación (`claude-sonnet-4-6`, configurable por tenant)
+- **Claude API o Gemini API** — generación. Proveedor y modelo se eligen por tenant
+  (`tenants.provider` + `tenants.model`; default `anthropic` + `claude-sonnet-4-6`)
 - **Workers AI `@cf/baai/bge-m3`** — embeddings, 1024 dims, multilingüe (es/en/pt)
 
 Los embeddings son de Cloudflare y no de OpenAI a propósito: multilingüe de serie,
@@ -30,7 +31,7 @@ README.md             Despliegue, indexación, alta de clientes, consultas SQL
 
 ## Esquema
 
-`tenants` (config del bot: prompt, modelo, colores, dominios permitidos, webhook de leads)
+`tenants` (config del bot: prompt, proveedor+modelo, colores, dominios permitidos, webhook de leads)
 → `tenant_keys` (claves públicas del widget, rotables)
 → `documents` → `chunks` (embedding vector(1024), índice HNSW coseno)
 → `conversations` → `messages` (con `was_answered`, clave para detectar huecos)
@@ -59,7 +60,8 @@ Hecho: esquema aplicado, tenant `fisioexpo` creado con clave
 `pk_fisioexpo_739c231e7180a38646bdf491`, código del Worker y del widget escrito.
 
 Pendiente inmediato:
-1. `wrangler deploy` + los 4 secretos (SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, ADMIN_TOKEN)
+1. `wrangler deploy` + los 4 secretos (SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY,
+   ADMIN_TOKEN) — y GEMINI_API_KEY si algún tenant usa `provider = 'google'`
 2. Indexar contenido. **Ojo: fisioexpo.es bloquea el scraping por robots.txt** — la
    indexación por URL puede fallar. Usar el campo `texts` del endpoint de ingest.
 3. Escribir a mano el FAQ con los datos duros (fechas, precios, tipos de stand, contacto).
