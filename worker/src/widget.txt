@@ -1,5 +1,5 @@
 (function () {
-  var s = document.currentScript;
+  var s = document.currentScript || document.getElementById("cb-widget-script");
   var KEY = s.getAttribute("data-key");
   var API = s.getAttribute("data-api");
   if (!KEY || !API) return console.error("[chatbot] faltan data-key o data-api");

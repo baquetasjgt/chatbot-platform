@@ -76,10 +76,12 @@ Pendiente inmediato:
    Esto importa más que cualquier ajuste del prompt.
 4. Probar el circuito de punta a punta.
 
-Backlog: aplicar `monthly_message_limit`, rate limiting por IP, reindexado con Cron
-Trigger, streaming de respuestas, enviar leads por email a `handoff_email` (hoy solo
-webhook). Los paneles ya existen: `/admin` para el dueño (auth: ADMIN_TOKEN) y
-`/panel?token=` para cada cliente (auth: `tenants.panel_token`).
+Backlog: rate limiting por IP, reindexado con Cron Trigger, streaming de respuestas,
+enviar leads por email a `handoff_email` (hoy solo webhook), integraciones de canal
+(Telegram vía Bot API, WhatsApp vía Meta Cloud API) y sync de Google Drive. Los paneles
+ya existen: `/admin` para el dueño (auth: ADMIN_TOKEN) y `/panel?token=` para cada
+cliente (auth: `tenants.panel_token`; incluye chat de prueba y subida de documentos).
+`monthly_message_limit` se aplica en /api/chat (función SQL `monthly_messages`).
 
 ## Dato sin resolver
 

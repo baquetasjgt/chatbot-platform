@@ -213,9 +213,12 @@ La segunda consulta es la más valiosa. Las preguntas que el bot no supo respond
 exactamente el contenido que le falta a la base de conocimiento, y también un informe
 que puedes enseñarle al cliente cada mes para justificar la cuota.
 
+El panel del cliente incluye además: **probar el bot** (el widget vive dentro del propio
+panel), y **subir documentos** (`/panel/upload`, mismo pipeline que el admin) para que el
+cliente mantenga el contenido al día sin pasar por ti.
+
 ## Lo que falta (fases siguientes)
 
-- Límite de mensajes por tenant (el campo `monthly_message_limit` existe, no se aplica todavía)
 - Rate limiting por IP en el Worker
 - Reindexado automático con un Cron Trigger
 - Streaming de la respuesta (ahora llega de golpe)

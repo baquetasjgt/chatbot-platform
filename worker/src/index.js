@@ -153,6 +153,35 @@ async function indexDocument(env, tenantId, { source_url = null, source_type, ti
   return { ok: true, chunks: pieces.length };
 }
 
+// archivos en base64 → texto (TXT/MD directo; el resto vía env.AI.toMarkdown) → índice
+async function indexUploadedFiles(env, tenantId, files) {
+  const report = [];
+  for (const f of files) {
+    try {
+      const bytes = Uint8Array.from(atob(f.data || ""), (c) => c.charCodeAt(0));
+      const ext = (f.name?.split(".").pop() || "").toLowerCase();
+      let content;
+      if (ext === "txt" || ext === "md") {
+        content = new TextDecoder().decode(bytes);
+      } else {
+        const [md] = await env.AI.toMarkdown([
+          { name: f.name, blob: new Blob([bytes], { type: "application/octet-stream" }) },
+        ]);
+        content = md?.data || "";
+      }
+      const res = await indexDocument(env, tenantId, {
+        source_type: "file",
+        title: f.name,
+        content,
+      });
+      report.push({ source: f.name, ...res });
+    } catch (err) {
+      report.push({ source: f.name, ok: false, reason: String(err?.message || err).slice(0, 200) });
+    }
+  }
+  return report;
+}
+
 // ---------- herramienta de captura de lead ----------
 
 const LEAD_TOOL = {
@@ -1324,12 +1353,19 @@ const PANEL_HTML = `<!doctype html>
   .m{width:fit-content;max-width:80%;padding:8px 12px;border-radius:12px;margin-bottom:8px;white-space:pre-wrap;font-size:14px}
   .m.user{background:#e8eefc;margin-left:auto}
   .m.assistant{background:#f2f2f0}
+  .box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px}
+  .btn{background:#111;color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font:inherit}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ok{color:#0a7a4b;font-size:13px}
+  .err{color:#b3261e;font-size:13px}
+  #up-files{border:1px dashed var(--line);border-radius:10px;padding:16px;width:100%;background:#fff}
+  #dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:#111;margin-right:8px}
 </style>
 </head>
 <body>
 <header>
-  <h1 id="name">Cargando…</h1>
-  <div class="sub">Conversaciones, leads y huecos de contenido del asistente</div>
+  <h1><span id="dot"></span><span id="name">Cargando…</span></h1>
+  <div class="sub">Conversaciones, leads, contenido y pruebas de tu asistente</div>
 </header>
 <main>
   <div class="stats">
@@ -1342,6 +1378,8 @@ const PANEL_HTML = `<!doctype html>
     <button class="on" data-tab="t-leads">Leads</button>
     <button data-tab="t-convs">Conversaciones</button>
     <button data-tab="t-gaps">Preguntas sin respuesta</button>
+    <button data-tab="t-add">Añadir contenido</button>
+    <button data-tab="t-test">Probar el bot</button>
   </nav>
   <section id="t-leads" class="on">
     <table>
@@ -1357,6 +1395,29 @@ const PANEL_HTML = `<!doctype html>
       <thead><tr><th>Fecha</th><th>Pregunta</th></tr></thead>
       <tbody id="gaps-body"></tbody>
     </table>
+  </section>
+  <section id="t-add">
+    <div class="box">
+      <p style="margin-bottom:10px">Sube documentos con información que el asistente deba conocer:
+      tarifas, horarios, catálogos, preguntas frecuentes… <span class="mut">(PDF, TXT, CSV o imágenes;
+      máx. 10 MB por archivo. Subir un archivo con el mismo nombre sustituye al anterior.)</span></p>
+      <input id="up-files" type="file" multiple
+        accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button id="up-run" class="btn">Subir e indexar</button>
+        <span id="up-msg" class="mut"></span>
+      </div>
+      <div id="up-report" class="mut" style="margin-top:10px"></div>
+    </div>
+  </section>
+  <section id="t-test">
+    <div class="box">
+      <p><b>Tu asistente está en la esquina inferior derecha</b> — el botón redondo de chat.
+      Pruébalo exactamente igual que lo verán tus visitantes.</p>
+      <p class="mut" style="margin-top:8px">Las conversaciones de prueba también quedan registradas en
+      la pestaña Conversaciones. Si acabas de subir contenido nuevo, pregúntale sobre ello para
+      comprobar que lo ha aprendido.</p>
+    </div>
   </section>
 </main>
 <script>
@@ -1383,6 +1444,15 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     if (d.error) { document.getElementById("name").textContent = "Enlace no válido"; return; }
     var convs = d.conversations || [], leads = d.leads || [];
     document.getElementById("name").textContent = d.name;
+    if (d.primary_color) document.getElementById("dot").style.background = d.primary_color;
+    if (d.public_key) {
+      var ws = document.createElement("script");
+      ws.id = "cb-widget-script";
+      ws.src = "/widget.js";
+      ws.setAttribute("data-key", d.public_key);
+      ws.setAttribute("data-api", location.origin);
+      document.body.appendChild(ws);
+    }
 
     var gaps = [], userMsgs = 0, answered = 0, assistantMsgs = 0;
     convs.forEach(function (c) {
@@ -1442,6 +1512,44 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
   .catch(function () {
     document.getElementById("name").textContent = "No se ha podido cargar el panel";
   });
+
+document.getElementById("up-run").onclick = function () {
+  var files = document.getElementById("up-files").files;
+  var msg = document.getElementById("up-msg");
+  if (!files.length) { msg.textContent = "Elige uno o varios archivos primero."; msg.className = "err"; return; }
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].size > 10 * 1024 * 1024) {
+      msg.textContent = files[i].name + " pesa más de 10 MB; divídelo o reduce el PDF.";
+      msg.className = "err";
+      return;
+    }
+  }
+  msg.textContent = "Subiendo e indexando… puede tardar un poco."; msg.className = "mut";
+  Promise.all([].map.call(files, function (f) {
+    return new Promise(function (resolve, reject) {
+      var rd = new FileReader();
+      rd.onload = function () { resolve({ name: f.name, data: String(rd.result).split(",")[1] }); };
+      rd.onerror = reject;
+      rd.readAsDataURL(f);
+    });
+  })).then(function (payload) {
+    return fetch("/panel/upload?token=" + encodeURIComponent(token), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: payload }),
+    }).then(function (r) { return r.json(); });
+  }).then(function (r) {
+    if (r.error) { msg.textContent = r.error; msg.className = "err"; return; }
+    msg.textContent = "Hecho. El asistente ya conoce este contenido: pruébalo en la pestaña «Probar el bot».";
+    msg.className = "ok";
+    document.getElementById("up-report").innerHTML = (r.indexed || []).map(function (x) {
+      var dv = document.createElement("div");
+      dv.textContent = (x.ok ? "✓ " : "✗ ") + x.source + (x.ok ? "" : " — " + (x.reason || "error"));
+      return dv.outerHTML;
+    }).join("");
+    document.getElementById("up-files").value = "";
+  }).catch(function () { msg.textContent = "Error al subir."; msg.className = "err"; });
+};
 </script>
 </body>
 </html>`;
@@ -1565,6 +1673,23 @@ ${inject}</body></html>`;
         }
         if (!message || message.length > 2000) {
           return json({ error: "mensaje no válido" }, 400, ch);
+        }
+
+        // límite mensual del tenant: al alcanzarlo, respuesta fija sin gastar modelo
+        if (tenant.monthly_message_limit) {
+          const used = await rpc(env, "monthly_messages", { p_tenant_id: tenant.id });
+          if (used >= tenant.monthly_message_limit) {
+            return json(
+              {
+                reply:
+                  "Hemos alcanzado el máximo de consultas de este mes. Escríbenos directamente y te atenderemos encantados.",
+                sources: [],
+                limit_reached: true,
+              },
+              200,
+              ch
+            );
+          }
         }
 
         // conversación (se crea en el primer mensaje de la sesión)
@@ -1731,32 +1856,18 @@ ${inject}</body></html>`;
         const tenant = (await sb(env, `tenants?slug=eq.${slug}&select=id`))[0];
         if (!tenant) return json({ error: "tenant no encontrado" }, 404);
 
-        const report = [];
-        for (const f of files) {
-          try {
-            const bytes = Uint8Array.from(atob(f.data || ""), (c) => c.charCodeAt(0));
-            const ext = (f.name?.split(".").pop() || "").toLowerCase();
-            let content;
-            if (ext === "txt" || ext === "md") {
-              content = new TextDecoder().decode(bytes);
-            } else {
-              // PDF y demás: conversión a Markdown de Workers AI
-              const [md] = await env.AI.toMarkdown([
-                { name: f.name, blob: new Blob([bytes], { type: "application/octet-stream" }) },
-              ]);
-              content = md?.data || "";
-            }
-            const res = await indexDocument(env, tenant.id, {
-              source_type: "file",
-              title: f.name,
-              content,
-            });
-            report.push({ source: f.name, ...res });
-          } catch (err) {
-            report.push({ source: f.name, ok: false, reason: String(err?.message || err).slice(0, 200) });
-          }
+        return json({ indexed: await indexUploadedFiles(env, tenant.id, files) });
+      }
+
+      // --- subida de archivos desde el panel del cliente ---
+      if (url.pathname === "/panel/upload" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        const { files = [] } = await request.json();
+        if (!files.length || files.length > 10) {
+          return json({ error: "envía entre 1 y 10 archivos" }, 400);
         }
-        return json({ indexed: report });
+        return json({ indexed: await indexUploadedFiles(env, tenant.id, files) });
       }
 
       // --- panel del cliente ---
@@ -1771,7 +1882,7 @@ ${inject}</body></html>`;
       if (url.pathname === "/panel/data") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
         if (!tenant) return json({ error: "token no válido" }, 401);
-        const [conversations, leads] = await Promise.all([
+        const [conversations, leads, keys] = await Promise.all([
           sb(
             env,
             `conversations?tenant_id=eq.${tenant.id}` +
@@ -1784,10 +1895,19 @@ ${inject}</body></html>`;
               `&select=kind,name,email,phone,company,message,status,created_at` +
               `&order=created_at.desc&limit=200`
           ),
+          sb(env, `tenant_keys?tenant_id=eq.${tenant.id}&revoked_at=is.null&select=public_key`),
         ]);
-        return json({ name: tenant.name, conversations, leads }, 200, {
-          "Cache-Control": "no-store",
-        });
+        return json(
+          {
+            name: tenant.name,
+            primary_color: tenant.primary_color,
+            public_key: keys?.[keys.length - 1]?.public_key || null,
+            conversations,
+            leads,
+          },
+          200,
+          { "Cache-Control": "no-store" }
+        );
       }
 
       return json({ error: "no encontrado" }, 404);
