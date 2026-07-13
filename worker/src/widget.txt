@@ -131,6 +131,7 @@
       max-width:calc(100vw - 96px)}
     .cb-tease.cb-left{left:16px;right:auto}
   }
+  .cb-btn,.cb-close,.cb-foot button,.cb-sug button,.cb-tease,.cb-foot input{touch-action:manipulation}
   @media(prefers-reduced-motion:reduce){.cb-btn,.cb-dots span,.cb-tease{transition:none;animation:none}}`;
 
   var st = document.createElement("style");
