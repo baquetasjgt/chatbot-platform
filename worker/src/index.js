@@ -1423,6 +1423,13 @@ const PANEL_HTML = `<!doctype html>
   .err{color:#b3261e;font-size:13px}
   #up-files{border:1px dashed var(--line);border-radius:10px;padding:16px;width:100%;background:#fff}
   #dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:#111;margin-right:8px}
+  #chart{display:flex;align-items:flex-end;gap:3px;height:72px}
+  #chart div{flex:1;background:#c9d4e8;border-radius:3px 3px 0 0;min-height:3px}
+  .mini{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;
+    font:13px system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .done{color:#0a7a4b;font-size:13px;white-space:nowrap}
+  section{overflow-x:auto}
+  section table{min-width:640px}
 </style>
 </head>
 <body>
@@ -1437,6 +1444,10 @@ const PANEL_HTML = `<!doctype html>
     <div class="stat"><b id="s-rate">–</b><span>respondidas con contexto</span></div>
     <div class="stat"><b id="s-leads">–</b><span>leads</span></div>
   </div>
+  <div class="box" style="margin-bottom:20px">
+    <div class="mut" style="margin-bottom:10px">Actividad — preguntas por día, últimos 30 días</div>
+    <div id="chart"></div>
+  </div>
   <nav>
     <button class="on" data-tab="t-leads">Leads</button>
     <button data-tab="t-convs">Conversaciones</button>
@@ -1445,8 +1456,11 @@ const PANEL_HTML = `<!doctype html>
     <button data-tab="t-test">Probar el bot</button>
   </nav>
   <section id="t-leads" class="on">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button id="csv" class="btn" style="padding:8px 14px;font-size:13px">Descargar CSV</button>
+    </div>
     <table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th><th>Estado</th></tr></thead>
       <tbody id="leads-body"></tbody>
     </table>
   </section>
@@ -1485,6 +1499,7 @@ const PANEL_HTML = `<!doctype html>
 </main>
 <script>
 var token = new URLSearchParams(location.search).get("token") || "";
+var LEADS = [];
 
 function esc(t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; }
 function fmt(iso) {
@@ -1517,6 +1532,19 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
       document.body.appendChild(ws);
     }
 
+    var act = d.activity || [];
+    var mx = 1;
+    act.forEach(function (a) { if (a.n > mx) mx = a.n; });
+    var ch = document.getElementById("chart");
+    ch.innerHTML = "";
+    act.forEach(function (a) {
+      var bar = document.createElement("div");
+      bar.style.height = Math.max(4, Math.round((a.n / mx) * 100)) + "%";
+      bar.style.background = a.n ? (d.primary_color || "#111") : "#e8e8e5";
+      bar.title = a.day + ": " + a.n + (a.n === 1 ? " pregunta" : " preguntas");
+      ch.appendChild(bar);
+    });
+
     var gaps = [], userMsgs = 0, answered = 0, assistantMsgs = 0;
     convs.forEach(function (c) {
       var ms = c.messages || [];
@@ -1540,13 +1568,36 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     document.getElementById("s-rate").textContent =
       assistantMsgs ? Math.round((100 * answered) / assistantMsgs) + "%" : "–";
 
+    LEADS = leads;
     document.getElementById("leads-body").innerHTML = leads.length
       ? leads.map(function (l) {
           return "<tr><td>" + fmt(l.created_at) + "</td><td>" + esc(l.kind) + "</td><td>" + esc(l.name) +
             (l.company ? "<div class='mut'>" + esc(l.company) + "</div>" : "") + "</td><td>" + esc(l.email) +
-            (l.phone ? "<div class='mut'>" + esc(l.phone) + "</div>" : "") + "</td><td>" + esc(l.message) + "</td></tr>";
+            (l.phone ? "<div class='mut'>" + esc(l.phone) + "</div>" : "") + "</td><td>" + esc(l.message) + "</td><td>" +
+            (l.status === "contactado"
+              ? "<span class='done'>✓ contactado</span>"
+              : "<button class='mini' data-lead='" + l.id + "'>Marcar contactado</button>") +
+            "</td></tr>";
         }).join("")
-      : "<tr><td colspan='5' class='mut'>Todavía no hay leads.</td></tr>";
+      : "<tr><td colspan='6' class='mut'>Todavía no hay leads. Cuando un visitante deje sus datos de contacto en el chat, aparecerán aquí y podrás descargarlos.</td></tr>";
+
+    [].forEach.call(document.querySelectorAll("[data-lead]"), function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        fetch("/panel/lead-status?token=" + encodeURIComponent(token), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: b.getAttribute("data-lead"), status: "contactado" }),
+        }).then(function (r) { return r.json(); }).then(function (r) {
+          if (r.ok) {
+            var sp = document.createElement("span");
+            sp.className = "done";
+            sp.textContent = "✓ contactado";
+            b.replaceWith(sp);
+          } else { b.disabled = false; }
+        }).catch(function () { b.disabled = false; });
+      };
+    });
 
     var cv = document.getElementById("convs");
     if (!convs.length) cv.innerHTML = "<p class='mut'>Todavía no hay conversaciones.</p>";
@@ -1575,6 +1626,21 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
   .catch(function () {
     document.getElementById("name").textContent = "No se ha podido cargar el panel";
   });
+
+document.getElementById("csv").onclick = function () {
+  var rows = [["Fecha", "Tipo", "Nombre", "Email", "Telefono", "Empresa", "Mensaje", "Estado"]].concat(
+    LEADS.map(function (l) {
+      return [l.created_at, l.kind, l.name, l.email, l.phone, l.company, l.message, l.status];
+    })
+  );
+  var csv = rows.map(function (r) {
+    return r.map(function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }).join(";");
+  }).join("\\n");
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "leads.csv";
+  a.click();
+};
 
 document.getElementById("up-run").onclick = function () {
   var files = document.getElementById("up-files").files;
@@ -1671,8 +1737,9 @@ export default {
         const inject =
           `<div style="position:fixed;top:0;left:0;right:0;z-index:2147483001;background:#111;color:#fff;` +
           `font:600 13px/1.4 system-ui,sans-serif;padding:9px 16px;text-align:center">` +
-          `DEMOSTRACIÓN · Así se verá el asistente de ${h(tenant.name)} · La web es una copia estática, el chat funciona de verdad</div>` +
-          `<script src="${url.origin}/widget.js" data-key="${h(key)}" data-api="${url.origin}"></script>`;
+          `DEMOSTRACIÓN · Así se verá el asistente de ${h(tenant.name)} en su web · ` +
+          `El chat funciona de verdad: pruébelo · ¿Le gusta? Se activa en su web en 5 minutos</div>` +
+          `<script src="${url.origin}/widget.js" data-key="${h(key)}" data-api="${url.origin}" data-open="2500"></script>`;
 
         if (page) {
           // copia estática: fuera scripts y CSP; base para que css/imágenes carguen del sitio real
@@ -1933,6 +2000,21 @@ ${inject}</body></html>`;
         return json({ indexed: await indexUploadedFiles(env, tenant.id, files) });
       }
 
+      // --- marcar estado de un lead desde el panel del cliente ---
+      if (url.pathname === "/panel/lead-status" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        const { id, status } = await request.json();
+        if (!["nuevo", "contactado"].includes(status) || !/^[0-9a-f-]{36}$/.test(id || "")) {
+          return json({ error: "datos no válidos" }, 400);
+        }
+        const rows = await sb(env, `leads?id=eq.${id}&tenant_id=eq.${tenant.id}`, {
+          method: "PATCH",
+          body: { status },
+        });
+        return json({ ok: !!rows?.length });
+      }
+
       // --- panel del cliente ---
       if (url.pathname === "/panel") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
@@ -1945,7 +2027,7 @@ ${inject}</body></html>`;
       if (url.pathname === "/panel/data") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
         if (!tenant) return json({ error: "token no válido" }, 401);
-        const [conversations, leads, keys] = await Promise.all([
+        const [conversations, leads, keys, activity] = await Promise.all([
           sb(
             env,
             `conversations?tenant_id=eq.${tenant.id}` +
@@ -1955,10 +2037,11 @@ ${inject}</body></html>`;
           sb(
             env,
             `leads?tenant_id=eq.${tenant.id}` +
-              `&select=kind,name,email,phone,company,message,status,created_at` +
+              `&select=id,kind,name,email,phone,company,message,status,created_at` +
               `&order=created_at.desc&limit=200`
           ),
           sb(env, `tenant_keys?tenant_id=eq.${tenant.id}&revoked_at=is.null&select=public_key`),
+          rpc(env, "daily_activity", { p_tenant_id: tenant.id, p_days: 30 }),
         ]);
         return json(
           {
@@ -1967,6 +2050,7 @@ ${inject}</body></html>`;
             public_key: keys?.[keys.length - 1]?.public_key || null,
             conversations,
             leads,
+            activity,
           },
           200,
           { "Cache-Control": "no-store" }
