@@ -24,7 +24,8 @@ mismo proveedor que el Worker, un tercero menos en la factura.
 
 ```
 worker/src/index.js   Motor. Endpoints: /api/config, /api/chat, /admin (panel de gestión),
-                      /admin/api/*, /admin/ingest, /panel (panel del cliente)
+                      /admin/api/*, /admin/ingest, /admin/upload (archivos PDF/TXT/MD/CSV/
+                      imágenes vía env.AI.toMarkdown), /panel (panel del cliente)
 worker/wrangler.toml  Binding AI. Los secretos van con `wrangler secret put`
 widget/widget.js      Widget embebible, vanilla JS, sin dependencias
 README.md             Despliegue, indexación, alta de clientes, consultas SQL

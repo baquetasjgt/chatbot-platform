@@ -159,7 +159,10 @@ Se entra con el `ADMIN_TOKEN` (el mismo secreto del Worker). Desde ahí puedes:
 - Apagar el bot de un cliente (checkbox "Activo")
 - Copiar el snippet del widget y el enlace del panel de cada cliente, y rotar
   ambos si se filtran
-- Indexar contenido (URLs o texto pegado a mano) y ver el resultado
+- Indexar contenido y ver el resultado: URLs, texto pegado a mano o **archivos
+  subidos** (PDF, TXT, MD, CSV, HTML e imágenes; máx. 10 MB por archivo). Los PDF
+  y demás formatos se convierten a texto con la conversión a Markdown de Workers AI
+  (`env.AI.toMarkdown`); subir un archivo con el mismo nombre reemplaza al anterior
 
 El alta por SQL sigue funcionando igual; el panel hace lo mismo por debajo.
 
