@@ -370,6 +370,56 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
   };
 }
 
+// ---------- portal de clientes: sesiones y contraseñas ----------
+
+function b64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+
+async function hmacSign(data, secret) {
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return b64(sig).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function makePortalToken(env, clientId) {
+  const exp = Date.now() + 30 * 24 * 3600 * 1000; // 30 días
+  const body = `${clientId}.${exp}`;
+  return `${body}.${await hmacSign(body, env.ADMIN_TOKEN)}`;
+}
+
+async function portalClientId(env, token) {
+  if (!token) return null;
+  const p = token.split(".");
+  if (p.length !== 3) return null;
+  const body = `${p[0]}.${p[1]}`;
+  if ((await hmacSign(body, env.ADMIN_TOKEN)) !== p[2]) return null;
+  if (Date.now() > parseInt(p[1], 10)) return null;
+  return p[0];
+}
+
+async function hashPassword(pw, saltB64) {
+  const salt = saltB64
+    ? Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0))
+    : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: 100000 }, key, 256
+  );
+  return `pbkdf2$100000$${b64(salt)}$${b64(bits)}`;
+}
+
+async function verifyPassword(pw, stored) {
+  const p = (stored || "").split("$");
+  if (p.length !== 4) return false;
+  return (await hashPassword(pw, p[2])) === stored;
+}
+
 // ---------- administración (para el dueño de la plataforma) ----------
 
 function isAdmin(request, env) {
@@ -562,6 +612,79 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}`;
       await sb(env, `tenants?project_id=in.(${ids})`, { method: "DELETE" });
     }
     await sb(env, `clients?id=eq.${mClient[1]}`, { method: "DELETE" });
+    return json({ ok: true });
+  }
+
+  // --- acceso al portal del cliente: generar contraseña ---
+  const mPass = url.pathname.match(/^\/admin\/api\/clients\/([0-9a-f-]{36})\/portal-password$/);
+  if (mPass && request.method === "POST") {
+    const [c] = await sb(env, `clients?id=eq.${mPass[1]}&select=id,email`);
+    if (!c) return json({ error: "cliente no encontrado" }, 404);
+    if (!c.email) return json({ error: "ponle primero un email al cliente y guarda" }, 400);
+    const pw = randomHex(5) + "-" + randomHex(5);
+    const hash = await hashPassword(pw);
+    await sb(env, `clients?id=eq.${mPass[1]}`, {
+      method: "PATCH",
+      body: { portal_password_hash: hash },
+    });
+    return json({ password: pw, email: c.email });
+  }
+
+  // --- facturas del cliente (admin) ---
+  const mInv = url.pathname.match(/^\/admin\/api\/clients\/([0-9a-f-]{36})\/invoices$/);
+  if (mInv && request.method === "GET") {
+    return json(
+      await sb(env, `invoices?client_id=eq.${mInv[1]}&order=issued_at.desc,created_at.desc`)
+    );
+  }
+  if (mInv && request.method === "POST") {
+    const { number, concept, amount_cents, issued_at, status, pdf_base64 } = await request.json();
+    if (!number || !amount_cents) return json({ error: "faltan el número o el importe" }, 400);
+    const [inv] = await sb(env, "invoices", {
+      method: "POST",
+      body: {
+        client_id: mInv[1],
+        number: String(number).slice(0, 60),
+        concept: String(concept || "").slice(0, 300),
+        amount_cents: Math.round(amount_cents),
+        issued_at: issued_at || undefined,
+        status: status === "pagada" ? "pagada" : "pendiente",
+      },
+    });
+    if (pdf_base64) {
+      const bytes = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+      const path = `${mInv[1]}/${inv.id}.pdf`;
+      const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${path}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          "Content-Type": "application/pdf",
+        },
+        body: bytes,
+      });
+      if (up.ok) {
+        await sb(env, `invoices?id=eq.${inv.id}`, { method: "PATCH", body: { pdf_path: path } });
+        inv.pdf_path = path;
+      }
+    }
+    return json(inv);
+  }
+  const mInvOne = url.pathname.match(/^\/admin\/api\/invoices\/([0-9a-f-]{36})$/);
+  if (mInvOne && request.method === "PATCH") {
+    const { status } = await request.json();
+    if (!["pendiente", "pagada"].includes(status)) return json({ error: "estado no válido" }, 400);
+    const rows = await sb(env, `invoices?id=eq.${mInvOne[1]}`, { method: "PATCH", body: { status } });
+    return json(rows?.[0] || { error: "factura no encontrada" });
+  }
+  if (mInvOne && request.method === "DELETE") {
+    const [inv] = await sb(env, `invoices?id=eq.${mInvOne[1]}&select=pdf_path`);
+    if (inv?.pdf_path) {
+      await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${inv.pdf_path}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` },
+      }).catch(() => {});
+    }
+    await sb(env, `invoices?id=eq.${mInvOne[1]}`, { method: "DELETE" });
     return json({ ok: true });
   }
 
@@ -794,6 +917,46 @@ const ADMIN_HTML = `<!doctype html>
           <button id="proj-create" class="ghost small">Crear&nbsp;proyecto</button>
         </div>
         <p id="proj-msg" class="mut"></p>
+      </div>
+
+      <div class="card hide" id="v-client-portal">
+        <h2>Acceso al portal del cliente</h2>
+        <p class="sub">El cliente entra con su email (el de su ficha) y una contraseña que generas aquí.
+        En su portal ve todos sus proyectos, sus herramientas y su facturación.</p>
+        <div class="copyrow"><input id="portal-url" readonly>
+          <button class="ghost small" data-copy="portal-url">Copiar</button></div>
+        <div class="actions">
+          <button id="portal-pass" class="ghost small">Generar contraseña nueva</button>
+          <span id="portal-msg" class="mut"></span>
+        </div>
+        <p id="portal-pass-out" class="mut" style="margin-top:8px"></p>
+      </div>
+
+      <div class="card hide" id="v-client-inv">
+        <h2>Facturación</h2>
+        <p class="sub">Las facturas de este cliente; él las ve y descarga desde su portal.</p>
+        <div id="inv-list" class="mut">Cargando…</div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+        <div class="row">
+          <div><label>Número</label><input id="iv-num" placeholder="2026-001"></div>
+          <div><label>Importe (€)</label><input id="iv-amt" type="number" step="0.01" min="0"></div>
+        </div>
+        <div class="row">
+          <div><label>Fecha de emisión</label><input id="iv-date" type="date"></div>
+          <div><label>Estado</label>
+            <select id="iv-status">
+              <option value="pendiente">Pendiente</option>
+              <option value="pagada">Pagada</option>
+            </select></div>
+        </div>
+        <label>Concepto</label>
+        <input id="iv-concept" placeholder="Cuota mensual chatbot — julio 2026">
+        <label>PDF de la factura (opcional, máx. 8 MB)</label>
+        <input id="iv-pdf" type="file" accept=".pdf">
+        <div class="actions">
+          <button id="iv-add" class="primary">Añadir factura</button>
+          <span id="iv-msg" class="mut"></span>
+        </div>
       </div>
 
       <div class="card hide" id="v-project">
@@ -1179,7 +1342,7 @@ function renderTree() {
   });
 }
 
-var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-project", "v-project-tools", "v-assist", "v-tenant", "integ", "ingest"];
+var ALL_VIEWS = ["v-home", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "integ", "ingest"];
 function showCards(ids) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
   $("main").classList.remove("hide");
@@ -1203,9 +1366,123 @@ function selClient(id) {
   $("c-msg").textContent = "";
   $("proj-msg").textContent = "";
   $("proj-new-name").value = "";
-  if (c) renderProjects(c);
-  showCards(c ? ["v-client", "v-client-projects"] : ["v-client"]);
+  if (c) {
+    renderProjects(c);
+    $("portal-url").value = location.origin + "/acceso";
+    $("portal-pass-out").textContent = c.portal_password_hash
+      ? "El cliente ya tiene contraseña. Genera una nueva solo si la ha perdido (la anterior dejará de valer)."
+      : "Este cliente aún no tiene contraseña: genera una y envíasela junto con el enlace de acceso.";
+    $("portal-pass-out").className = "mut";
+    $("portal-msg").textContent = "";
+    $("iv-msg").textContent = "";
+    loadInvoices();
+  }
+  showCards(c ? ["v-client", "v-client-projects", "v-client-portal", "v-client-inv"] : ["v-client"]);
 }
+
+function loadInvoices() {
+  var box = $("inv-list");
+  box.textContent = "Cargando…";
+  api("/admin/api/clients/" + sel.id + "/invoices").then(function (list) {
+    if (list.error) { box.textContent = list.error; return; }
+    box.innerHTML = "";
+    if (!list.length) { box.textContent = "Sin facturas todavía. Añade la primera abajo."; return; }
+    list.forEach(function (v) {
+      var row = document.createElement("div");
+      row.className = "doc";
+      var left = document.createElement("div");
+      var t1 = document.createElement("div");
+      t1.textContent = v.number + " — " +
+        (v.amount_cents / 100).toLocaleString("es-ES", { minimumFractionDigits: 2 }) + " € · " +
+        (v.status === "pagada" ? "✓ pagada" : "pendiente");
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = (v.issued_at || "") + (v.concept ? " · " + v.concept : "") +
+        (v.pdf_path ? " · con PDF" : " · sin PDF");
+      left.appendChild(t1);
+      left.appendChild(meta);
+      var btns = document.createElement("div");
+      btns.style.whiteSpace = "nowrap";
+      if (v.status !== "pagada") {
+        var pay = document.createElement("button");
+        pay.className = "ghost small";
+        pay.textContent = "Marcar pagada";
+        pay.onclick = function () {
+          api("/admin/api/invoices/" + v.id, { method: "PATCH", body: JSON.stringify({ status: "pagada" }) })
+            .then(loadInvoices);
+        };
+        btns.appendChild(pay);
+      }
+      var del = document.createElement("button");
+      del.className = "ghost small";
+      del.style.marginLeft = "6px";
+      del.textContent = "Eliminar";
+      del.onclick = function () {
+        if (!confirm("¿Eliminar la factura " + v.number + "?")) return;
+        api("/admin/api/invoices/" + v.id, { method: "DELETE" }).then(loadInvoices);
+      };
+      btns.appendChild(del);
+      row.appendChild(left);
+      row.appendChild(btns);
+      box.appendChild(row);
+    });
+  }).catch(function () { box.textContent = "No se ha podido cargar."; });
+}
+
+$("iv-add").onclick = function () {
+  var amt = Math.round(parseFloat(($("iv-amt").value || "0").replace(",", ".")) * 100);
+  var num = $("iv-num").value.trim();
+  if (!num || !amt) {
+    $("iv-msg").textContent = "El número y el importe son obligatorios."; $("iv-msg").className = "err";
+    return;
+  }
+  var send = function (pdf64) {
+    $("iv-msg").textContent = "Guardando…"; $("iv-msg").className = "mut";
+    api("/admin/api/clients/" + sel.id + "/invoices", {
+      method: "POST",
+      body: JSON.stringify({
+        number: num,
+        concept: $("iv-concept").value.trim(),
+        amount_cents: amt,
+        issued_at: $("iv-date").value || null,
+        status: $("iv-status").value,
+        pdf_base64: pdf64 || null,
+      }),
+    }).then(function (r) {
+      if (r.error) { $("iv-msg").textContent = r.error; $("iv-msg").className = "err"; return; }
+      $("iv-msg").textContent = "Factura añadida ✓"; $("iv-msg").className = "ok";
+      $("iv-num").value = ""; $("iv-amt").value = ""; $("iv-concept").value = ""; $("iv-pdf").value = "";
+      toast("Factura añadida ✓");
+      loadInvoices();
+    }).catch(function () { $("iv-msg").textContent = "Error al guardar."; $("iv-msg").className = "err"; });
+  };
+  var f = $("iv-pdf").files[0];
+  if (f) {
+    if (f.size > 8 * 1024 * 1024) {
+      $("iv-msg").textContent = "El PDF supera los 8 MB."; $("iv-msg").className = "err";
+      return;
+    }
+    var rd = new FileReader();
+    rd.onload = function () { send(String(rd.result).split(",")[1]); };
+    rd.readAsDataURL(f);
+  } else {
+    send(null);
+  }
+};
+
+$("portal-pass").onclick = function () {
+  var c = findClient(sel.id);
+  if (!confirm("Se generará una contraseña nueva para " + (c ? c.name : "este cliente") +
+    " y la anterior dejará de valer. ¿Seguir?")) return;
+  api("/admin/api/clients/" + sel.id + "/portal-password", { method: "POST" }).then(function (r) {
+    if (r.error) { $("portal-msg").textContent = r.error; $("portal-msg").className = "err"; return; }
+    $("portal-msg").textContent = "";
+    $("portal-pass-out").textContent =
+      "Envíale estos datos (la contraseña solo se muestra ahora): " + r.email + "  /  " + r.password;
+    $("portal-pass-out").className = "ok";
+    toast("Contraseña generada ✓");
+  });
+};
 
 $("new-client").onclick = function () { selClient(null); };
 
@@ -1769,6 +2046,273 @@ $("g-upload").onclick = function () {
   }).catch(function () {
     $("g-upmsg").textContent = "Error al subir."; $("g-upmsg").className = "err";
   });
+};
+
+if (TOKEN) load(); else showLogin();
+</script>
+</body>
+</html>`;
+
+// ---------- portal de clientes (acceso con usuario y contraseña) ----------
+
+const PORTAL_HTML = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Portal de cliente</title>
+<style>
+  :root{--ink:#1a1a1a;--mut:#777;--line:#e5e5e2;--bg:#f7f7f5;--err:#b3261e;--ok:#0a7a4b}
+  *{box-sizing:border-box;margin:0}
+  body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  .hide{display:none!important}
+  button{font:inherit;cursor:pointer}
+  input,select{font:inherit;width:100%;border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;background:#fff;color:var(--ink)}
+  input:focus,select:focus{outline:0;border-color:#999}
+  label{display:block;font-size:13px;color:var(--mut);margin:14px 0 4px}
+  .btn{background:#111;color:#fff;border:0;border-radius:10px;padding:11px 20px}
+  .ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+  .small{font-size:13px;padding:6px 12px}
+  .mut{color:var(--mut);font-size:13px}
+  .err{color:var(--err);font-size:13px}
+  .ok{color:var(--ok);font-size:13px}
+  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login .card{width:390px;max-width:100%}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;margin-bottom:16px}
+  .card h2{font-size:16px;margin-bottom:4px}
+  .card .sub{color:var(--mut);font-size:13px;margin-bottom:10px}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:16px 24px;display:flex;
+    justify-content:space-between;align-items:center}
+  header h1{font-size:17px}
+  main{max-width:880px;margin:0 auto;padding:22px 16px}
+  .tool{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px}
+  .tool .name{font-weight:600}
+  .tool .mut{font-size:12.5px}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .paid{color:var(--ok);font-size:13px;white-space:nowrap}
+  .pend{color:#a15c00;font-size:13px;white-space:nowrap}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  @media(max-width:640px){.row2{grid-template-columns:1fr}}
+  .twrap{overflow-x:auto}
+  .twrap table{min-width:560px}
+</style>
+</head>
+<body>
+
+<div id="login" class="login hide">
+  <div class="card">
+    <h2>Portal de cliente</h2>
+    <p class="sub">Accede con el email y la contraseña que te hemos facilitado.</p>
+    <label>Email</label>
+    <input id="l-email" type="email" autocomplete="username">
+    <label>Contraseña</label>
+    <input id="l-pass" type="password" autocomplete="current-password">
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+      <button id="l-go" class="btn">Entrar</button>
+      <span id="l-msg" class="err"></span>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hide">
+  <header>
+    <h1 id="c-name">Portal</h1>
+    <button id="logout" class="ghost small">Salir</button>
+  </header>
+  <main>
+    <div id="projects"></div>
+
+    <div class="card">
+      <h2>Facturación</h2>
+      <p class="sub">Tu histórico de facturas. Pulsa una factura para descargar el PDF.</p>
+      <div class="twrap"><table>
+        <thead><tr><th>Fecha</th><th>Número</th><th>Concepto</th><th>Importe</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="inv-body"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h2>Método de pago</h2>
+      <p class="sub">Cómo prefieres pagar las cuotas. Si cambias de cuenta o de método, actualízalo aquí.</p>
+      <div class="row2">
+        <div>
+          <label>Método</label>
+          <select id="pm-type">
+            <option value="transferencia">Transferencia bancaria</option>
+            <option value="domiciliacion">Domiciliación (recibo)</option>
+            <option value="tarjeta">Tarjeta (próximamente pago online)</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div><label>Titular</label><input id="pm-holder"></div>
+      </div>
+      <label>Detalles (IBAN, referencia, observaciones…)</label>
+      <input id="pm-details" placeholder="ES12 3456 …">
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button id="pm-save" class="btn">Guardar</button>
+        <span id="pm-msg" class="mut"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+var TOKEN = localStorage.getItem("cb_portal") || "";
+
+function $(id) { return document.getElementById(id); }
+
+function showLogin(msg) {
+  $("app").classList.add("hide");
+  $("login").classList.remove("hide");
+  $("l-msg").textContent = msg || "";
+}
+
+function euros(cents, cur) {
+  return (cents / 100).toLocaleString("es-ES", { minimumFractionDigits: 2 }) + " " + (cur === "EUR" ? "€" : cur);
+}
+
+function fmtd(iso) {
+  return iso ? new Date(iso + "T00:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "";
+}
+
+$("l-go").onclick = function () {
+  var email = $("l-email").value.trim(), pass = $("l-pass").value;
+  if (!email || !pass) return;
+  $("l-msg").textContent = "";
+  fetch("/portal/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email, password: pass }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.error) { $("l-msg").textContent = d.error; return; }
+    TOKEN = d.token;
+    localStorage.setItem("cb_portal", TOKEN);
+    load();
+  }).catch(function () { $("l-msg").textContent = "No se ha podido conectar."; });
+};
+$("l-pass").addEventListener("keydown", function (e) { if (e.key === "Enter") $("l-go").click(); });
+$("logout").onclick = function () {
+  localStorage.removeItem("cb_portal");
+  TOKEN = "";
+  showLogin();
+};
+
+function load() {
+  fetch("/portal/data", { headers: { Authorization: "Bearer " + TOKEN } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.error) { showLogin(TOKEN ? "" : undefined); return; }
+      $("login").classList.add("hide");
+      $("app").classList.remove("hide");
+      $("c-name").textContent = d.name;
+
+      var box = $("projects");
+      box.innerHTML = "";
+      (d.projects || []).forEach(function (p) {
+        var card = document.createElement("div");
+        card.className = "card";
+        var h = document.createElement("h2");
+        h.textContent = p.name;
+        var sub = document.createElement("p");
+        sub.className = "sub";
+        sub.textContent = p.description || "Herramientas contratadas en este proyecto";
+        card.appendChild(h);
+        card.appendChild(sub);
+        var ts = p.tenants || [];
+        if (!ts.length) {
+          var e = document.createElement("p");
+          e.className = "mut";
+          e.textContent = "Sin herramientas activas todavía.";
+          card.appendChild(e);
+        }
+        ts.forEach(function (t) {
+          var row = document.createElement("div");
+          row.className = "tool";
+          var left = document.createElement("div");
+          var nm = document.createElement("div");
+          nm.className = "name";
+          nm.textContent = "💬 " + t.name;
+          var st = document.createElement("div");
+          st.className = "mut";
+          st.textContent = t.active ? "Chatbot · activo" : "Chatbot · apagado";
+          left.appendChild(nm);
+          left.appendChild(st);
+          var open = document.createElement("button");
+          open.className = "ghost small";
+          open.textContent = "Abrir panel";
+          open.onclick = function () {
+            window.open("/panel?token=" + encodeURIComponent(t.panel_token), "_blank");
+          };
+          row.appendChild(left);
+          row.appendChild(open);
+          card.appendChild(row);
+        });
+        box.appendChild(card);
+      });
+      if (!(d.projects || []).length) {
+        box.innerHTML = "<div class='card'><p class='mut'>Todavía no tienes proyectos activos.</p></div>";
+      }
+
+      var tb = $("inv-body");
+      tb.innerHTML = "";
+      var invs = d.invoices || [];
+      if (!invs.length) {
+        tb.innerHTML = "<tr><td colspan='6' class='mut'>Todavía no hay facturas.</td></tr>";
+      }
+      invs.forEach(function (v) {
+        var tr = document.createElement("tr");
+        function td(x) { var c = document.createElement("td"); c.textContent = x; return c; }
+        tr.appendChild(td(fmtd(v.issued_at)));
+        tr.appendChild(td(v.number));
+        tr.appendChild(td(v.concept));
+        tr.appendChild(td(euros(v.amount_cents, v.currency)));
+        var st = document.createElement("td");
+        var sp = document.createElement("span");
+        sp.className = v.status === "pagada" ? "paid" : "pend";
+        sp.textContent = v.status === "pagada" ? "✓ pagada" : "pendiente";
+        st.appendChild(sp);
+        tr.appendChild(st);
+        var dl = document.createElement("td");
+        if (v.pdf_path) {
+          var b = document.createElement("button");
+          b.className = "ghost small";
+          b.textContent = "PDF";
+          b.onclick = function () {
+            window.open("/portal/invoice?id=" + v.id + "&pt=" + encodeURIComponent(TOKEN), "_blank");
+          };
+          dl.appendChild(b);
+        }
+        tr.appendChild(dl);
+        tb.appendChild(tr);
+      });
+
+      var pm = d.payment_method || {};
+      $("pm-type").value = pm.type || "transferencia";
+      $("pm-holder").value = pm.holder || "";
+      $("pm-details").value = pm.details || "";
+    })
+    .catch(function () { showLogin("No se ha podido conectar."); });
+}
+
+$("pm-save").onclick = function () {
+  $("pm-msg").textContent = "Guardando…"; $("pm-msg").className = "mut";
+  fetch("/portal/payment-method", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + TOKEN },
+    body: JSON.stringify({
+      type: $("pm-type").value,
+      holder: $("pm-holder").value.trim(),
+      details: $("pm-details").value.trim(),
+    }),
+  }).then(function (r) { return r.json(); }).then(function (r) {
+    if (r.error) { $("pm-msg").textContent = r.error; $("pm-msg").className = "err"; return; }
+    $("pm-msg").textContent = "Guardado ✓"; $("pm-msg").className = "ok";
+  }).catch(function () { $("pm-msg").textContent = "Error al guardar."; $("pm-msg").className = "err"; });
 };
 
 if (TOKEN) load(); else showLogin();
@@ -2562,6 +3106,86 @@ ${inject}</body></html>`;
           return json({ error: "envía entre 1 y 10 archivos" }, 400);
         }
         return json({ indexed: await indexUploadedFiles(env, tenant.id, files) });
+      }
+
+      // --- portal de clientes ---
+      if (url.pathname === "/acceso" || url.pathname === "/portal") {
+        return new Response(PORTAL_HTML, {
+          headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
+        });
+      }
+
+      if (url.pathname === "/portal/login" && request.method === "POST") {
+        const { email, password } = await request.json();
+        if (!email || !password) return json({ error: "faltan el email o la contraseña" }, 400);
+        const rows = await sb(
+          env,
+          `clients?email=ilike.${encodeURIComponent(email.trim())}&select=id,portal_password_hash`
+        );
+        const c = rows?.[0];
+        if (!c || !c.portal_password_hash || !(await verifyPassword(password, c.portal_password_hash))) {
+          return json({ error: "email o contraseña incorrectos" }, 401);
+        }
+        return json({ token: await makePortalToken(env, c.id) });
+      }
+
+      const portalAuth = async () => {
+        const auth = (request.headers.get("Authorization") || "").replace(/^Bearer /, "") ||
+          url.searchParams.get("pt") || "";
+        return portalClientId(env, auth);
+      };
+
+      if (url.pathname === "/portal/data") {
+        const cid = await portalAuth();
+        if (!cid) return json({ error: "sesión caducada" }, 401);
+        const [client] = await sb(
+          env,
+          `clients?id=eq.${cid}&select=name,email,payment_method,projects(id,name,description,tenants(name,active,panel_token))`
+        );
+        if (!client) return json({ error: "sesión caducada" }, 401);
+        const invoices = await sb(
+          env,
+          `invoices?client_id=eq.${cid}&select=id,number,concept,amount_cents,currency,issued_at,status,pdf_path&order=issued_at.desc,created_at.desc`
+        );
+        return json({ ...client, invoices }, 200, { "Cache-Control": "no-store" });
+      }
+
+      if (url.pathname === "/portal/payment-method" && request.method === "POST") {
+        const cid = await portalAuth();
+        if (!cid) return json({ error: "sesión caducada" }, 401);
+        const { type, holder, details } = await request.json();
+        await sb(env, `clients?id=eq.${cid}`, {
+          method: "PATCH",
+          body: {
+            payment_method: {
+              type: String(type || "").slice(0, 40),
+              holder: String(holder || "").slice(0, 120),
+              details: String(details || "").slice(0, 200),
+            },
+          },
+        });
+        return json({ ok: true });
+      }
+
+      if (url.pathname === "/portal/invoice") {
+        const cid = await portalAuth();
+        if (!cid) return new Response("Sesión caducada", { status: 401 });
+        const [inv] = await sb(
+          env,
+          `invoices?id=eq.${encodeURIComponent(url.searchParams.get("id") || "")}&client_id=eq.${cid}&select=pdf_path,number`
+        );
+        if (!inv?.pdf_path) return new Response("Factura no encontrada", { status: 404 });
+        const pdf = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${inv.pdf_path}`, {
+          headers: { Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` },
+        });
+        if (!pdf.ok) return new Response("PDF no disponible", { status: 404 });
+        return new Response(pdf.body, {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="factura-${inv.number.replace(/[^\w.-]/g, "_")}.pdf"`,
+            "Cache-Control": "no-store",
+          },
+        });
       }
 
       // --- formulario de FAQ: página, datos y envío ---
