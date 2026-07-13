@@ -2,6 +2,11 @@ name = "chatbot-engine"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
 
+# El widget se importa como texto (src/widget.txt) y se sirve en /widget.js
+rules = [
+  { type = "Text", globs = ["**/*.txt"], fallthrough = true }
+]
+
 # Embeddings (@cf/baai/bge-m3) via Workers AI
 [ai]
 binding = "AI"

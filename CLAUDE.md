@@ -23,13 +23,18 @@ mismo proveedor que el Worker, un tercero menos en la factura.
 ## Estructura
 
 ```
-worker/src/index.js   Motor. Endpoints: /api/config, /api/chat, /admin (panel de gestión),
-                      /admin/api/*, /admin/ingest, /admin/upload (archivos PDF/TXT/MD/CSV/
-                      imágenes vía env.AI.toMarkdown), /panel (panel del cliente)
-worker/wrangler.toml  Binding AI. Los secretos van con `wrangler secret put`
-widget/widget.js      Widget embebible, vanilla JS, sin dependencias
+worker/src/index.js   Motor. Endpoints: /api/config, /api/chat, /widget.js, /demo (clon de
+                      la web del cliente con el bot), /admin (panel de gestión), /admin/api/*
+                      (clients, projects, tenants, assist), /admin/ingest, /admin/upload
+                      (PDF/TXT/MD/CSV/imágenes vía env.AI.toMarkdown), /panel (cliente)
+worker/src/widget.txt Widget embebible (vanilla JS); el Worker lo sirve en /widget.js
+worker/wrangler.toml  Binding AI + regla Text para widget.txt. Secretos con `wrangler secret put`
 README.md             Despliegue, indexación, alta de clientes, consultas SQL
 ```
+
+Jerarquía de gestión: `clients` → `projects` → `tenants` (un chatbot = un tenant;
+un proyecto puede tener varios). El alta y edición se hace desde /admin, con
+asistente de configuración por IA (/admin/api/assist, gemini-3.5-flash).
 
 ## Esquema
 

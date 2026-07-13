@@ -69,14 +69,30 @@ anterior de cada URL, no duplica.
 En el `<footer>` del tema de WordPress, o con un plugin de "insertar código":
 
 ```html
-<script src="https://TU-CDN/widget.js"
+<script src="https://chatbot-engine.baquetasjgt.workers.dev/widget.js"
         data-key="pk_fisioexpo_739c231e7180a38646bdf491"
-        data-api="https://TU-WORKER.workers.dev"></script>
+        data-api="https://chatbot-engine.baquetasjgt.workers.dev"></script>
 ```
 
-Sube `widget.js` a Cloudflare Pages, R2 o al propio WordPress. La clave pública es
+El widget lo sirve el propio Worker en `/widget.js` (su código fuente vive en
+`worker/src/widget.txt`) — no hay que subir nada a ningún CDN. La clave pública es
 visible en el HTML, y no pasa nada: solo funciona desde los dominios de la lista
-`allowed_domains` del tenant.
+`allowed_domains` del tenant. El snippet exacto de cada cliente se copia desde el
+panel de administración.
+
+### Demo para el cliente
+
+Antes de tocar la web real, cada chatbot tiene un enlace de demostración que clona
+la web del cliente (copia estática, con aviso de demo) y le incrusta el bot
+funcionando de verdad:
+
+```
+https://chatbot-engine.baquetasjgt.workers.dev/demo?key=CLAVE_PUBLICA
+```
+
+Solo clona dominios de la lista `allowed_domains` del tenant. Si la web no se deja
+clonar (bloqueos anti-bot), muestra una maqueta genérica con los colores del bot.
+El enlace está listo para copiar en el panel de administración.
 
 ## 4. Dar de alta un cliente nuevo (esto es el negocio)
 
@@ -151,7 +167,15 @@ Todo lo de los puntos 2 y 4 sin escribir SQL ni curl:
 https://TU-WORKER.workers.dev/admin
 ```
 
-Se entra con el `ADMIN_TOKEN` (el mismo secreto del Worker). Desde ahí puedes:
+Se entra con el `ADMIN_TOKEN` (el mismo secreto del Worker). Está organizado en
+**clientes → proyectos → herramientas**: cada cliente tiene sus datos y sus
+proyectos, y cada proyecto sus chatbots (puede haber varios). Desde ahí puedes:
+
+- Dar de alta clientes (nombre, contacto, notas) y proyectos
+- Crear chatbots dentro de un proyecto, con ayuda de la IA: describes el negocio
+  en dos frases y te redacta el system prompt profesional, la bienvenida y las
+  preguntas sugeridas (endpoint `/admin/api/assist`, usa `gemini-3.5-flash`)
+- Generar el enlace de demo de cada chatbot para enseñárselo al cliente
 
 - Dar de alta clientes y editar toda su configuración: prompt, proveedor y modelo,
   mensaje de bienvenida, preguntas sugeridas, color, dominios permitidos, límite
