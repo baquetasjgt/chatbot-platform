@@ -57,11 +57,12 @@ de buscar.** Nunca se cruzan datos entre clientes.
 ## Estado
 
 Hecho: esquema aplicado, tenant `fisioexpo` creado con clave
-`pk_fisioexpo_739c231e7180a38646bdf491`, código del Worker y del widget escrito.
+`pk_fisioexpo_739c231e7180a38646bdf491` y configurado con `provider = 'google'` +
+`model = 'gemini-3.1-flash-lite'`, código del Worker y del widget escrito.
 
 Pendiente inmediato:
-1. `wrangler deploy` + los 4 secretos (SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY,
-   ADMIN_TOKEN) — y GEMINI_API_KEY si algún tenant usa `provider = 'google'`
+1. `wrangler deploy` + los 5 secretos (SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY,
+   ADMIN_TOKEN, GEMINI_API_KEY — este último ya es necesario: fisioexpo usa Gemini)
 2. Indexar contenido. **Ojo: fisioexpo.es bloquea el scraping por robots.txt** — la
    indexación por URL puede fallar. Usar el campo `texts` del endpoint de ingest.
 3. Escribir a mano el FAQ con los datos duros (fechas, precios, tipos de stand, contacto).
