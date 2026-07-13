@@ -20,7 +20,9 @@ async function sb(env, path, { method = "GET", body, headers = {} } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
-  return res.status === 204 ? null : res.json();
+  // con Prefer: return=minimal el cuerpo llega vacío aunque el estado sea 201
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 async function rpc(env, fn, args) {
