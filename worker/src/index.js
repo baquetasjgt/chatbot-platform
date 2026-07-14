@@ -83,10 +83,42 @@ function storageHeaders(env) {
   return k.startsWith("sb_") ? { apikey: k } : { apikey: k, Authorization: `Bearer ${k}` };
 }
 
+// comparación en tiempo constante para secretos/HMAC (evita fugas por tiempo)
+function safeEqual(a, b) {
+  a = String(a ?? "");
+  b = String(b ?? "");
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 // ---------- CORS ----------
 
+// ¿el Origin de la petición está entre los dominios permitidos?
+// Compara por HOST con frontera de etiqueta: "fisioexpo.com" permite
+// "fisioexpo.com" y "www.fisioexpo.com", pero NO "malfisioexpo.com".
+function originAllowed(origin, allowed) {
+  if (!allowed || allowed.length === 0) return true;
+  let host;
+  try {
+    host = new URL(origin).hostname.toLowerCase();
+  } catch {
+    return false; // sin Origin válido no se autoriza el cruce de origen
+  }
+  return allowed.some((d) => {
+    const dom = String(d || "")
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "");
+    if (!dom) return false;
+    return host === dom || host.endsWith("." + dom);
+  });
+}
+
 function cors(origin, allowed) {
-  const ok = allowed.length === 0 || allowed.some((d) => origin?.endsWith(d));
+  const ok = originAllowed(origin, allowed);
   return {
     "Access-Control-Allow-Origin": ok ? origin : "null",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -803,7 +835,7 @@ async function portalClientId(env, token) {
   const p = token.split(".");
   if (p.length !== 3) return null;
   const body = `${p[0]}.${p[1]}`;
-  if ((await hmacSign(body, env.ADMIN_TOKEN)) !== p[2]) return null;
+  if (!safeEqual(await hmacSign(body, env.ADMIN_TOKEN), p[2])) return null;
   if (Date.now() > parseInt(p[1], 10)) return null;
   return p[0];
 }
@@ -829,7 +861,7 @@ async function readActionToken(env, kind, token) {
   const p = String(token || "").split(".");
   if (p.length !== 5 || p[0] !== kind) return null;
   const body = p.slice(0, 4).join(".");
-  if ((await hmacSign(body, env.ADMIN_TOKEN)) !== p[4]) return null;
+  if (!safeEqual(await hmacSign(body, env.ADMIN_TOKEN), p[4])) return null;
   if (Date.now() > parseInt(p[3], 10)) return null;
   return { clientId: p[1], extra: p[2] === "-" ? null : b64urlDecode(p[2]) };
 }
@@ -850,13 +882,24 @@ async function hashPassword(pw, saltB64) {
 async function verifyPassword(pw, stored) {
   const p = (stored || "").split("$");
   if (p.length !== 4) return false;
-  return (await hashPassword(pw, p[2])) === stored;
+  return safeEqual(await hashPassword(pw, p[2]), stored);
+}
+
+// email normalizado y seguro para consultar por ilike: minúsculas, sin comodines.
+// PostgREST interpreta `*` y `%` como comodín de ilike; un email con esos caracteres
+// podría hacer que `ilike.${email}` cazara a varios (o todos) los clientes. Devuelve
+// null si no es un email con forma válida, lo que ya excluye esos caracteres.
+function normEmail(s) {
+  const e = String(s || "").trim().toLowerCase();
+  if (e.length > 160) return null;
+  if (e.includes("*") || e.includes("%") || e.includes(",")) return null;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? e : null;
 }
 
 // ---------- administración (para el dueño de la plataforma) ----------
 
 function isAdmin(request, env) {
-  return request.headers.get("Authorization") === `Bearer ${env.ADMIN_TOKEN}`;
+  return safeEqual(request.headers.get("Authorization") || "", `Bearer ${env.ADMIN_TOKEN}`);
 }
 
 function randomHex(bytes) {
@@ -6312,7 +6355,7 @@ ${inject}</body></html>`;
           },
           200,
           // el host propio se permite siempre: las páginas /demo viven en él
-          cors(origin, [...tenant.allowed_domains, url.hostname])
+          cors(origin, [...(tenant.allowed_domains || []), url.hostname])
         );
       }
 
@@ -6322,13 +6365,17 @@ ${inject}</body></html>`;
         const tenant = await getTenant(env, key);
         if (!tenant) return json({ error: "clave no válida" }, 401);
 
-        const ch = cors(origin, [...tenant.allowed_domains, url.hostname]);
+        const ch = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
         if (ch["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, ch);
         }
         if (!message || message.length > 2000) {
           return json({ error: "mensaje no válido" }, 400, ch);
         }
+        // id de sesión acotado y obligatorio: sin él, cada mensaje abriría una
+        // conversación nueva (encodeURIComponent(undefined) === "undefined")
+        const sid = String(session_id || "").slice(0, 80);
+        if (!sid) return json({ error: "sesión no válida" }, 400, ch);
 
         // límite por IP: 20 mensajes/minuto; el exceso recibe una respuesta fija
         const ip = request.headers.get("CF-Connecting-IP") || "";
@@ -6368,14 +6415,14 @@ ${inject}</body></html>`;
         let conv = (
           await sb(
             env,
-            `conversations?tenant_id=eq.${tenant.id}&session_id=eq.${encodeURIComponent(session_id)}&select=id&limit=1`
+            `conversations?tenant_id=eq.${tenant.id}&session_id=eq.${encodeURIComponent(sid)}&select=id&limit=1`
           )
         )[0];
         if (!conv) {
           conv = (
             await sb(env, "conversations", {
               method: "POST",
-              body: { tenant_id: tenant.id, session_id, page_url },
+              body: { tenant_id: tenant.id, session_id: sid, page_url },
             })
           )[0];
         }
@@ -6475,11 +6522,19 @@ ${inject}</body></html>`;
         const { key, session_id, name, email, phone, company, message, kind } = await request.json();
         const tenant = await getTenant(env, key);
         if (!tenant) return json({ error: "clave no válida" }, 401);
-        const ch = cors(origin, [...tenant.allowed_domains, url.hostname]);
+        const ch = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
         if (ch["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, ch);
         }
         if (!leadCaptureEnabled(tenant)) return json({ error: "no disponible" }, 403, ch);
+        // límite por IP: evita inundar leads/webhook/emails con la clave pública
+        const leadIp = request.headers.get("CF-Connecting-IP") || "";
+        if (leadIp) {
+          const okRate = await rpc(env, "check_rate", { p_ip: "lead:" + leadIp, p_limit: 8 });
+          if (okRate === false) {
+            return json({ error: "demasiadas solicitudes; espera un momento" }, 429, ch);
+          }
+        }
         const nm = String(name || "").trim().slice(0, 120);
         const em = String(email || "").trim().slice(0, 160);
         if (!nm || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) {
@@ -6532,11 +6587,9 @@ ${inject}</body></html>`;
 
       // --- indexación (admin) ---
       if (url.pathname === "/admin/ingest" && request.method === "POST") {
-        if (request.headers.get("Authorization") !== `Bearer ${env.ADMIN_TOKEN}`) {
-          return json({ error: "no autorizado" }, 401);
-        }
+        if (!isAdmin(request, env)) return json({ error: "no autorizado" }, 401);
         const { slug, urls = [], texts = [] } = await request.json();
-        const tenant = (await sb(env, `tenants?slug=eq.${slug}&select=id`))[0];
+        const tenant = (await sb(env, `tenants?slug=eq.${encodeURIComponent(String(slug || ""))}&select=id`))[0];
         if (!tenant) return json({ error: "tenant no encontrado" }, 404);
 
         const docs = [];
@@ -6576,7 +6629,7 @@ ${inject}</body></html>`;
       if (url.pathname === "/admin/upload" && request.method === "POST") {
         if (!isAdmin(request, env)) return json({ error: "no autorizado" }, 401);
         const { slug, files = [] } = await request.json();
-        const tenant = (await sb(env, `tenants?slug=eq.${slug}&select=id`))[0];
+        const tenant = (await sb(env, `tenants?slug=eq.${encodeURIComponent(String(slug || ""))}&select=id`))[0];
         if (!tenant) return json({ error: "tenant no encontrado" }, 404);
 
         return json({ indexed: await indexUploadedFiles(env, tenant.id, files) });
@@ -6606,9 +6659,18 @@ ${inject}</body></html>`;
       if (url.pathname === "/portal/login" && request.method === "POST") {
         const { email, password } = await request.json();
         if (!email || !password) return json({ error: "faltan el email o la contraseña" }, 400);
+        const loginIp = request.headers.get("CF-Connecting-IP") || "";
+        if (loginIp) {
+          const okRate = await rpc(env, "check_rate", { p_ip: "login:" + loginIp, p_limit: 10 });
+          if (okRate === false) {
+            return json({ error: "demasiados intentos; espera un minuto y vuelve a probar" }, 429);
+          }
+        }
+        const loginEmail = normEmail(email);
+        if (!loginEmail) return json({ error: "email o contraseña incorrectos" }, 401);
         const rows = await sb(
           env,
-          `clients?email=ilike.${encodeURIComponent(email.trim())}&select=id,portal_password_hash,portal_enabled`
+          `clients?email=ilike.${encodeURIComponent(loginEmail)}&select=id,portal_password_hash,portal_enabled`
         );
         const c = rows?.[0];
         if (!c || !c.portal_password_hash || !(await verifyPassword(password, c.portal_password_hash))) {
@@ -6624,7 +6686,7 @@ ${inject}</body></html>`;
         // respuesta idéntica exista o no el email: no se filtra quién es cliente
         const generic = { ok: true };
         const { email } = await request.json().catch(() => ({}));
-        const em = String(email || "").trim();
+        const em = normEmail(email);
         if (!em) return json(generic);
         const ip = request.headers.get("CF-Connecting-IP") || "";
         if (ip) {
@@ -6689,10 +6751,11 @@ ${inject}</body></html>`;
         if (!t || !t.extra) {
           return page("Enlace no válido", "El enlace ha caducado o ya se usó. Vuelve a solicitar el cambio de email desde tu portal.");
         }
-        const newEmail = t.extra;
+        const newEmail = normEmail(t.extra);
+        if (!newEmail) return page("Enlace no válido", "El email no es válido. Vuelve a solicitar el cambio desde tu portal.");
         const dup = await sb(
           env,
-          `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${t.clientId}&select=id&limit=1`
+          `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${encodeURIComponent(t.clientId)}&select=id&limit=1`
         );
         if (dup?.length) return page("Email en uso", "Ese email ya pertenece a otra cuenta. Contacta con nosotros.");
         const rows = await sb(env, `clients?id=eq.${t.clientId}`, { method: "PATCH", body: { email: newEmail } });
@@ -6736,14 +6799,14 @@ ${inject}</body></html>`;
         }
         const changes = {};
         let emailPending = null;
-        const newEmail = String(email || "").trim().toLowerCase();
+        const newEmail = normEmail(email);
+        if (email && String(email).trim() && !newEmail) {
+          return json({ error: "el email nuevo no parece válido" }, 400);
+        }
         if (newEmail && newEmail !== (c.email || "").toLowerCase()) {
-          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) {
-            return json({ error: "el email nuevo no parece válido" }, 400);
-          }
           const dup = await sb(
             env,
-            `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${cid}&select=id&limit=1`
+            `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${encodeURIComponent(cid)}&select=id&limit=1`
           );
           if (dup?.length) return json({ error: "ese email ya está en uso por otra cuenta" }, 400);
           // el cambio no se aplica hasta que el dueño del email nuevo lo confirme
@@ -7076,17 +7139,20 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           `documents?tenant_id=eq.${tenant.id}` +
             `&select=id,title,source_type,source_url,created_at,indexed_at&order=created_at.desc&limit=100`
         );
+        // las pestañas desactivadas no solo se ocultan en la interfaz: no se envían
+        // los datos, para que no se puedan leer directamente desde la respuesta JSON.
+        const feat = tenant.panel_features || {};
         return json(
           {
             name: tenant.name,
             primary_color: tenant.primary_color,
             logo_url: tenant.theme?.logo_url || null,
             public_key: keys?.[keys.length - 1]?.public_key || null,
-            features: tenant.panel_features || {},
-            conversations,
-            leads,
+            features: feat,
+            conversations: feat.convs === false ? [] : conversations,
+            leads: feat.leads === false ? [] : leads,
             activity,
-            documents,
+            documents: feat.uploads === false ? [] : documents,
           },
           200,
           { "Cache-Control": "no-store" }
@@ -7096,13 +7162,10 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
       return json({ error: "no encontrado" }, 404);
     } catch (err) {
       console.error(err);
+      // el detalle se registra en el servidor (error_log) pero no se devuelve al
+      // cliente: los mensajes de Supabase/proveedor pueden filtrar pistas internas
       if (ctx?.waitUntil) ctx.waitUntil(logError(env, url.pathname, err?.message || err));
-      // el detalle no incluye secretos: son mensajes de estado de Supabase/proveedor
-      return json(
-        { error: "error interno", detail: String(err?.message || err).slice(0, 300) },
-        500,
-        cors(origin, [])
-      );
+      return json({ error: "error interno" }, 500, cors(origin, []));
     }
   },
 };

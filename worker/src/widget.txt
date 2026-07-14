@@ -201,7 +201,8 @@
   function esc(t) {
     var d = document.createElement("div");
     d.textContent = t;
-    return d.innerHTML;
+    // textContent no escapa comillas; esc() también se usa dentro de atributos
+    return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function md(t) {
