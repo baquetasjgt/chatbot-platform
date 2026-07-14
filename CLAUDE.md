@@ -28,6 +28,10 @@ worker/src/index.js   Motor. Endpoints: /api/config, /api/chat, /widget.js, /dem
                       (clients, projects, tenants, assist), /admin/ingest, /admin/upload
                       (PDF/TXT/MD/CSV/imágenes vía env.AI.toMarkdown), /panel (cliente)
 worker/src/widget.txt Widget embebible (vanilla JS); el Worker lo sirve en /widget.js
+worker/src/web/*.txt  Web pública de expobot.es (home, interiores, legales) servida por el
+                      Worker: en expobot.es con URLs limpias y en /web como vista previa.
+                      Contenido en JSON entre <!--DATA … DATA-->, render en serveWeb().
+                      El bot de la web es el tenant `expobot-web` (cliente ExpoBot interno).
 worker/wrangler.toml  Binding AI + regla Text para widget.txt. Secretos con `wrangler secret put`
 README.md             Despliegue, indexación, alta de clientes, consultas SQL
 ```

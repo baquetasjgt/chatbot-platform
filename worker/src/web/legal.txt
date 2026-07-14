@@ -1,0 +1,170 @@
+<!--DATA
+{
+  "aviso": { "path": "aviso-legal", "label": "Aviso legal", "title": "Aviso legal", "sections": [
+    { "t": "1. Identificación del titular (LSSI-CE, art. 10)", "d": "En cumplimiento de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de que el titular de este sitio web es:\n\nDenominación social: [NOMBRE DE LA EMPRESA, S.L.]\nNombre comercial: ExpoBot\nNIF: [NIF]\nDomicilio: [Domicilio social completo]\nInscripción: [Datos de inscripción en el Registro Mercantil]\nEmail de contacto: contacto@expobot.es" },
+    { "t": "2. Objeto", "d": "Este sitio web tiene por objeto informar sobre los servicios de ExpoBot (desarrollo de chatbots con inteligencia artificial para organizadores de ferias de muestras, congresos y recintos feriales), facilitar el contacto comercial y la solicitud de demostraciones." },
+    { "t": "3. Condiciones de uso", "d": "El acceso y la navegación por este sitio web atribuyen la condición de usuario e implican la aceptación de este aviso legal. El usuario se compromete a hacer un uso adecuado de los contenidos y a no emplearlos para actividades ilícitas o contrarias a la buena fe y al ordenamiento legal." },
+    { "t": "4. Propiedad intelectual e industrial", "d": "Todos los contenidos de este sitio (textos, diseños, logotipos, imágenes, código fuente y software) son titularidad de [NOMBRE DE LA EMPRESA, S.L.] o de terceros que han autorizado su uso, y están protegidos por la normativa de propiedad intelectual e industrial. Queda prohibida su reproducción, distribución o transformación sin autorización expresa. Las marcas de terceros citadas (WhatsApp, Telegram, HubSpot, Salesforce, Zoho, etc.) pertenecen a sus respectivos titulares." },
+    { "t": "5. Responsabilidad", "d": "El titular no se hace responsable del mal uso de los contenidos del sitio ni de los daños derivados de circunstancias ajenas a su control, como interrupciones del servicio o errores en redes de comunicaciones. Las conversaciones mostradas en las demostraciones de esta web son simuladas y sus datos son ficticios." },
+    { "t": "6. Enlaces", "d": "Los enlaces a sitios de terceros tienen finalidad meramente informativa. El titular no asume responsabilidad sobre sus contenidos ni sobre sus políticas de privacidad." },
+    { "t": "7. Legislación aplicable y jurisdicción", "d": "Este aviso legal se rige por la legislación española. Para cualquier controversia, y salvo norma imperativa en contrario, las partes se someten a los juzgados y tribunales del domicilio del titular o, si el usuario es consumidor, a los de su domicilio." }
+  ] },
+  "privacidad": { "path": "privacidad", "label": "Privacidad", "title": "Política de privacidad", "sections": [
+    { "t": "1. Responsable del tratamiento (RGPD, arts. 13-14)", "d": "Responsable: [NOMBRE DE LA EMPRESA, S.L.]\nNIF: [NIF]\nDomicilio: [Domicilio social completo]\nEmail: contacto@expobot.es\n\nEsta política se elabora conforme al Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018, de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD)." },
+    { "t": "2. Datos que tratamos", "d": "Formulario de demo y contacto: nombre, empresa, email y/o teléfono, tipo de proyecto, fecha del evento, canales de interés y mensaje.\nChatbot de la web: el contenido de la conversación y los datos de contacto que decidas facilitar.\nNavegación: dirección IP y datos técnicos, en función de la configuración de cookies que aceptes." },
+    { "t": "3. Finalidades y base jurídica", "d": "Atender solicitudes de información y demos (art. 6.1.b RGPD — medidas precontractuales).\nGestionar la relación comercial y el seguimiento de tu proyecto (art. 6.1.b y 6.1.f — interés legítimo).\nEnviar comunicaciones comerciales solo si nos das tu consentimiento (art. 6.1.a).\nAnalítica de uso de la web, únicamente con tu consentimiento de cookies (art. 6.1.a)." },
+    { "t": "4. Conservación", "d": "Los datos se conservan mientras dure la relación comercial o hasta que solicites su supresión, y después bloqueados durante los plazos de prescripción legal. Las conversaciones del chatbot se conservan el tiempo imprescindible para su finalidad, con políticas de conservación configurables." },
+    { "t": "5. Destinatarios y encargados", "d": "No cedemos tus datos a terceros salvo obligación legal. Podemos utilizar proveedores tecnológicos (alojamiento, CRM, mensajería, IA) que actúan como encargados del tratamiento con contratos conforme al art. 28 RGPD. Si algún proveedor está fuera del Espacio Económico Europeo, el tratamiento se ampara en garantías adecuadas (cláusulas contractuales tipo u otras del capítulo V del RGPD). [Completar con la lista real de proveedores.]" },
+    { "t": "6. Tus derechos", "d": "Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad escribiendo a contacto@expobot.es, acreditando tu identidad. También puedes retirar tu consentimiento en cualquier momento y reclamar ante la Agencia Española de Protección de Datos (www.aepd.es) si consideras que el tratamiento no es adecuado." },
+    { "t": "7. Menores y decisiones automatizadas", "d": "Este sitio no se dirige a menores de 14 años. El chatbot de esta web es un asistente informativo: no toma decisiones automatizadas con efectos jurídicos sobre las personas, y siempre es posible pedir la intervención de una persona." },
+    { "t": "8. Seguridad", "d": "Aplicamos medidas técnicas y organizativas apropiadas (art. 32 RGPD): cifrado en tránsito, control de accesos, minimización de datos y registro de actividades de tratamiento." }
+  ] },
+  "cookies": { "path": "cookies", "label": "Cookies", "title": "Política de cookies", "sections": [
+    { "t": "1. Qué son las cookies", "d": "Las cookies son pequeños archivos que se almacenan en tu dispositivo al navegar. Esta política cumple el art. 22.2 de la LSSI-CE y las directrices de la AEPD sobre cookies." },
+    { "t": "2. Cookies que utiliza esta web", "d": "Técnicas (necesarias): imprescindibles para el funcionamiento de la web, como recordar tu configuración de cookies o el estado del chatbot. No requieren consentimiento.\nAnalíticas: nos ayudan a entender cómo se usa la web (p. ej. Google Analytics 4). Solo se activan con tu consentimiento. [Completar con la lista real de cookies, duración y titular.]\nMarketing: permiten medir campañas y mostrar publicidad relevante (p. ej. Meta Pixel, LinkedIn Insight Tag). Solo se activan con tu consentimiento." },
+    { "t": "3. Cómo gestionar tu consentimiento", "d": "Al entrar en la web puedes aceptar todas, rechazar todas o configurar las cookies. Puedes cambiar tu decisión en cualquier momento desde el panel de esta página o desde el enlace «Configurar cookies» del pie de página. Rechazar las cookies no esenciales no impide usar la web.\n\nTambién puedes eliminar o bloquear cookies desde la configuración de tu navegador." }
+  ] },
+  "condiciones": { "path": "condiciones", "label": "Condiciones", "title": "Condiciones de contratación", "sections": [
+    { "t": "1. Ámbito", "d": "Estas condiciones regulan la contratación de los servicios de ExpoBot (diseño, entrenamiento, integración y mantenimiento de chatbots con IA) entre [NOMBRE DE LA EMPRESA, S.L.] y sus clientes profesionales. La web no permite contratación directa online: cada proyecto se formaliza mediante propuesta y contrato específicos." },
+    { "t": "2. Propuestas y precios", "d": "Los precios se establecen en cada propuesta según canales, integraciones, volumen y duración (activación por edición o servicio anual). Salvo indicación contraria, los importes no incluyen IVA." },
+    { "t": "3. Obligaciones de las partes", "d": "ExpoBot se compromete a prestar el servicio con diligencia profesional. El cliente se compromete a facilitar información veraz y actualizada para el entrenamiento del chatbot y a garantizar que dispone de los derechos sobre los contenidos entregados." },
+    { "t": "4. Protección de datos en el servicio", "d": "Cuando ExpoBot trata datos personales por cuenta del cliente (p. ej. leads captados por el chatbot), actúa como encargado del tratamiento conforme al art. 28 RGPD, mediante el correspondiente contrato de encargo." },
+    { "t": "5. Limitaciones", "d": "Los resultados comerciales (leads, conversaciones, asistencia) dependen de cada evento y no constituyen un compromiso de resultados garantizados." }
+  ] },
+  "accesibilidad": { "path": "accesibilidad", "label": "Accesibilidad", "title": "Declaración de accesibilidad", "sections": [
+    { "t": "Compromiso", "d": "ExpoBot se ha diseñado siguiendo, en la medida de lo posible, las pautas WCAG 2.2 nivel AA: contraste suficiente, navegación por teclado, foco visible, textos alternativos, jerarquía de encabezados y respeto de la preferencia de reducción de movimiento (prefers-reduced-motion)." },
+    { "t": "Comunicación", "d": "Si encuentras alguna barrera de accesibilidad en este sitio, escríbenos a contacto@expobot.es y trataremos de resolverla lo antes posible." }
+  ] }
+}
+DATA-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%%TITLE%% | ExpoBot</title>
+<meta name="description" content="Aviso legal, política de privacidad, política de cookies y condiciones de ExpoBot.">
+<meta name="robots" content="noindex, follow">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ac:#2F5BFF;--ac-soft:rgba(47,91,255,.10);--bg:#F2F3F8;--bg2:#FFFFFF;--ink:#0A102E;--mut:#565F80;--line:rgba(10,16,46,.12)}
+[data-theme="dark"]{--bg:#0A102E;--bg2:#131B40;--ink:#F2F4FB;--mut:#9AA6C8;--line:rgba(242,244,251,.14);--ac-soft:rgba(47,91,255,.22)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+a{color:var(--ac);text-decoration:none}
+a:hover{color:#1D3FDB}
+::selection{background:var(--ac);color:#fff}
+button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@keyframes popin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+nav.top{position:sticky;top:0;z-index:90;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 5vw;background:var(--bg2);background:color-mix(in srgb,var(--bg2) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav.top .logo img{display:block;height:32px;width:auto}
+[data-theme="dark"] nav.top .logo img{filter:brightness(0) invert(1)}
+.back{border:1.5px solid var(--line);color:var(--mut);padding:10px 18px;border-radius:99px;font-weight:800;font-size:13.5px;transition:border-color .2s,color .2s}
+.back:hover{border-color:var(--ac);color:var(--ac)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;padding:26px 5vw 0;max-width:940px;margin:0 auto}
+.ptab{border-radius:99px;padding:11px 20px;font-weight:800;font-size:13.5px;border:1.5px solid var(--line);background:var(--bg2);color:var(--mut);transition:border-color .2s,color .2s}
+.ptab:hover{border-color:var(--ac);color:var(--ac)}
+.ptab.on{border-color:var(--ac);background:var(--ac-soft);color:var(--ac)}
+main{max-width:940px;margin:0 auto;padding:40px 5vw 90px}
+.pagein{animation:popin .3s ease both}
+h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(30px,4vw,48px);letter-spacing:-.03em;line-height:1.05;margin:0 0 8px;font-weight:600}
+.upd{color:var(--mut);font-size:13.5px;margin:0 0 36px}
+section{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:28px 30px;margin-bottom:14px}
+section h2{font-family:'Space Grotesk',sans-serif;font-size:20px;letter-spacing:-.01em;margin:0 0 12px;font-weight:600}
+section .txt{color:var(--mut);font-size:14.5px;line-height:1.75;white-space:pre-line}
+.draftnote{color:var(--mut);font-size:12.5px;line-height:1.7;margin-top:28px;border-left:3px solid #B4540A;padding-left:14px}
+.ckrow{display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.sw{cursor:pointer;flex:none;width:52px;height:30px;border-radius:99px;border:none;background:rgba(10,16,46,.2);position:relative;transition:background .2s}
+.sw[aria-checked="true"]{background:var(--ac)}
+.sw[disabled]{cursor:not-allowed}
+.sw span{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(10,16,46,.25);transition:left .2s}
+.sw[aria-checked="true"] span{left:25px}
+.savebtn{cursor:pointer;background:var(--ac);border:none;color:#fff;border-radius:99px;padding:13px 24px;font-size:14px;font-weight:800;font-family:'Manrope',sans-serif}
+.savebtn:hover{background:#1D3FDB}
+footer{border-top:1px solid var(--line);padding:30px 5vw;background:var(--bg2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;color:var(--mut);font-size:12.5px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <a class="logo" href="%%BASE%%/" aria-label="Volver a la home"><img src="/brand/logo.png" alt="ExpoBot"></a>
+  <a href="%%BASE%%/" class="back">← Volver a la web</a>
+</nav>
+
+<div class="tabs" aria-label="Páginas legales">%%TABS%%</div>
+
+<main>
+  <div class="pagein">
+    <h1>%%TITLE%%</h1>
+    <p class="upd">Última actualización: julio de 2026 · <strong style="color:#B4540A">Borrador pendiente de revisión jurídica</strong></p>
+    %%SECTIONS%%
+    <!--COOKIES-->
+    <section style="border:1.5px solid var(--ac)">
+      <h2>Configura tus cookies</h2>
+      <p style="color:var(--mut);font-size:14.5px;line-height:1.7;margin:0 0 18px">Puedes cambiar tu configuración en cualquier momento. Las cookies técnicas son necesarias para que la web funcione y no pueden desactivarse.</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="ckrow">
+          <div><div style="font-weight:800;font-size:14.5px">Cookies técnicas (necesarias)</div><div style="color:var(--mut);font-size:13px;line-height:1.5">Funcionamiento básico de la web. Siempre activas.</div></div>
+          <button class="sw" role="switch" aria-checked="true" aria-label="Cookies técnicas" disabled><span></span></button>
+        </div>
+        <div class="ckrow">
+          <div><div style="font-weight:800;font-size:14.5px">Cookies analíticas</div><div style="color:var(--mut);font-size:13px;line-height:1.5">Medición anónima de uso para mejorar la web. Ejemplo: Google Analytics 4.</div></div>
+          <button class="sw" id="sw-analiticas" role="switch" aria-checked="false" aria-label="Cookies analíticas"><span></span></button>
+        </div>
+        <div class="ckrow">
+          <div><div style="font-weight:800;font-size:14.5px">Cookies de marketing</div><div style="color:var(--mut);font-size:13px;line-height:1.5">Medición de campañas y publicidad relevante. Ejemplo: Meta Pixel, LinkedIn Insight Tag.</div></div>
+          <button class="sw" id="sw-marketing" role="switch" aria-checked="false" aria-label="Cookies de marketing"><span></span></button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+        <button class="savebtn" id="ckSave">Guardar preferencias</button>
+        <span id="ckSaved" style="display:none;align-self:center;color:#1E9E5C;font-weight:800;font-size:13.5px;animation:popin .3s ease both">✓ Preferencias guardadas</span>
+      </div>
+    </section>
+    <!--/COOKIES-->
+    <p class="draftnote">Este contenido es un borrador orientativo preparado para el diseño de la web. Antes de publicar, debe ser revisado y completado por un asesor jurídico con los datos reales de la empresa (denominación social, NIF, domicilio, registro mercantil) y las herramientas de terceros finalmente utilizadas.</p>
+  </div>
+</main>
+
+<footer>
+  <span>© 2026 ExpoBot. Todos los derechos reservados.</span>
+  <span>contacto@expobot.es</span>
+</footer>
+
+<script>
+(function () {
+  var theme = "";
+  try { theme = localStorage.getItem("expobot-theme") || ""; } catch (e) {}
+  if (!theme) theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+
+  var save = document.getElementById("ckSave");
+  if (!save) return;
+  var prefs = { analiticas: false, marketing: false };
+  try { prefs = JSON.parse(localStorage.getItem("expobot-cookie-prefs")) || prefs; } catch (e) {}
+  ["analiticas", "marketing"].forEach(function (k) {
+    var sw = document.getElementById("sw-" + k);
+    sw.setAttribute("aria-checked", prefs[k] ? "true" : "false");
+    sw.onclick = function () {
+      prefs[k] = !prefs[k];
+      sw.setAttribute("aria-checked", prefs[k] ? "true" : "false");
+    };
+  });
+  var t = null;
+  save.onclick = function () {
+    try {
+      localStorage.setItem("expobot-cookie-prefs", JSON.stringify(prefs));
+      localStorage.setItem("expobot-cookie-consent", "custom");
+    } catch (e) {}
+    var ok = document.getElementById("ckSaved");
+    ok.style.display = "inline";
+    clearTimeout(t); t = setTimeout(function () { ok.style.display = "none"; }, 2500);
+  };
+})();
+</script>
+</body>
+</html>

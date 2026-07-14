@@ -4,6 +4,9 @@
  */
 
 import WIDGET_JS from "./widget.txt";
+import WEB_HOME from "./web/home.txt";
+import WEB_PAGES from "./web/paginas.txt";
+import WEB_LEGAL from "./web/legal.txt";
 
 const EMBED_MODEL = "@cf/baai/bge-m3";
 
@@ -6052,6 +6055,125 @@ $("up-run").onclick = function () {
 </body>
 </html>`;
 
+// ---------- web pública de ExpoBot ----------
+// expobot.es se sirve desde este mismo Worker (home + interiores + legales).
+// En cualquier otro host la web vive bajo /web (vista previa antes del dominio).
+// Los contenidos van en src/web/*.txt con un bloque JSON entre <!--DATA … DATA-->.
+
+const WEB_BOT_KEY = "pk_expobotweb_f8939cf0846f1142efcf3d4e";
+const WEB_HOSTS = ["expobot.es", "www.expobot.es"];
+
+function webData(txt) {
+  const open = txt.indexOf("<!--DATA");
+  const close = txt.indexOf("DATA-->");
+  return { data: JSON.parse(txt.slice(open + 8, close)), tpl: txt.slice(close + 7) };
+}
+
+function webHtml(body) {
+  return new Response(body, {
+    headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "public, max-age=300" },
+  });
+}
+
+function serveWeb(url) {
+  let base = null;
+  let path = null;
+  if (url.pathname === "/web" || url.pathname.startsWith("/web/")) {
+    base = "/web";
+    path = url.pathname.slice(4) || "/";
+  } else if (WEB_HOSTS.includes(url.hostname)) {
+    if (url.hostname === "www.expobot.es") {
+      return Response.redirect("https://expobot.es" + url.pathname + url.search, 301);
+    }
+    base = "";
+    path = url.pathname;
+  }
+  if (path === null) return null;
+  if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+
+  const fill = (tpl) =>
+    tpl
+      .replaceAll("%%BASE%%", base)
+      .replaceAll("%%WEBKEY%%", WEB_BOT_KEY)
+      .replaceAll("%%ORIGIN%%", url.origin);
+
+  if (path === "/") return webHtml(fill(WEB_HOME));
+
+  if (path === "/robots.txt") {
+    const body =
+      base === ""
+        ? "User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: https://expobot.es/sitemap.xml\n"
+        : "User-agent: *\nDisallow: /\n";
+    return new Response(body, { headers: { "Content-Type": "text/plain;charset=utf-8" } });
+  }
+
+  if (path === "/sitemap.xml") {
+    const pages = webData(WEB_PAGES).data;
+    const urls = ["", ...Object.values(pages).map((p) => p.path)]
+      .map((p) => `<url><loc>https://expobot.es/${p}</loc></url>`)
+      .join("");
+    return new Response(
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`,
+      { headers: { "Content-Type": "application/xml;charset=utf-8" } }
+    );
+  }
+
+  const slug = path.slice(1);
+
+  {
+    const { data, tpl } = webData(WEB_PAGES);
+    const key = Object.keys(data).find((k) => data[k].path === slug);
+    if (key) {
+      const p = data[key];
+      const tabs = Object.keys(data)
+        .map((k) => `<a class="ptab${k === key ? " on" : ""}" href="${base}/${data[k].path}">${data[k].label}</a>`)
+        .join("");
+      const blocks = p.blocks
+        .map((b) => `<div class="blk"><div class="blk-t">${b.t}</div><div class="blk-d">${b.d}</div></div>`)
+        .join("");
+      return webHtml(
+        fill(tpl)
+          .replaceAll("%%PATH%%", p.path)
+          .replaceAll("%%TITLE%%", p.title)
+          .replaceAll("%%DESC%%", p.intro.slice(0, 155))
+          .replaceAll("%%KICKER%%", p.kicker)
+          .replaceAll("%%H1%%", p.title)
+          .replaceAll("%%INTRO%%", p.intro)
+          .replaceAll("%%BLOCKS%%", blocks)
+          .replaceAll("%%NOTE%%", p.note ? `<p class="note">${p.note}</p>` : "")
+          .replaceAll("%%CTA%%", p.cta)
+          .replaceAll("%%TABS%%", tabs)
+      );
+    }
+  }
+
+  {
+    const { data, tpl } = webData(WEB_LEGAL);
+    const key = Object.keys(data).find((k) => data[k].path === slug);
+    if (key) {
+      const p = data[key];
+      const tabs = Object.keys(data)
+        .map((k) => `<a class="ptab${k === key ? " on" : ""}" href="${base}/${data[k].path}">${data[k].label}</a>`)
+        .join("");
+      const sections = p.sections
+        .map((s) => `<section><h2>${s.t}</h2><div class="txt">${s.d}</div></section>`)
+        .join("");
+      let out = fill(tpl)
+        .replaceAll("%%TITLE%%", p.title)
+        .replaceAll("%%SECTIONS%%", sections)
+        .replaceAll("%%TABS%%", tabs);
+      if (key !== "cookies") {
+        const a = out.indexOf("<!--COOKIES-->");
+        const b = out.indexOf("<!--/COOKIES-->");
+        if (a >= 0 && b > a) out = out.slice(0, a) + out.slice(b + "<!--/COOKIES-->".length);
+      }
+      return webHtml(out);
+    }
+  }
+
+  return null;
+}
+
 // ---------- handler principal ----------
 
 export default {
@@ -6100,6 +6222,10 @@ export default {
           },
         });
       }
+
+      // --- web pública de ExpoBot (expobot.es; vista previa en /web) ---
+      const webResp = serveWeb(url);
+      if (webResp) return webResp;
 
       // --- demo: clon estático de la web del cliente con el bot funcionando ---
       if (url.pathname === "/demo") {

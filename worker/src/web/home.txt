@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="/favicon.png">
+<title>Chatbot con IA para empresas, ferias de muestras y recintos feriales | ExpoBot</title>
+<meta name="description" content="Chatbot con inteligencia artificial para empresas: atención al cliente automatizada 24/7 en web, WhatsApp y Telegram. Especialistas en ferias de muestras, congresos y recintos feriales. Capta leads y envíalos a tu CRM. Solicita una demo gratuita.">
+<link rel="canonical" href="https://expobot.es/">
+<meta property="og:locale" content="es_ES">
+<meta property="og:url" content="https://expobot.es/">
+<meta property="og:site_name" content="ExpoBot">
+<meta property="og:title" content="Chatbot con IA para ferias de muestras y recintos feriales | ExpoBot">
+<meta property="og:description" content="Chatbots con IA para ferias, webs, WhatsApp y Telegram. Convierte cada consulta en una conversación comercial.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://expobot.es/brand/logo.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Chatbot con IA para ferias de muestras y recintos feriales | ExpoBot">
+<meta name="twitter:description" content="Atiende a cada visitante, capta leads y envíalos a tu CRM. Antes, durante y después de cada feria.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://expobot.es/#org","name":"ExpoBot","url":"https://expobot.es/","email":"contacto@expobot.es","description":"Chatbots con inteligencia artificial para organizadores de ferias de muestras, congresos y recintos feriales.","areaServed":["España","Europa"],"logo":"https://expobot.es/brand/logo.png"},
+{"@type":"Service","@id":"https://expobot.es/#service","name":"Chatbot con IA para empresas, ferias de muestras y recintos feriales","provider":{"@id":"https://expobot.es/#org"},"serviceType":"Desarrollo e implantación de chatbots con inteligencia artificial para empresas","audience":{"@type":"BusinessAudience","name":"Empresas, organizadores de ferias de muestras, congresos y recintos feriales"},"areaServed":["España","Europa"],"availableChannel":[{"@type":"ServiceChannel","name":"Web"},{"@type":"ServiceChannel","name":"WhatsApp"},{"@type":"ServiceChannel","name":"Telegram"}]},
+{"@type":"FAQPage","@id":"https://expobot.es/#faq","mainEntity":[
+{"@type":"Question","name":"¿Sirve un chatbot con IA para cualquier empresa?","acceptedAnswer":{"@type":"Answer","text":"Sí. Aunque ExpoBot está especializado en ferias y recintos feriales, implanta chatbots con IA para cualquier empresa que quiera automatizar su atención al cliente, captar leads y atender por web, WhatsApp y Telegram: comercios, servicios, industria, turismo y campañas temporales."}},
+{"@type":"Question","name":"¿Qué información necesita un chatbot con IA para ferias?","acceptedAnswer":{"@type":"Answer","text":"La información real de tu feria: programa, entradas, planos, expositores, servicios, normativa y preguntas frecuentes. Con eso se entrena el chatbot y se controlan las fuentes de sus respuestas."}},
+{"@type":"Question","name":"¿Puede el chatbot funcionar en WhatsApp y Telegram al mismo tiempo?","acceptedAnswer":{"@type":"Answer","text":"Sí. La misma inteligencia y la misma información responden en web, WhatsApp y Telegram simultáneamente."}},
+{"@type":"Question","name":"¿Puede responder en varios idiomas?","acceptedAnswer":{"@type":"Answer","text":"Sí, detecta el idioma del visitante y responde en él, con la misma base de conocimiento de la feria."}},
+{"@type":"Question","name":"¿Puede enviar los contactos captados a nuestro CRM?","acceptedAnswer":{"@type":"Answer","text":"Sí: HubSpot, Salesforce, Zoho y otros, además de email, hojas de cálculo o sistemas propios vía API."}},
+{"@type":"Question","name":"¿Qué ocurre si el chatbot no sabe responder?","acceptedAnswer":{"@type":"Answer","text":"Lo indica con claridad, registra la pregunta y puede derivar la conversación a una persona del equipo de organización."}},
+{"@type":"Question","name":"¿Cuánto tarda la implantación de un chatbot para una feria?","acceptedAnswer":{"@type":"Answer","text":"Para una edición o campaña concreta puede estar activo en pocos días una vez recibida la información de la feria."}},
+{"@type":"Question","name":"¿Se puede usar el chatbot solo durante una edición de la feria?","acceptedAnswer":{"@type":"Answer","text":"Sí. Existen activaciones temporales por edición, con fecha de inicio y fin."}},
+{"@type":"Question","name":"¿Es necesario cambiar los sistemas actuales de la feria o el recinto?","acceptedAnswer":{"@type":"Answer","text":"No. ExpoBot se adapta a lo que ya usáis mediante integraciones y API: venta de entradas, acreditaciones, CRM y calendarios."}}
+]}]}
+</script>
+<style>
+:root{--ac:#2F5BFF;--ac-soft:rgba(47,91,255,.10);--bg:#F2F3F8;--bg2:#FFFFFF;--ink:#0A102E;--mut:#565F80;--line:rgba(10,16,46,.12);--grad:linear-gradient(135deg,#2F5BFF 0%,#6B4EFF 100%);--warn:#E0533D;--ok:#1E9E5C;--tg:#2E8FE6}
+[data-theme="dark"]{--bg:#0A102E;--bg2:#131B40;--ink:#F2F4FB;--mut:#9AA6C8;--line:rgba(242,244,251,.14);--ac-soft:rgba(90,120,255,.18)}
+[data-theme="dark"] .nav{background:rgba(10,16,46,.85)}
+[data-theme="dark"] #problema{background:var(--bg)}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--ac);text-decoration:none}
+a:hover{color:#1D3FDB}
+::selection{background:var(--ac);color:#fff}
+input,select,textarea{font-family:'Manrope',system-ui,sans-serif}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button,a{transition:transform .25s cubic-bezier(.22,.61,.2,1),background .25s,border-color .25s,color .25s,box-shadow .25s}
+section{scroll-margin-top:84px}
+.hide{display:none!important}
+.grotesk{font-family:'Space Grotesk',sans-serif}
+.kick{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.kick .n{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;color:var(--ac)}
+.kick .l{height:1px;flex:none;width:60px;background:var(--ac)}
+.kick .t{font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h2.sec{font-family:'Space Grotesk',sans-serif;font-size:clamp(36px,4.8vw,68px);letter-spacing:-.035em;line-height:1.02;margin:0 0 16px}
+.wrap{max-width:1180px;margin:0 auto}
+.pill{border-radius:99px;font-weight:800;cursor:pointer}
+.btn-grad{background:var(--grad);color:#fff;padding:11px 20px;border:none;border-radius:99px;font-weight:800;font-size:13.5px;white-space:nowrap;box-shadow:0 6px 20px rgba(47,91,255,.35)}
+.btn-grad:hover{background:#1D3FDB;color:#fff;transform:translateY(-1px)}
+.btn-ink{background:var(--ink);color:#fff;padding:17px 32px;border-radius:99px;font-weight:800;font-size:16px;display:inline-flex;align-items:center;gap:10px;box-shadow:0 14px 40px rgba(10,16,46,.25);border:none;cursor:pointer}
+.btn-ink:hover{background:var(--ac);color:#fff;transform:translateY(-2px)}
+.btn-line{border:2px solid var(--ink);color:var(--ink);padding:15px 30px;border-radius:99px;font-weight:800;font-size:16px;background:var(--bg2);display:inline-block}
+.btn-line:hover{border-color:var(--ac);color:var(--ac)}
+.btn-ac{background:var(--ac);color:#fff;border-radius:99px;padding:14px 26px;font-weight:800;font-size:14px;box-shadow:0 8px 24px rgba(47,91,255,.3);border:none;cursor:pointer;display:inline-block}
+.btn-ac:hover{background:#1D3FDB;color:#fff;transform:translateY(-1px)}
+.chip-ghost{border:1.5px solid var(--line);color:var(--mut);border-radius:99px;padding:11px 20px;font-weight:800;font-size:13px;background:none;cursor:pointer;font-family:'Manrope',sans-serif}
+.chip-ghost:hover{border-color:var(--ac);color:var(--ac)}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:26px;transition:transform .25s,box-shadow .25s,border-color .25s}
+.card:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(10,16,46,.12);border-color:var(--ac)}
+.alink{display:inline-flex;align-items:center;gap:8px;color:var(--ac);font-weight:800;font-size:15px}
+.alink:hover{color:#1D3FDB}
+.alink .ar{display:inline-block;transition:transform .3s cubic-bezier(.22,.61,.2,1)}
+.alink:hover .ar{transform:translateX(5px)}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes dash{to{stroke-dashoffset:-24}}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes popin{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes hreveal{from{opacity:0;transform:translateY(34px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(-10% -5% -10% -5%)}}
+@keyframes wordup{from{opacity:0;transform:translateY(105%) rotate(2deg)}to{opacity:1;transform:none}}
+@keyframes preLine{0%{width:0;height:3px;border-radius:2px}45%{width:56px;height:3px;border-radius:2px}75%{width:56px;height:56px;border-radius:50%}100%{width:56px;height:56px;border-radius:50% 50% 50% 12%}}
+@keyframes preFade{0%,82%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+@keyframes faqslide{from{opacity:0;transform:translateY(-6px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(0)}}
+@keyframes liquid1{0%,100%{border-radius:58% 42% 63% 37%/45% 55% 45% 55%;transform:translate(0,0) rotate(0deg) scale(1)}33%{border-radius:38% 62% 45% 55%/60% 38% 62% 40%;transform:translate(130px,70px) rotate(40deg) scale(1.18)}66%{border-radius:50% 50% 34% 66%/38% 60% 40% 62%;transform:translate(-70px,110px) rotate(-28deg) scale(.88)}}
+@keyframes liquid2{0%,100%{border-radius:45% 55% 52% 48%/55% 45% 60% 40%;transform:translate(0,0) rotate(0deg) scale(1)}40%{border-radius:60% 40% 38% 62%/42% 58% 45% 55%;transform:translate(-120px,-65px) rotate(-48deg) scale(1.16)}70%{border-radius:36% 64% 60% 40%/58% 42% 36% 64%;transform:translate(65px,-100px) rotate(30deg) scale(1.06)}}
+@keyframes liquid3{0%,100%{border-radius:52% 48% 40% 60%/48% 52% 58% 42%;transform:translate(0,0) rotate(0deg) scale(1)}50%{border-radius:40% 60% 58% 42%/62% 38% 44% 56%;transform:translate(95px,-90px) rotate(55deg) scale(1.24)}}
+.word{display:inline-block;overflow:hidden;vertical-align:bottom}
+.word>span{display:inline-block;animation:wordup .8s cubic-bezier(.22,.61,.2,1) both}
+.marq:hover>div{animation-play-state:paused}
+@supports (animation-timeline: view()){h2.sec{animation:hreveal .9s cubic-bezier(.25,.6,.2,1) both;animation-timeline:view();animation-range:entry 5% entry 38%}}
+.navlinks a{color:var(--mut)}
+.navlinks a:hover{color:var(--ink)}
+.navclient{border:1.5px solid var(--line);color:var(--ink);padding:10px 18px;border-radius:99px;font-weight:800;font-size:13.5px;white-space:nowrap;background:var(--bg2)}
+.navclient:hover{border-color:var(--ac);color:var(--ac)}
+.theme-btn{cursor:pointer;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg2);color:var(--ink);font-size:15px;display:grid;place-items:center;flex:none}
+.theme-btn:hover{border-color:var(--ac);color:var(--ac)}
+.feat-chip{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:14px 22px;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:10px;transition:transform .2s,background .2s,color .2s,border-color .2s}
+.feat-chip:hover{background:var(--ac);color:#fff;transform:translateY(-3px);border-color:var(--ac)}
+.feat-chip:hover .dot{background:#fff}
+.int-chip{border:1.5px solid var(--ink);background:var(--bg2);border-radius:99px;padding:12px 22px;font-size:14px;font-weight:800;transition:transform .2s,background .2s,color .2s}
+.int-chip:hover{background:var(--ink);color:#fff;transform:translateY(-2px)}
+.scen-tab{cursor:pointer;border-radius:99px;padding:11px 20px;font-weight:800;font-size:13.5px;border:1.5px solid var(--line);background:var(--bg2);color:var(--mut);font-family:'Manrope',sans-serif;transition:transform .15s,border-color .2s}
+.scen-tab:hover{border-color:var(--ac);transform:translateY(-2px)}
+.scen-tab.on{border-color:var(--ac);background:var(--ac-soft);color:var(--ac)}
+.canal-chip{cursor:pointer;border-radius:99px;padding:9px 16px;font-weight:800;font-size:13px;font-family:'Manrope',sans-serif;border:1.5px solid var(--line);background:var(--bg2);color:var(--mut)}
+.canal-chip.on{border-color:var(--ac);background:var(--ac-soft);color:var(--ac)}
+.faq-item{border:1px solid var(--line);border-radius:16px;background:var(--bg);overflow:hidden}
+.faq-item.open{border-color:var(--ac)}
+.faq-item>button{cursor:pointer;width:100%;text-align:left;background:none;border:none;color:var(--ink);padding:19px 22px;font-size:15.5px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:14px;font-family:'Manrope',sans-serif}
+.faq-item>button:hover{color:var(--ac)}
+.faq-item .pl{color:var(--ac);font-size:20px;flex:none;transition:transform .25s}
+.faq-item.open .pl{transform:rotate(45deg)}
+.faq-a{padding:0 22px 19px;color:var(--mut);font-size:14.5px;line-height:1.65;animation:faqslide .35s cubic-bezier(.22,.61,.2,1) both}
+.finput{margin-top:6px;width:100%;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--ink);font-size:14px}
+.flabel{font-size:13px;font-weight:700;color:var(--mut);display:block}
+input[type=range]{width:100%;accent-color:var(--ac)}
+.slider-row{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:8px}
+.slider-row .v{color:var(--ac)}
+.imgslot{position:relative;height:340px;border-radius:22px;overflow:hidden;border:1px solid var(--line);background:repeating-linear-gradient(45deg,var(--ac-soft) 0 14px,transparent 14px 28px),linear-gradient(135deg,rgba(47,91,255,.08),rgba(107,78,255,.08));display:grid;place-items:center;color:var(--mut);font-weight:700;font-size:14px;text-align:center;padding:20px}
+footer a.f{color:var(--ink)}
+footer a.f:hover{color:var(--ac)}
+@media (max-width:1120px){.navlinks{display:none!important}.burger{display:grid!important}}
+@media (max-width:560px){.navclient{display:none!important}}
+@media (max-width:760px){
+  [data-scene="hero"]{height:auto!important}
+  html,body{overflow-x:clip}
+  [data-scene="hero"] header{position:relative!important;height:auto!important;min-height:0!important;overflow:hidden!important;grid-template-columns:1fr!important;padding-top:104px!important;padding-bottom:48px!important;gap:24px!important}
+  .hero-wrap{height:440px!important}
+  .hero-canvas{left:calc(50% - 200px)!important;top:0!important}
+  [data-scene="canales"],[data-scene="feria"]{height:auto!important}
+  [data-scene="canales"]>div,[data-scene="feria"]>div{position:relative!important;min-height:0!important;overflow:visible!important;padding-top:70px!important;padding-bottom:70px!important}
+  [data-scene="lead"]{height:220vh!important}
+  .feria-clip{overflow-x:auto!important;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+  .feria-clip .htrack{transform:none!important}
+  .feria-clip .htrack>*{scroll-snap-align:center}
+  #integraciones .g2,#analitica .g2{grid-template-columns:1fr!important}
+  .case-grid{grid-template-columns:1fr!important;padding:28px!important}
+  input,select,textarea{font-size:16px!important}
+  .msg2{position:static!important;margin-top:18px!important}
+  .hero-badge{border-radius:18px!important;letter-spacing:.06em!important;max-width:100%;box-sizing:border-box}
+  section{padding-left:5vw!important;padding-right:5vw!important}
+}
+@media (pointer:fine){.cursor-dot{display:block!important}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.preloader{display:none!important}}
+</style>
+</head>
+<body>
+
+<div class="preloader" aria-hidden="true" style="position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;animation:preFade .95s ease .05s both;pointer-events:none">
+  <div style="background:var(--ac);animation:preLine .8s cubic-bezier(.6,0,.2,1) both;box-shadow:0 10px 40px rgba(47,91,255,.4)"></div>
+</div>
+<div id="scrollbar" aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:3px;z-index:210;background:var(--ac);transform:scaleX(0);transform-origin:left;pointer-events:none"></div>
+<div id="cursor" class="cursor-dot" aria-hidden="true" style="display:none;position:fixed;left:0;top:0;width:34px;height:34px;border:1.5px solid var(--ac);border-radius:50%;pointer-events:none;z-index:300;transform:translate(-100px,-100px);transition:width .2s,height .2s,background .2s;background:transparent;mix-blend-mode:multiply"></div>
+
+<nav class="nav" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:26px;padding:10px 12px 10px 20px;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:99px;box-shadow:0 10px 40px rgba(10,16,46,.10);max-width:calc(100vw - 32px);box-sizing:border-box">
+  <a href="#hero" aria-label="ExpoBot, inicio" style="display:flex;align-items:center"><img src="/brand/logo.png" alt="ExpoBot" style="display:block;height:30px;width:auto"></a>
+  <div class="navlinks" style="display:flex;align-items:center;gap:20px;font-size:13.5px;font-weight:700;white-space:nowrap">
+    <a href="#como-funciona">Producto</a>
+    <a href="#feria">Para ferias</a>
+    <a href="#funcionalidades">Funcionalidades</a>
+    <a href="#integraciones">Integraciones</a>
+    <a href="#casos">Casos de uso</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="https://chatbot-engine.baquetasjgt.workers.dev/acceso" class="navclient">Acceso clientes</a>
+    <button id="themeBtn" class="theme-btn" aria-label="Cambiar entre modo claro y oscuro">☾</button>
+    <a href="#contacto" class="btn-grad" data-magnet>Solicitar demo</a>
+  </div>
+  <button id="burger" class="burger" aria-label="Abrir menú" aria-expanded="false" style="display:none;cursor:pointer;background:none;border:none;place-items:center;width:40px;height:40px;padding:0">
+    <span style="display:flex;flex-direction:column;gap:5px"><span style="width:20px;height:2.5px;background:var(--ink);border-radius:2px"></span><span style="width:20px;height:2.5px;background:var(--ink);border-radius:2px"></span><span style="width:14px;height:2.5px;background:var(--ac);border-radius:2px"></span></span>
+  </button>
+</nav>
+<div id="mobileMenu" class="hide" style="position:fixed;inset:0;z-index:89;background:rgba(242,243,248,.97);backdrop-filter:blur(10px);display:flex;flex-direction:column;justify-content:center;padding:0 8vw;animation:popin .25s ease both">
+  <div style="display:flex;flex-direction:column;gap:8px" id="mobileLinks">
+    <a href="#como-funciona" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Producto</a>
+    <a href="#feria" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Para ferias</a>
+    <a href="#funcionalidades" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Funcionalidades</a>
+    <a href="#integraciones" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Integraciones</a>
+    <a href="#casos" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Casos de uso</a>
+    <a href="https://chatbot-engine.baquetasjgt.workers.dev/acceso" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Acceso clientes</a>
+    <a href="#contacto" style="margin-top:22px;background:var(--ac);color:#fff;padding:18px;border-radius:99px;font-weight:800;font-size:17px;text-align:center">Solicitar una demo</a>
+  </div>
+  <button id="menuClose" aria-label="Cerrar menú" style="position:absolute;top:22px;right:22px;cursor:pointer;background:var(--bg2);border:1px solid var(--line);border-radius:50%;width:46px;height:46px;font-size:18px;color:var(--ink)">✕</button>
+</div>
+
+<!-- HERO -->
+<div data-scene="hero" style="height:300vh">
+<header id="hero" style="position:sticky;top:0;height:100vh;overflow:hidden;display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,1fr);align-items:center;gap:40px;padding:92px 6vw 24px;box-sizing:border-box;background:radial-gradient(1100px 600px at 75% 20%, rgba(47,91,255,.10), transparent 60%), repeating-linear-gradient(90deg, rgba(10,16,46,.03) 0 1px, transparent 1px 120px), var(--bg)">
+  <div aria-hidden="true" data-liquid style="position:absolute;left:6%;top:8%;width:460px;height:440px;background:linear-gradient(135deg,rgba(47,91,255,.28),rgba(43,179,255,.16));filter:blur(34px);animation:liquid1 9s ease-in-out infinite;pointer-events:none;will-change:transform,border-radius"></div>
+  <div aria-hidden="true" data-liquid style="position:absolute;right:2%;bottom:12%;width:420px;height:400px;background:linear-gradient(225deg,rgba(107,78,255,.26),rgba(47,91,255,.14));filter:blur(34px);animation:liquid2 11s ease-in-out infinite;pointer-events:none;will-change:transform,border-radius"></div>
+  <div aria-hidden="true" data-liquid style="position:absolute;left:42%;top:38%;width:320px;height:300px;background:linear-gradient(180deg,rgba(43,179,255,.20),rgba(107,78,255,.18));filter:blur(36px);animation:liquid3 13s ease-in-out infinite;pointer-events:none;will-change:transform,border-radius"></div>
+  <div data-fx="bigword" aria-hidden="true" class="grotesk" style="position:absolute;left:-2vw;bottom:-4vw;font-weight:700;font-size:22vw;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px rgba(47,91,255,.14);white-space:nowrap;pointer-events:none;user-select:none;will-change:transform">EXPOBOT</div>
+  <div style="animation:rise .9s ease both;position:relative">
+    <div class="hero-badge" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);box-shadow:0 4px 16px rgba(10,16,46,.06)"><span style="width:7px;height:7px;border-radius:50%;background:var(--ac);animation:pulse 2s infinite;flex:none"></span><span>IA para organizadores de ferias y recintos feriales</span></div>
+    <h1 class="grotesk" style="font-size:min(clamp(46px,6.6vw,96px),11vh);line-height:.98;letter-spacing:-.045em;margin:clamp(12px,2.4vh,24px) 0 clamp(10px,2vh,20px);text-wrap:balance"><span class="word"><span style="animation-delay:.15s">Tu</span></span> <span class="word"><span style="animation-delay:.22s">feria</span></span> <span class="word"><span style="animation-delay:.29s">nunca</span></span> <span class="word"><span style="animation-delay:.36s">deja</span></span> <span class="word"><span style="animation-delay:.43s">de</span></span> <span class="word"><span style="animation-delay:.52s;color:var(--ac)">atender.</span></span></h1>
+    <p style="font-size:clamp(15px,2.2vh,18px);line-height:1.55;color:var(--mut);max-width:50ch;margin:0 0 clamp(16px,3vh,32px)">Para organizadores de ferias de muestras, congresos y recintos feriales: ExpoBot responde a asistentes y expositores, informa del programa, capta contactos y descarga a tu equipo antes, durante y después de cada edición — en tu web, WhatsApp y Telegram.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+      <a href="#contacto" class="btn-ink" data-magnet>Solicitar una demo <span class="ar" aria-hidden="true">→</span></a>
+      <a href="#demo" class="btn-line" data-magnet>Probar ExpoBot</a>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin:clamp(10px,1.8vh,18px) 0 0;font-size:13px;color:var(--mut);font-weight:600"><span style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok);font-weight:800">✓</span>Sin cambiar tus sistemas</span><span style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok);font-weight:800">✓</span>Demo sin compromiso</span><span style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok);font-weight:800">✓</span>Respuesta en 24 h laborables</span></div>
+    <p class="msg2 grotesk" data-fx="msg2" style="position:absolute;top:100%;margin:clamp(12px,2.2vh,28px) 0 0;font-size:clamp(17px,2.4vh,21px);font-weight:600;color:var(--ink);max-width:26ch;line-height:1.35">Atiende cada consulta, <span style="color:var(--ac)">incluso cuando tu equipo está ocupado</span>.</p>
+  </div>
+  <div aria-hidden="true" class="hero-wrap" style="position:relative;height:min(560px,70vh);animation:rise 1.1s .15s ease both">
+  <div class="hero-canvas" style="position:absolute;left:calc(50% - 260px);top:calc(50% - 280px);width:520px;height:560px;transform-origin:center">
+    <svg data-fx="lines" viewBox="0 0 520 560" style="position:absolute;inset:0;width:100%;height:100%" preserveAspectRatio="xMidYMid meet">
+      <line x1="105" y1="120" x2="240" y2="255" stroke="var(--ac)" stroke-width="1.6" stroke-dasharray="6 6" opacity=".6" style="animation:dash 1.6s linear infinite"></line>
+      <line x1="95" y1="280" x2="230" y2="285" stroke="var(--ac)" stroke-width="1.6" stroke-dasharray="6 6" opacity=".6" style="animation:dash 1.6s linear infinite"></line>
+      <line x1="110" y1="440" x2="240" y2="315" stroke="var(--ac)" stroke-width="1.6" stroke-dasharray="6 6" opacity=".6" style="animation:dash 1.6s linear infinite"></line>
+      <line x1="300" y1="285" x2="430" y2="285" stroke="var(--ac)" stroke-width="2" stroke-dasharray="6 6" style="animation:dash 1.2s linear infinite"></line>
+    </svg>
+    <div data-fx="q1" data-cx="160" data-cy="160" style="position:absolute;left:0;top:88px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:11px 15px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(10,16,46,.10)"><span style="color:var(--ac);font-size:11px;font-weight:800;letter-spacing:.08em">WEB</span><br>«¿Cómo puedo exponer?»</div>
+    <div data-fx="q2" data-cx="165" data-cy="0" style="position:absolute;left:-6px;top:250px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:11px 15px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(10,16,46,.10)"><span style="color:var(--ok);font-size:11px;font-weight:800;letter-spacing:.08em">WHATSAPP</span><br>«¿Dónde compro las entradas?»</div>
+    <div data-fx="q3" data-cx="160" data-cy="-155" style="position:absolute;left:4px;top:412px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:11px 15px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(10,16,46,.10)"><span style="color:var(--tg);font-size:11px;font-weight:800;letter-spacing:.08em">TELEGRAM</span><br>«Quiero una reunión»</div>
+    <div data-fx="bot" style="position:absolute;left:50%;top:285px;transform:translate(-50%,-50%);width:110px;height:110px;border-radius:50%;background:var(--bg2);border:2px solid var(--ac);display:grid;place-items:center;box-shadow:0 0 70px rgba(47,91,255,.35)">
+      <img src="/brand/isotipo.png" alt="" width="56" height="60" style="display:block">
+    </div>
+    <div data-fx="lead" style="position:absolute;right:0;top:236px;background:var(--bg2);border:1.5px solid var(--ac);border-radius:14px;padding:13px 17px;font-size:13px;box-shadow:8px 8px 0 rgba(47,91,255,.18)">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--ac);margin-bottom:6px">LEAD → CRM</div>
+      <div style="font-weight:700">María G. · Quiere exponer</div>
+      <div style="color:var(--mut);font-size:12px">Interés: alto · Contacto: equipo comercial</div>
+    </div>
+    <div style="position:absolute;right:14px;top:340px;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--mut)"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.8s infinite"></span>Actividad en tiempo real</div>
+  </div>
+  </div>
+</header>
+</div>
+
+<!-- MARQUEE -->
+<div aria-hidden="true" style="background:var(--ac);color:#fff;transform:rotate(-1.2deg) scale(1.02);margin:-20px 0 0;position:relative;z-index:5;overflow:hidden;box-shadow:0 20px 50px rgba(47,91,255,.28)">
+  <div class="marq" style="display:flex;width:max-content"><div style="display:flex;width:max-content;animation:marquee 26s linear infinite;padding:16px 0">
+    <div class="grotesk" style="display:flex;gap:44px;padding-right:44px;font-weight:600;font-size:18px;white-space:nowrap;align-items:center"><span>Tu feria nunca deja de atender</span><span style="opacity:.5">✦</span><span>Convierte preguntas en oportunidades</span><span style="opacity:.5">✦</span><span>Una conversación. Todos tus canales</span><span style="opacity:.5">✦</span><span>Del primer mensaje al CRM</span><span style="opacity:.5">✦</span><span>Antes, durante y después de la feria</span><span style="opacity:.5">✦</span></div>
+    <div class="grotesk" style="display:flex;gap:44px;padding-right:44px;font-weight:600;font-size:18px;white-space:nowrap;align-items:center"><span>Tu feria nunca deja de atender</span><span style="opacity:.5">✦</span><span>Convierte preguntas en oportunidades</span><span style="opacity:.5">✦</span><span>Una conversación. Todos tus canales</span><span style="opacity:.5">✦</span><span>Del primer mensaje al CRM</span><span style="opacity:.5">✦</span><span>Antes, durante y después de la feria</span><span style="opacity:.5">✦</span></div>
+  </div></div>
+</div>
+
+<!-- 01 PROBLEMA -->
+<section id="problema" style="padding:130px 6vw 110px;background:linear-gradient(180deg,var(--bg) 0%,#F5F2EC 100%)">
+  <div class="wrap">
+    <div class="kick"><span class="n">01</span><span class="l"></span><span class="t">El problema</span></div>
+    <h2 class="sec" style="max-width:20ch">En una feria, cada segundo cuenta.</h2>
+    <p style="color:var(--mut);font-size:17px;max-width:60ch;margin:0 0 48px">Mientras tu equipo de organización atiende una consulta, otras tres se quedan sin respuesta: un asistente que no compra su entrada, un expositor que no contrata su stand, un organizador que se lleva su evento a otro recinto.</p>
+    <div id="problemas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px"></div>
+    <p style="margin:48px auto 0;text-align:center;font-size:15px;color:var(--warn);font-weight:700;max-width:52ch">Cada conversación que no atiendes puede ser una oportunidad comercial que no vuelve.</p>
+    <p class="grotesk" style="margin:14px auto 0;text-align:center;font-size:clamp(22px,2.8vw,36px);font-weight:600;max-width:30ch;letter-spacing:-.02em;text-wrap:balance;line-height:1.25">«ExpoBot atiende las conversaciones que tu equipo <span style="background:linear-gradient(transparent 62%, rgba(47,91,255,.25) 62%)">no puede atender al mismo tiempo</span>.»</p>
+    <div style="margin:56px auto 0;display:grid;grid-template-columns:2fr 1fr;gap:16px" class="g2">
+      <div class="imgslot">Foto: tu recinto en plena feria<br><span style="font-weight:600;font-size:12px">(pendiente de fotografía real)</span></div>
+      <div class="imgslot">Foto: asistentes / equipo de organización<br><span style="font-weight:600;font-size:12px">(pendiente de fotografía real)</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 CÓMO FUNCIONA -->
+<section id="como-funciona" style="padding:110px 6vw;background:var(--bg2);border-top:1px solid var(--line);border-radius:48px 48px 0 0">
+  <div class="wrap">
+    <div class="kick"><span class="n">02</span><span class="l"></span><span class="t">Cómo funciona</span></div>
+    <h2 class="sec">De la pregunta al lead, <span style="color:var(--ac)">en segundos</span>.</h2>
+    <p style="color:var(--mut);font-size:17px;margin:0 0 52px">Cuatro pasos. Sin cambiar tus sistemas actuales.</p>
+    <div id="pasos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px"></div>
+    <div style="text-align:center;margin-top:40px"><a href="#demo" class="alink">Míralo en acción en la demo <span class="ar" aria-hidden="true">↓</span></a></div>
+  </div>
+</section>
+
+<!-- ESCENA: DEL MENSAJE AL CRM -->
+<section data-scene="lead" style="height:300vh;position:relative;background:var(--bg2)">
+  <div style="position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:80px 6vw 40px;box-sizing:border-box;overflow:hidden;background:radial-gradient(800px 500px at 50% 45%, rgba(47,91,255,.07), transparent 70%)">
+    <h2 class="grotesk" style="font-size:clamp(34px,4.4vw,60px);letter-spacing:-.035em;margin:0;text-align:center">Del primer mensaje <span style="color:var(--ac)">al CRM</span>.</h2>
+    <p style="color:var(--mut);font-size:16px;margin:0;text-align:center">Sigue el recorrido: una burbuja de conversación se convierte en una oportunidad comercial.</p>
+    <div style="position:relative;width:min(600px,92vw);height:280px">
+      <svg aria-hidden="true" viewBox="0 0 600 280" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+        <path data-fx="leadpath" d="M16,244 C150,244 200,36 300,36 C400,36 450,244 584,244" pathLength="1" fill="none" stroke="var(--ac)" stroke-width="1.5" stroke-dasharray="1" stroke-dashoffset="1" opacity=".35" stroke-linecap="round"></path>
+      </svg>
+      <div data-fx="st1" style="position:absolute;inset:0;display:grid;place-items:center;opacity:0">
+        <div style="display:flex;justify-content:flex-end;width:100%"><div style="max-width:70%;padding:16px 20px;font-size:16px;line-height:1.55;border-radius:18px 18px 4px 18px;background:var(--ac);color:#fff;box-shadow:0 16px 40px rgba(47,91,255,.3)">«Hola, mi empresa quiere exponer en la próxima edición de la feria.»</div></div>
+      </div>
+      <div data-fx="st2" style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:12px;opacity:0">
+        <div style="display:flex"><div style="max-width:75%;padding:14px 18px;font-size:15px;line-height:1.55;border-radius:18px 18px 18px 4px;background:var(--bg2);border:1px solid var(--line);box-shadow:0 10px 30px rgba(10,16,46,.08)">Te envío el dossier de expositor y las tarifas de espacios. ¿Me dejas tus datos para que el equipo comercial te prepare una propuesta?</div></div>
+        <div style="display:flex;justify-content:flex-end"><div style="padding:14px 18px;font-size:15px;border-radius:18px 18px 4px 18px;background:var(--ac);color:#fff">María G. · maria@empresa.com ✓</div></div>
+      </div>
+      <div data-fx="st3" style="position:absolute;inset:0;display:grid;place-items:center;opacity:0">
+        <div style="background:var(--bg2);border:1.5px solid var(--ac);border-radius:18px;padding:24px 28px;box-shadow:10px 10px 0 rgba(47,91,255,.15);min-width:min(340px,80vw)">
+          <div style="font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--ac);margin-bottom:10px">LEAD REGISTRADO</div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:4px">María G. · Empresa S.L.</div>
+          <div style="color:var(--mut);font-size:14px;margin-bottom:12px">Expositora potencial · sector alimentación</div>
+          <span style="font-size:12px;font-weight:800;background:var(--ac-soft);color:var(--ac);border-radius:6px;padding:4px 10px">Interés: alto</span>
+        </div>
+      </div>
+      <div data-fx="st4" style="position:absolute;inset:0;display:grid;place-items:center">
+        <div style="background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:24px 28px;box-shadow:0 24px 60px rgba(10,16,46,.12);min-width:min(380px,84vw)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--mut)">TU CRM</span><span style="font-size:12px;font-weight:800;color:var(--ok)">✓ Contacto creado</span></div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:42px;height:42px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:800">MG</div>
+            <div style="flex:1"><div style="font-weight:800;font-size:15px">María G.</div><div style="color:var(--mut);font-size:13px">Asignada a: equipo comercial del recinto · Reunión: jueves 12:00</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="width:min(440px,80vw)">
+      <div style="height:5px;border-radius:3px;background:var(--line);overflow:hidden"><div data-fx="rail" style="height:100%;width:100%;background:var(--ac);transform-origin:left"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11.5px;font-weight:800;letter-spacing:.06em;color:var(--mut)"><span>PREGUNTA</span><span>RESPUESTA</span><span>LEAD</span><span>CRM</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 DEMO INTERACTIVA -->
+<section id="demo" style="padding:110px 6vw;border-top:1px solid var(--line)">
+  <div style="max-width:980px;margin:0 auto">
+    <div class="kick" style="justify-content:center"><span class="n">03</span><span class="l"></span><span class="t">Demo interactiva</span></div>
+    <h2 class="sec" style="text-align:center">No te lo contamos. <span style="color:var(--ac)">Pruébalo</span>.</h2>
+    <p style="color:var(--mut);text-align:center;margin:0 0 36px">Elige el escenario que más se parece a tu feria y mira cómo lo resuelve — o pregúntale tú mismo. <span style="font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin-left:6px;background:var(--bg2)">Conversación de demostración</span></p>
+    <div id="scenTabs" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:30px" role="tablist" aria-label="Escenarios de demostración"></div>
+    <div style="background:var(--bg2);border:1.5px solid var(--ink);border-radius:24px;overflow:hidden;box-shadow:14px 14px 0 rgba(47,91,255,.15)">
+      <div style="display:flex;align-items:center;gap:10px;padding:15px 22px;border-bottom:1.5px solid var(--ink);background:var(--bg)">
+        <img src="/brand/isotipo.png" alt="" width="26" height="28" style="display:block">
+        <div><div style="font-weight:800;font-size:14px">ExpoBot</div><div style="font-size:11.5px;color:var(--ok);display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:var(--ok)"></span>Asistente con IA · en línea</div></div>
+      </div>
+      <div id="demoLog" style="padding:26px 22px;min-height:340px;display:flex;flex-direction:column;gap:12px"></div>
+      <div style="padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center">
+        <input id="demoIn" placeholder="Escribe tu propia pregunta a ExpoBot…" aria-label="Escribe tu pregunta a ExpoBot" style="flex:1;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--line);border-radius:99px;padding:13px 18px;color:var(--ink);font-size:14px">
+        <button id="demoSend" aria-label="Enviar pregunta" style="cursor:pointer;flex:none;width:46px;height:46px;border-radius:50%;background:var(--ac);border:none;color:#fff;font-size:17px;font-weight:800;box-shadow:0 8px 24px rgba(47,91,255,.3)">→</button>
+      </div>
+      <div style="padding:0 20px 16px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">
+        <button id="demoReplay" class="chip-ghost">↻ Reiniciar escenario</button>
+        <a href="#contacto" class="btn-ac" style="font-size:14px;padding:12px 22px">Quiero un ExpoBot para mi empresa</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 CANALES -->
+<section id="canales" data-scene="canales" style="height:280vh;background:var(--ink)">
+  <div style="position:sticky;top:0;min-height:100vh;display:flex;align-items:center;overflow:hidden;padding:80px 6vw;box-sizing:border-box;background:radial-gradient(900px 500px at 50% 20%, rgba(47,91,255,.25), transparent 65%)">
+  <div class="wrap" style="width:100%">
+    <div class="kick"><span class="n" style="color:#8FA6FF">04</span><span class="l" style="background:#8FA6FF"></span><span class="t" style="color:rgba(255,255,255,.55)">Canales</span></div>
+    <h2 class="grotesk" style="font-size:clamp(36px,4.8vw,68px);letter-spacing:-.035em;line-height:1.02;margin:0 0 16px;color:#fff">Una conversación.<br><span style="color:#8FA6FF">Todos tus canales.</span></h2>
+    <p style="color:rgba(255,255,255,.65);font-size:17px;max-width:62ch;margin:0 0 48px">La misma inteligencia, entrenada con la información de tu feria, responde en tu web, en WhatsApp y en Telegram.</p>
+    <div id="canalesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px"></div>
+    <div data-fx="conv" style="margin-top:36px;display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:10px;border:1px solid #8FA6FF;background:rgba(47,91,255,.2);border-radius:99px;padding:13px 26px;font-weight:700;font-size:14px;color:#fff">Las tres conversaciones convergen en una misma plataforma</span>
+      <a href="#contacto" style="background:var(--bg2);color:var(--ac);border-radius:99px;padding:13px 26px;font-weight:800;font-size:14px">Quiero ExpoBot en mis canales →</a>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- 05 ANTES / DURANTE / DESPUÉS -->
+<section id="feria" data-scene="feria" style="height:280vh;border-top:1px solid var(--line)">
+  <div style="position:sticky;top:0;min-height:100vh;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding:80px 6vw;box-sizing:border-box">
+  <div class="wrap" style="width:100%">
+    <div class="kick"><span class="n">05</span><span class="l"></span><span class="t">El ciclo del evento</span></div>
+    <h2 class="grotesk" style="font-size:clamp(34px,4.4vw,60px);letter-spacing:-.035em;line-height:1.05;margin:0 0 14px">Antes, durante y <span style="color:var(--ac)">después</span> del evento.</h2>
+    <p style="color:var(--mut);font-size:17px;margin:0 0 48px">Tu edición dura unos días. Las oportunidades, todo el año. Sigue haciendo scroll: la historia avanza contigo.</p>
+    <div class="feria-clip" style="overflow:hidden;margin:0 -6vw;padding:0 6vw">
+    <div class="htrack" data-fx="htrack" id="momentos" style="display:flex;gap:44px;will-change:transform"></div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- 06 FUNCIONALIDADES -->
+<section id="funcionalidades" style="padding:110px 6vw;background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="kick"><span class="n">06</span><span class="l"></span><span class="t">Funcionalidades</span></div>
+    <h2 class="sec">Mucho más que <span style="color:var(--ac)">responder preguntas</span>.</h2>
+    <p style="color:var(--mut);font-size:17px;margin:0 0 44px">Todo lo que una feria de muestras, un congreso o un recinto ferial necesitan de un asistente con IA.</p>
+    <div id="features" style="display:flex;flex-wrap:wrap;gap:12px"></div>
+    <div style="margin-top:36px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <a href="#contacto" class="btn-ac">Quiero todo esto en mi feria →</a>
+      <span style="color:var(--mut);font-size:13px;font-weight:600">Demo sin compromiso</span>
+    </div>
+  </div>
+</section>
+
+<!-- 07 INTEGRACIONES -->
+<section id="integraciones" style="padding:110px 6vw;border-top:1px solid var(--line)">
+  <div class="wrap g2" style="display:grid;grid-template-columns:minmax(300px,1fr) minmax(300px,1.1fr);gap:50px;align-items:center">
+    <div>
+      <div class="kick"><span class="n">07</span><span class="l"></span><span class="t">Integraciones</span></div>
+      <h2 class="grotesk" style="font-size:clamp(32px,3.8vw,52px);letter-spacing:-.035em;line-height:1.05;margin:0 0 16px">Se conecta con las herramientas que <span style="color:var(--ac)">ya utilizas</span>.</h2>
+      <p style="color:var(--mut);font-size:16px;line-height:1.65;margin:0 0 20px">Del primer mensaje al CRM: cada contacto, cada respuesta y cada reunión pueden llegar automáticamente a tus sistemas.</p>
+      <p style="font-weight:700;font-size:15px;border-left:3px solid var(--ac);padding-left:14px;margin-bottom:24px">Cuando no existe una integración estándar, desarrollamos una conexión a medida.</p>
+      <a href="#contacto" class="alink">Consultar mi integración <span class="ar" aria-hidden="true">→</span></a>
+    </div>
+    <div id="intChips" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+  </div>
+</section>
+
+<!-- 08 CASOS DE USO -->
+<section id="casos" style="padding:110px 6vw;background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="kick"><span class="n">08</span><span class="l"></span><span class="t">Casos de uso</span></div>
+    <h2 class="sec" style="margin-bottom:48px">Un ExpoBot para <span style="color:var(--ac)">cada proyecto</span>.</h2>
+    <div id="casos-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px"></div>
+  </div>
+</section>
+
+<!-- 09 CALCULADORA -->
+<section id="calculadora" style="padding:110px 6vw;border-top:1px solid var(--line)">
+  <div style="max-width:1080px;margin:0 auto">
+    <div class="kick" style="justify-content:center"><span class="n">09</span><span class="l"></span><span class="t">Calculadora</span></div>
+    <h2 class="grotesk" style="font-size:clamp(32px,3.8vw,52px);letter-spacing:-.035em;margin:0 0 14px;text-align:center;text-wrap:balance">¿Cuántas conversaciones puede estar <span style="color:var(--ac)">perdiendo</span> tu feria?</h2>
+    <p style="color:var(--mut);text-align:center;margin:0 0 40px">Mueve los controles y calcula una estimación para tu próxima edición.</p>
+    <div class="g2" style="display:grid;grid-template-columns:minmax(300px,1fr) minmax(280px,.9fr);gap:24px;align-items:stretch">
+      <div style="background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:22px;box-shadow:0 16px 44px rgba(10,16,46,.06)">
+        <label><div class="slider-row"><span>Visitantes estimados de la feria</span><span class="v" id="v-visitantes">8.000</span></div><input type="range" id="c-visitantes" min="500" max="50000" step="500" value="8000"></label>
+        <label><div class="slider-row"><span>Días de feria</span><span class="v" id="v-dias">3</span></div><input type="range" id="c-dias" min="1" max="7" step="1" value="3"></label>
+        <label><div class="slider-row"><span>Personas atendiendo consultas</span><span class="v" id="v-comerciales">3</span></div><input type="range" id="c-comerciales" min="1" max="12" step="1" value="3"></label>
+        <label><div class="slider-row"><span>Minutos por conversación</span><span class="v" id="v-minutos">8 min</span></div><input type="range" id="c-minutos" min="2" max="30" step="1" value="8"></label>
+        <label><div class="slider-row"><span>% de visitantes que preguntan</span><span class="v" id="v-pct">30%</span></div><input type="range" id="c-pct" min="5" max="80" step="5" value="30"></label>
+      </div>
+      <div style="background:var(--grad);border-radius:22px;padding:32px;display:flex;flex-direction:column;justify-content:center;gap:20px;color:#fff;box-shadow:14px 14px 0 rgba(47,91,255,.18)">
+        <div><div style="font-size:11.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.7);text-transform:uppercase">Conversaciones potenciales</div><div class="grotesk" style="font-size:40px;font-weight:700" data-res id="r-conv">2.400</div></div>
+        <div><div style="font-size:11.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.7);text-transform:uppercase">Capacidad aproximada de tu equipo</div><div class="grotesk" style="font-size:40px;font-weight:700" data-res id="r-cap">540</div></div>
+        <div style="background:rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;margin:-6px -8px"><div style="font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">⚠ Consultas que hoy se quedan sin atender</div><div class="grotesk" style="font-size:54px;font-weight:700;line-height:1.05" data-res id="r-sin">1.860</div><div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:4px">Oportunidades que ExpoBot podría recuperar en cada edición</div></div>
+        <div><div style="font-size:11.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.7);text-transform:uppercase">Leads potencialmente registrables</div><div class="grotesk" style="font-size:40px;font-weight:700" data-res id="r-leads">891</div></div>
+        <a href="#contacto" style="background:var(--bg2);color:var(--ac);text-align:center;border-radius:99px;padding:15px;font-weight:800">Quiero recuperar esas conversaciones →</a>
+      </div>
+    </div>
+    <p style="text-align:center;color:var(--mut);font-size:12.5px;margin:20px 0 0">Estimación orientativa basada en los datos introducidos. Los resultados reales dependen de cada evento.</p>
+  </div>
+</section>
+
+<!-- 10 ANALÍTICA -->
+<section id="analitica" data-scene="bars" style="padding:110px 6vw;background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap g2" style="display:grid;grid-template-columns:minmax(300px,.9fr) minmax(320px,1.1fr);gap:50px;align-items:center">
+    <div>
+      <div class="kick"><span class="n">10</span><span class="l"></span><span class="t">Analítica</span></div>
+      <h2 class="grotesk" style="font-size:clamp(32px,3.8vw,52px);letter-spacing:-.035em;line-height:1.05;margin:0 0 16px">Convierte cada conversación en <span style="color:var(--ac)">información útil</span>.</h2>
+      <p style="color:var(--mut);font-size:16px;line-height:1.65;margin:0 0 24px">Preguntas frecuentes, productos más consultados, idiomas, horas de mayor actividad, leads cualificados y reuniones reservadas: todo queda registrado y disponible para tu equipo.</p>
+      <a href="#contacto" class="alink">Quiero ver mi panel de conversaciones <span class="ar" aria-hidden="true">→</span></a>
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 24px 60px rgba(10,16,46,.10)" aria-label="Panel de analítica con datos de ejemplo">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-weight:800;font-size:15px">Panel de conversaciones</div><span style="font-size:11px;font-weight:800;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--mut);background:var(--bg2)">DATOS DE EJEMPLO</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px"><div style="font-size:11px;color:var(--mut);font-weight:700">Conversaciones</div><div data-cnt="1284" class="grotesk" style="font-size:26px;font-weight:700">1.284</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px"><div style="font-size:11px;color:var(--mut);font-weight:700">Leads captados</div><div data-cnt="312" class="grotesk" style="font-size:26px;font-weight:700;color:var(--ac)">312</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px"><div style="font-size:11px;color:var(--mut);font-weight:700">Reuniones</div><div data-cnt="57" class="grotesk" style="font-size:26px;font-weight:700">57</div></div>
+      </div>
+      <div id="bars" style="display:flex;align-items:flex-end;gap:8px;height:110px;padding:0 4px" aria-hidden="true"></div>
+      <div style="display:flex;justify-content:space-between;color:var(--mut);font-size:11px;margin-top:8px"><span>09:00</span><span>Hora de mayor actividad: 12:00</span><span>19:00</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 SEGURIDAD -->
+<section id="seguridad" style="padding:110px 6vw;border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="kick"><span class="n">11</span><span class="l"></span><span class="t">Seguridad y privacidad</span></div>
+    <h2 class="grotesk" style="font-size:clamp(30px,3.6vw,48px);letter-spacing:-.035em;margin:0 0 14px;max-width:24ch">La inteligencia artificial también debe ser <span style="color:var(--ac)">responsable</span>.</h2>
+    <p style="color:var(--mut);font-size:16px;max-width:64ch;margin:0 0 16px">ExpoBot responde solo con las fuentes que tú apruebas, y siempre puede derivar la conversación a una persona.</p>
+    <p style="color:var(--mut);font-size:14px;max-width:70ch;margin:0 0 40px;line-height:1.7">¿No organizas ferias? ExpoBot también implanta chatbots con IA para empresas de cualquier sector que quieran automatizar su atención al cliente, responder 24/7 y captar leads en su web, WhatsApp y Telegram. <a href="#contacto">Cuéntanos tu caso</a>.</p>
+    <div id="seguridad-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px"></div>
+  </div>
+</section>
+
+<!-- 12 PROCESO -->
+<section id="proceso" style="padding:110px 6vw;background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="kick"><span class="n">12</span><span class="l"></span><span class="t">Proceso</span></div>
+    <h2 class="sec" style="margin-bottom:48px">Tu chatbot listo en <span style="color:var(--ac)">cuatro pasos</span>.</h2>
+    <div id="proceso-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px"></div>
+    <div style="text-align:center;margin-top:40px"><a href="#contacto" class="btn-ink" style="font-size:16px">Empezar mi proyecto →</a></div>
+  </div>
+</section>
+
+<!-- 13 PRUEBA SOCIAL -->
+<section id="prueba-social" style="padding:110px 6vw;border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="kick"><span class="n">13</span><span class="l"></span><span class="t">Prueba social</span></div>
+    <h2 class="grotesk" style="font-size:clamp(30px,3.6vw,48px);letter-spacing:-.035em;margin:0 0 14px">Conversaciones que se convierten en oportunidades.</h2>
+    <p style="color:var(--mut);margin:0 0 40px;font-size:15px">Ferias y recintos que ya atienden con ExpoBot.</p>
+    <div id="logos" style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:44px" aria-label="Ferias que usan ExpoBot"></div>
+    <div id="metricas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:44px"></div>
+    <div id="testimonios" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:44px"></div>
+    <div class="case-grid" id="caseCard" style="background:var(--ink);border-radius:24px;padding:40px;display:grid;grid-template-columns:minmax(280px,1.2fr) minmax(240px,1fr);gap:36px;align-items:center">
+      <div>
+        <div style="font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8FA6FF;margin-bottom:14px">Caso de éxito · Feria de muestras regional</div>
+        <h3 class="grotesk" style="font-size:clamp(22px,2.6vw,32px);letter-spacing:-.02em;line-height:1.15;margin:0 0 14px;color:#fff">De 2 personas al teléfono a 9.400 conversaciones atendidas en una edición.</h3>
+        <p style="color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.7;margin:0 0 22px">Una feria de muestras con 40 años de historia integró ExpoBot en su web y WhatsApp seis semanas antes de la edición. El asistente absorbió las dudas de entradas, horarios y aparcamiento, y derivó al equipo solo las consultas complejas — incluidas 47 empresas interesadas en exponer en la siguiente edición.</p>
+        <a href="#contacto" style="display:inline-flex;align-items:center;gap:8px;color:#fff;font-weight:800;font-size:14.5px;background:var(--ac);border-radius:99px;padding:13px 24px">Quiero resultados así <span class="ar" aria-hidden="true">→</span></a>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px"><div class="grotesk" style="font-size:30px;font-weight:700;color:#fff">9.400</div><div style="color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600">conversaciones en 3 semanas</div></div>
+        <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px"><div class="grotesk" style="font-size:30px;font-weight:700;color:#8FA6FF">86%</div><div style="color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600">resueltas sin intervención humana</div></div>
+        <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px"><div class="grotesk" style="font-size:30px;font-weight:700;color:#fff">47</div><div style="color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600">expositores potenciales captados</div></div>
+        <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px"><div class="grotesk" style="font-size:30px;font-weight:700;color:#8FA6FF">4 idiomas</div><div style="color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600">atendidos automáticamente</div></div>
+      </div>
+    </div>
+    <p style="color:var(--mut);font-size:11.5px;margin:18px 0 0;text-align:right">* Contenido provisional de ejemplo, pendiente de sustituir por casos reales verificados.</p>
+  </div>
+</section>
+
+<!-- 14 FAQ -->
+<section id="faq" style="padding:110px 6vw;background:var(--bg2);border-top:1px solid var(--line)">
+  <div style="max-width:840px;margin:0 auto">
+    <div class="kick" style="justify-content:center"><span class="n">14</span><span class="l"></span><span class="t">FAQ</span></div>
+    <h2 class="grotesk" style="font-size:clamp(32px,3.8vw,52px);letter-spacing:-.035em;margin:0 0 40px;text-align:center">Preguntas frecuentes</h2>
+    <div id="faqList" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div style="text-align:center;margin-top:40px">
+      <p style="color:var(--mut);font-size:14.5px;margin:0 0 14px">¿Te queda alguna duda sin responder?</p>
+      <div style="display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button id="askBotBtn" class="chip-ghost" style="border-color:var(--ink);color:var(--ink);padding:13px 24px;font-size:14px">Pregúntale a ExpoBot</button>
+        <a href="#contacto" class="btn-ac" style="font-size:14px">Hablar con el equipo →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL + FORM -->
+<section id="contacto" data-scene="cierre" style="padding:120px 6vw;background:linear-gradient(160deg, #2F5BFF 0%, #1D3FDB 100%);border-radius:48px 48px 0 0;position:relative;overflow:hidden">
+  <div aria-hidden="true" data-liquid style="position:absolute;left:4%;top:6%;width:480px;height:440px;background:linear-gradient(135deg,rgba(255,255,255,.20),rgba(107,78,255,.30));filter:blur(40px);animation:liquid1 10s ease-in-out infinite;pointer-events:none;will-change:transform,border-radius"></div>
+  <div aria-hidden="true" data-liquid style="position:absolute;right:2%;bottom:4%;width:440px;height:420px;background:linear-gradient(225deg,rgba(43,179,255,.28),rgba(255,255,255,.12));filter:blur(40px);animation:liquid2 13s ease-in-out infinite;pointer-events:none;will-change:transform,border-radius"></div>
+  <div aria-hidden="true" class="grotesk" style="position:absolute;left:50%;top:-6vw;transform:translateX(-50%);font-weight:700;font-size:20vw;line-height:1;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.12);white-space:nowrap;pointer-events:none;user-select:none">EXPOBOT</div>
+  <div style="max-width:1080px;margin:0 auto;position:relative">
+    <div aria-hidden="true" style="display:flex;justify-content:center;margin-bottom:44px"><div style="position:relative;width:min(560px,92vw);height:170px">
+      <div data-fx="corelogo" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:96px;height:96px;border-radius:50%;background:var(--bg2);display:grid;place-items:center;box-shadow:0 20px 60px rgba(10,16,46,.3)"><img src="/brand/isotipo.png" alt="" width="52" height="56" style="display:block"></div>
+      <span data-fx="orb" data-dx="-70" data-dy="-40" style="position:absolute;left:6%;top:14%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:800;color:#fff">Web</span>
+      <span data-fx="orb" data-dx="70" data-dy="-45" style="position:absolute;right:7%;top:8%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:800;color:#fff">WhatsApp</span>
+      <span data-fx="orb" data-dx="-80" data-dy="45" style="position:absolute;left:3%;bottom:12%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:800;color:#fff">Telegram</span>
+      <span data-fx="orb" data-dx="85" data-dy="40" style="position:absolute;right:4%;bottom:16%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:800;color:#fff">CRM</span>
+      <span data-fx="orb" data-dx="0" data-dy="-70" style="position:absolute;left:44%;top:0;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:800;color:#fff">Stand</span>
+    </div></div>
+    <h2 class="grotesk" style="font-size:clamp(34px,4.6vw,64px);letter-spacing:-.035em;margin:0 0 16px;text-align:center;text-wrap:balance;color:#fff">En tu próxima feria, no dejes ninguna conversación sin atender.</h2>
+    <p style="color:rgba(255,255,255,.75);text-align:center;font-size:17px;max-width:60ch;margin:0 auto 28px">Cuéntanos cómo es tu feria y te mostraremos cómo ExpoBot puede integrarse en tu recinto, tu web y tus canales de mensajería.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin:0 0 40px;font-size:13.5px;color:rgba(255,255,255,.85);font-weight:700">
+      <span>✓ Demo gratuita y sin compromiso</span><span>✓ Activación por edición o anual</span><span>✓ Adaptado al RGPD</span>
+    </div>
+    <div style="max-width:560px;margin:0 auto;background:var(--bg2);border-radius:24px;padding:36px;box-shadow:0 40px 100px rgba(10,16,46,.35)">
+      <div id="formOk" class="hide" style="text-align:center;padding:30px 10px;animation:popin .4s ease both">
+        <div style="width:58px;height:58px;border-radius:50%;background:var(--ac-soft);border:2px solid var(--ac);display:grid;place-items:center;margin:0 auto 18px;color:var(--ac);font-size:26px;font-weight:800">✓</div>
+        <div class="grotesk" style="font-size:22px;font-weight:600;margin-bottom:8px">Solicitud enviada</div>
+        <p style="color:var(--mut);font-size:14.5px;line-height:1.6">Gracias. Te contactaremos muy pronto para preparar la demo de tu evento.</p>
+      </div>
+      <div id="formBox" style="display:flex;flex-direction:column;gap:16px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--mut);margin-bottom:8px"><span id="stepNum">Paso 1 de 3</span><span id="stepLabel">Tus datos</span></div>
+          <div style="height:5px;border-radius:3px;background:var(--bg);overflow:hidden"><div id="stepBar" style="height:100%;width:33%;background:var(--ac);border-radius:3px;transition:width .35s"></div></div>
+        </div>
+        <div id="step1" style="display:flex;flex-direction:column;gap:14px;animation:popin .3s ease both">
+          <label class="flabel">Nombre<input id="fNombre" class="finput" placeholder="Tu nombre"></label>
+          <label class="flabel">Empresa<input id="fEmpresa" class="finput" placeholder="Tu empresa"></label>
+          <label class="flabel">Email o teléfono<input id="fEmail" class="finput" placeholder="nombre@empresa.com"></label>
+        </div>
+        <div id="step2" class="hide" style="display:flex;flex-direction:column;gap:14px;animation:popin .3s ease both">
+          <label class="flabel">Tipo de proyecto<select id="fTipo" class="finput">
+            <option value="">Selecciona una opción</option><option>Organizo una feria de muestras</option><option>Gestiono un recinto ferial</option><option>Organizo un congreso</option><option>Chatbot para mi web</option><option>WhatsApp / Telegram</option><option>Chatbot para mi empresa (otro sector)</option><option>Otro</option>
+          </select></label>
+          <label class="flabel">Fecha aproximada de la feria (opcional)<input id="fFecha" class="finput" placeholder="p. ej. octubre 2026"></label>
+          <div>
+            <div class="flabel" style="margin-bottom:8px">Canales de interés</div>
+            <div id="canalChips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+          </div>
+        </div>
+        <div id="step3" class="hide" style="display:flex;flex-direction:column;gap:14px;animation:popin .3s ease both">
+          <label class="flabel">Mensaje (opcional)<textarea id="fMsg" class="finput" rows="4" placeholder="Cuéntanos tu evento, número de visitantes, integraciones…" style="resize:vertical"></textarea></label>
+          <div style="background:var(--bg);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--mut);line-height:1.6"><strong style="color:var(--ink)">Resumen:</strong> <span id="formResumen">—</span></div>
+          <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:12.5px;color:var(--mut);line-height:1.55">
+            <input type="checkbox" id="fPriv" style="margin-top:2px;width:16px;height:16px;accent-color:var(--ac);flex:none">
+            <span>He leído y acepto la <a href="%%BASE%%/privacidad" target="_blank">política de privacidad</a>. *</span>
+          </label>
+          <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:12.5px;color:var(--mut);line-height:1.55">
+            <input type="checkbox" id="fCom" style="margin-top:2px;width:16px;height:16px;accent-color:var(--ac);flex:none">
+            <span>Acepto recibir comunicaciones comerciales de ExpoBot sobre sus servicios (opcional).</span>
+          </label>
+        </div>
+        <div id="formError" role="alert" class="hide" style="color:var(--warn);font-size:13px;font-weight:700"></div>
+        <p style="color:var(--mut);font-size:12px;margin:0;text-align:center;font-weight:700">🔒 Solo te pedimos lo imprescindible · Respuesta en 24 h laborables</p>
+        <div style="display:flex;gap:10px">
+          <button id="formBack" class="chip-ghost hide" style="padding:15px 22px;font-size:15px">← Atrás</button>
+          <button id="formNext" style="cursor:pointer;flex:1;background:var(--grad);border:none;color:#fff;border-radius:99px;padding:16px;font-size:16px;font-weight:800;font-family:'Manrope',sans-serif;box-shadow:0 10px 30px rgba(47,91,255,.35)">Continuar →</button>
+        </div>
+        <p style="color:var(--mut);font-size:11px;margin:0;text-align:left;line-height:1.6"><strong>Información básica sobre protección de datos:</strong> Responsable: ExpoBot. Finalidad: atender tu solicitud de demo y contacto comercial. Legitimación: medidas precontractuales y tu consentimiento. Derechos: acceso, rectificación, supresión y otros, escribiendo a contacto@expobot.es. Más información en la <a href="%%BASE%%/privacidad" target="_blank">política de privacidad</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="padding:70px 6vw 40px;background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:34px">
+    <div>
+      <img src="/brand/logo.png" alt="ExpoBot" style="display:block;height:38px;width:auto;margin-bottom:14px">
+      <p style="color:var(--mut);font-size:13.5px;line-height:1.6;margin:0">IA conversacional para empresas que quieren aprovechar cada oportunidad.</p>
+      <p style="color:var(--mut);font-size:12px;line-height:1.7;margin:12px 0 0">Chatbot con inteligencia artificial para empresas y atención al cliente automatizada. Especialistas en chatbot para ferias de muestras, recintos feriales, congresos, captación de leads y de expositores. Asistente virtual 24/7 por web, WhatsApp y Telegram en toda España.</p>
+    </div>
+    <div><div style="font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:14px">Soluciones</div><div style="display:flex;flex-direction:column;gap:9px;font-size:14px"><a class="f" href="%%BASE%%/ferias">Ferias y eventos</a><a class="f" href="%%BASE%%/chatbot-web">Chatbot web</a><a class="f" href="%%BASE%%/whatsapp">WhatsApp</a><a class="f" href="%%BASE%%/telegram">Telegram</a></div></div>
+    <div><div style="font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:14px">Producto</div><div style="display:flex;flex-direction:column;gap:9px;font-size:14px"><a class="f" href="%%BASE%%/producto">Producto completo</a><a class="f" href="%%BASE%%/integraciones">Integraciones</a><a class="f" href="%%BASE%%/precios">Precios</a><a class="f" href="#analitica">Analítica</a></div></div>
+    <div><div style="font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:14px">Legal</div><div style="display:flex;flex-direction:column;gap:9px;font-size:14px"><a class="f" href="%%BASE%%/aviso-legal">Aviso legal</a><a class="f" href="%%BASE%%/privacidad">Política de privacidad</a><a class="f" href="%%BASE%%/cookies">Política de cookies</a><button id="reopenCookies" style="cursor:pointer;background:none;border:none;padding:0;text-align:left;font-family:'Manrope',sans-serif;font-size:14px;color:var(--ink)">Configurar cookies</button><a class="f" href="%%BASE%%/condiciones">Condiciones y accesibilidad</a></div></div>
+    <div><div style="font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:14px">Contacto</div><div style="display:flex;flex-direction:column;gap:9px;font-size:14px;color:var(--mut)"><a class="f" href="mailto:contacto@expobot.es">contacto@expobot.es</a><span>LinkedIn · Instagram · X</span><span>España · servicio en toda Europa</span></div></div>
+  </div>
+  <div class="wrap" style="margin:40px auto 0;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;color:var(--mut);font-size:12.5px"><span>© 2026 ExpoBot. Todos los derechos reservados. · <a href="%%BASE%%/aviso-legal">Información legal</a></span><span>Asistente con inteligencia artificial · las conversaciones de esta web son demostrativas</span></div>
+</footer>
+
+<!-- BANNER DE COOKIES -->
+<div id="cookieBanner" class="hide" role="dialog" aria-label="Configuración de cookies" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483100;width:min(680px,calc(100vw - 32px));background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 24px;box-shadow:0 30px 80px rgba(10,16,46,.3);animation:popin .4s ease both">
+  <div style="display:flex;gap:14px;align-items:flex-start">
+    <img src="/brand/isotipo.png" alt="" width="30" height="32" style="display:block;flex:none;margin-top:2px">
+    <div>
+      <div style="font-weight:800;font-size:15px;margin-bottom:6px">Esta web usa cookies</div>
+      <p style="color:var(--mut);font-size:13.5px;line-height:1.6;margin:0">Usamos cookies técnicas necesarias y, solo si las aceptas, cookies analíticas y de marketing. Puedes cambiar tu decisión cuando quieras. <a href="%%BASE%%/cookies">Más información</a></p>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:flex-end">
+    <a href="%%BASE%%/cookies" class="chip-ghost" style="text-decoration:none;display:inline-block">Configurar</a>
+    <button id="ckReject" class="chip-ghost" style="border-color:var(--ink);color:var(--ink)">Rechazar todas</button>
+    <button id="ckAccept" style="cursor:pointer;background:var(--ac);border:none;color:#fff;border-radius:99px;padding:12px 22px;font-weight:800;font-size:13px;font-family:'Manrope',sans-serif">Aceptar todas</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var fine = window.matchMedia && matchMedia("(pointer: fine)").matches;
+  var fmt = function (n) { return n.toLocaleString("es-ES"); };
+  var esc = function (t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; };
+
+  /* ---------- tema ---------- */
+  var theme = "";
+  try { theme = localStorage.getItem("expobot-theme") || ""; } catch (e) {}
+  function applyTheme() {
+    if (theme) document.documentElement.dataset.theme = theme;
+    else delete document.documentElement.dataset.theme;
+    $("themeBtn").textContent = theme === "dark" ? "☀" : "☾";
+  }
+  applyTheme();
+  $("themeBtn").onclick = function () {
+    theme = theme === "dark" ? "" : "dark";
+    try { localStorage.setItem("expobot-theme", theme); } catch (e) {}
+    applyTheme();
+  };
+
+  /* ---------- menú móvil ---------- */
+  $("burger").onclick = function () { $("mobileMenu").classList.remove("hide"); this.setAttribute("aria-expanded", "true"); };
+  $("menuClose").onclick = function () { $("mobileMenu").classList.add("hide"); $("burger").setAttribute("aria-expanded", "false"); };
+  $("mobileLinks").addEventListener("click", function (e) { if (e.target.tagName === "A") $("mobileMenu").classList.add("hide"); });
+
+  /* ---------- datos ---------- */
+  var PROBLEMAS = [
+    ["01", "Equipo de organización saturado", "Tu equipo atiende una consulta mientras decenas de asistentes y expositores esperan… o desisten."],
+    ["02", "Preguntas repetidas", "Horarios, entradas, acreditaciones, planos, aparcamiento: las mismas dudas, miles de veces."],
+    ["03", "Contactos que no se registran", "Visitantes y expositores potenciales que se marchan sin dejar ningún dato."],
+    ["04", "Idiomas distintos", "Asistentes internacionales que no siempre pueden ser atendidos en su idioma."],
+    ["05", "Información que se pierde", "Consultas, incidencias y peticiones que nunca llegan a los sistemas del recinto."],
+    ["06", "Seguimiento tardío", "Cuando el equipo responde días después, el expositor o visitante ya ha perdido el interés."]
+  ];
+  $("problemas").innerHTML = PROBLEMAS.map(function (p) {
+    return '<div class="card"><div class="grotesk" style="font-size:30px;color:transparent;-webkit-text-stroke:1.5px var(--ac);font-weight:700;margin-bottom:12px">' + p[0] + '</div><div style="font-weight:800;font-size:17px;margin-bottom:6px">' + p[1] + '</div><div style="color:var(--mut);font-size:14px;line-height:1.55">' + p[2] + "</div></div>";
+  }).join("");
+
+  var PASOS = [
+    ["1", "Entrenamos ExpoBot", "Con la información real de tu feria: programa, entradas, planos, expositores, servicios, normativa y FAQs."],
+    ["2", "Lo conectamos a tus canales", "Web de la feria, WhatsApp, Telegram, códigos QR en el recinto, pantallas táctiles y landings de campaña."],
+    ["3", "Atiende y cualifica", "Responde a asistentes y expositores, detecta la intención, solicita datos y deriva cada consulta al área adecuada."],
+    ["4", "Envía la oportunidad a tu equipo", "Cada lead —asistente registrado o expositor potencial— llega a tu CRM, email o sistema interno, clasificado."]
+  ];
+  $("pasos").innerHTML = PASOS.map(function (s) {
+    return '<div class="card" style="background:var(--bg);border-radius:20px;padding:30px 26px;position:relative;overflow:hidden"><div class="grotesk" aria-hidden="true" style="position:absolute;right:-10px;top:-22px;font-weight:700;font-size:110px;line-height:1;color:transparent;-webkit-text-stroke:1.5px rgba(47,91,255,.18);user-select:none">' + s[0] + '</div><div class="grotesk" style="width:40px;height:40px;border-radius:12px;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:700;font-size:17px;margin-bottom:18px;box-shadow:0 8px 20px rgba(47,91,255,.3);position:relative">' + s[0] + '</div><div class="grotesk" style="font-weight:600;font-size:19px;margin-bottom:8px;position:relative">' + s[1] + '</div><div style="color:var(--mut);font-size:14px;line-height:1.6;position:relative">' + s[2] + "</div></div>";
+  }).join("");
+
+  var CANALES = [
+    ["⌘", "Web", "var(--ac)", ["Chat integrado en la web de tu feria", "Instalación mediante script o componente", "Adaptado a ordenador, móvil y tablet", "Compatible con landings de cada edición"]],
+    ["W", "WhatsApp", "#1E9E5C", ["Atención automática 24/7 a asistentes", "Captación con QR en el recinto y la publicidad", "Derivación a tu equipo de organización", "Seguimiento posterior a la edición"]],
+    ["T", "Telegram", "#2E8FE6", ["Canales para expositores y montadores", "Difusión de avisos y programa", "Consultas automatizadas", "Integración con los sistemas del recinto"]]
+  ];
+  $("canalesGrid").innerHTML = CANALES.map(function (c) {
+    return '<div data-fx="ch" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:30px;backdrop-filter:blur(6px)"><div class="grotesk" style="width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:' + c[2] + ';color:#fff;font-weight:700;font-size:19px;margin-bottom:18px">' + c[0] + '</div><div class="grotesk" style="font-size:23px;font-weight:600;margin-bottom:14px;color:#fff">' + c[1] + "</div>" +
+      c[3].map(function (it) { return '<div style="display:flex;gap:9px;color:rgba(255,255,255,.65);font-size:14px;line-height:1.5;margin-bottom:9px"><span style="color:' + c[2] + ';font-weight:800">·</span>' + it + "</div>"; }).join("") + "</div>";
+  }).join("");
+
+  var MOMENTOS = [
+    ["Antes", "Calienta la edición", ["Vende entradas y resuelve dudas", "Presenta programa y actividades", "Capta expositores para la edición", "Gestiona acreditaciones", "Registra contactos interesados"]],
+    ["Durante", "Atiende sin límite", ["Responde consultas simultáneas de asistentes", "Informa de planos, horarios y servicios", "Atiende a expositores y montadores", "Realiza encuestas de satisfacción", "Deriva incidencias al área adecuada"]],
+    ["Después", "Prepara la siguiente", ["Envía la información solicitada", "Retoma conversaciones con expositores", "Clasifica oportunidades comerciales", "Analiza las preguntas más frecuentes", "Actualiza el CRM del recinto"]]
+  ];
+  $("momentos").innerHTML = MOMENTOS.map(function (m) {
+    return '<div style="flex:none;width:min(460px,78vw);box-sizing:border-box;padding:30px;background:var(--bg2);border:1px solid var(--line);border-radius:22px;position:relative;box-shadow:0 16px 44px rgba(10,16,46,.08);display:flex;flex-direction:column"><div class="grotesk" style="font-size:52px;font-weight:700;line-height:1;color:transparent;-webkit-text-stroke:1.5px var(--ac);text-transform:uppercase;margin-bottom:12px">' + m[0] + '</div><div class="grotesk" style="font-size:22px;font-weight:600;margin-bottom:16px">' + m[1] + "</div>" +
+      m[2].map(function (it) { return '<div style="color:var(--mut);font-size:14.5px;line-height:1.5;margin-bottom:9px;display:flex;gap:8px"><span style="color:var(--ac)">—</span>' + it + "</div>"; }).join("") + "</div>";
+  }).join("");
+
+  var FEATURES = ["IA entrenada con contenido propio", "Captación de leads", "Cualificación comercial", "Integración con CRM", "Integración con ERP", "Reservas y citas", "Catálogos interactivos", "Recomendación de productos", "Atención multilingüe", "Derivación a agentes humanos", "Analítica de conversaciones", "Historial y trazabilidad", "Formularios conversacionales", "Códigos QR para el recinto", "Automatizaciones posteriores", "Personalización visual completa", "Gestión de permisos", "Protección de datos", "Integración mediante API", "Funcionamiento 24/7"];
+  $("features").innerHTML = FEATURES.map(function (f) {
+    return '<div class="feat-chip"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:var(--ac);flex:none;transform:rotate(45deg)"></span>' + f + "</div>";
+  }).join("");
+
+  var INTS = ["CRM", "ERP", "Email marketing", "Calendarios", "Automatización", "Sistemas de reservas", "Bases de datos", "Catálogos", "Herramientas internas", "APIs personalizadas"];
+  $("intChips").innerHTML = INTS.map(function (i) { return '<div class="int-chip">' + i + "</div>"; }).join("");
+
+  var CASOS = [
+    ["Ferias de muestras", "Miles de dudas de asistentes sobre entradas, horarios, actividades y accesos.", "Responde al instante en web, WhatsApp y Telegram, vende la feria y registra a cada interesado.", "Menos carga de atención y más visitantes informados y registrados.", ["Web", "WhatsApp", "Telegram"]],
+    ["Recintos feriales", "Información dispersa entre expositores, montadores, visitantes y proveedores.", "Un asistente central para servicios, planos, horarios, normativa y contacto con cada área del recinto.", "Comunicación unificada durante todo el calendario ferial.", ["Web", "Telegram"]],
+    ["Captación de expositores", "Empresas interesadas en exponer que escriben fuera de horario o se pierden entre emails.", "Envía el dossier, tarifas y planos, cualifica el interés y pasa el contacto al equipo comercial.", "Más expositores captados para la siguiente edición.", ["Web", "WhatsApp"]],
+    ["Congresos", "Ponentes, salas y horarios que cambian a última hora.", "Información siempre actualizada y notificaciones a los asistentes.", "Menos confusión y mejor experiencia del asistente.", ["Web", "Telegram"]],
+    ["Acreditaciones y accesos", "Colas y consultas repetidas sobre entradas, invitaciones y acreditaciones profesionales.", "Resuelve dudas, envía entradas y guía a cada perfil (visitante, prensa, expositor) a su acceso.", "Menos colas y un equipo de acreditaciones descargado.", ["Web", "WhatsApp", "QR"]],
+    ["Ediciones y campañas", "Picos de consultas concentrados en las semanas previas a cada edición.", "Activación rápida con fecha de inicio y fin, escalando la atención sin ampliar plantilla.", "Atención completa en el pico de demanda, cada edición.", ["Web", "WhatsApp"]]
+  ];
+  $("casos-grid").innerHTML = CASOS.map(function (c) {
+    return '<div class="card" style="background:var(--bg);border-radius:20px;padding:28px"><div class="grotesk" style="font-size:21px;font-weight:600;margin-bottom:16px">' + c[0] + '</div><div style="font-size:13.5px;line-height:1.55;color:var(--mut);margin-bottom:10px"><span style="color:#E0533D;font-weight:800;font-size:11px;letter-spacing:.08em">PROBLEMA · </span>' + c[1] + '</div><div style="font-size:13.5px;line-height:1.55;color:var(--mut);margin-bottom:10px"><span style="color:var(--ac);font-weight:800;font-size:11px;letter-spacing:.08em">EXPOBOT · </span>' + c[2] + '</div><div style="font-size:13.5px;line-height:1.55;color:var(--mut);margin-bottom:14px"><span style="color:#1E9E5C;font-weight:800;font-size:11px;letter-spacing:.08em">RESULTADO ESPERADO · </span>' + c[3] + '</div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      c[4].map(function (ch) { return '<span style="font-size:11.5px;font-weight:800;border:1px solid var(--line);border-radius:6px;padding:3px 9px;color:var(--mut);background:var(--bg2)">' + ch + "</span>"; }).join("") + "</div></div>";
+  }).join("");
+
+  var SEG = [
+    ["Fuentes controladas", "ExpoBot responde únicamente con la información que tu empresa aprueba."],
+    ["Protección de datos", "Tratamiento seguro y minimización de datos personales."],
+    ["Adaptación al RGPD", "Gestión de consentimiento y políticas de conservación configurables."],
+    ["Trazabilidad", "Historial completo de conversaciones y respuestas."],
+    ["Permisos", "Control de quién accede a qué información y estadísticas."],
+    ["Derivación humana", "Cualquier conversación puede pasar a una persona de tu equipo."]
+  ];
+  $("seguridad-grid").innerHTML = SEG.map(function (s) {
+    return '<div style="border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--bg2)"><div style="font-weight:800;font-size:14.5px;margin-bottom:5px">' + s[0] + '</div><div style="color:var(--mut);font-size:13.5px;line-height:1.5">' + s[1] + "</div></div>";
+  }).join("");
+
+  var PROC = [
+    ["1", "Analizamos tu proyecto", "Canales, objetivos, público, evento e integraciones necesarias."],
+    ["2", "Diseñamos la conversación", "Estructura, tono, contenidos, formularios y recorridos del visitante."],
+    ["3", "Integramos y entrenamos", "Conectamos ExpoBot con tu información y tus herramientas."],
+    ["4", "Lanzamos y optimizamos", "Probamos, publicamos y analizamos las conversaciones para mejorar."]
+  ];
+  $("proceso-grid").innerHTML = PROC.map(function (p) {
+    return '<div class="card" style="background:var(--bg);border-radius:20px;padding:28px"><div class="grotesk" style="font-size:44px;font-weight:700;color:transparent;-webkit-text-stroke:1.5px var(--ac);margin-bottom:12px">' + p[0] + '</div><div style="font-weight:800;font-size:17px;margin-bottom:8px">' + p[1] + '</div><div style="color:var(--mut);font-size:14px;line-height:1.6">' + p[2] + "</div></div>";
+  }).join("");
+
+  var LOGOS = ["Feria de Muestras del Norte", "ExpoAgro Levante", "Salón Gourmet Ibérico", "Recinto Ferial Meseta", "Congreso TurisTech", "FeriaHogar Atlántico"];
+  $("logos").innerHTML = LOGOS.map(function (l) { return '<div class="grotesk" style="border:1px solid var(--line);background:var(--bg2);border-radius:14px;padding:16px 24px;font-weight:700;font-size:15px;letter-spacing:-.01em;color:var(--mut)">' + l + "</div>"; }).join("");
+
+  var METRICAS = [["+120.000", "conversaciones atendidas"], ["14", "ferias y recintos con ExpoBot"], ["92%", "consultas resueltas al momento"], ["24/7", "atención, también en fin de semana"]];
+  $("metricas").innerHTML = METRICAS.map(function (m) {
+    return '<div style="background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:28px;text-align:center"><div class="grotesk" style="font-size:44px;font-weight:700;color:var(--ac);letter-spacing:-.02em">' + m[0] + '</div><div style="color:var(--mut);font-size:14px;font-weight:600;margin-top:6px">' + m[1] + "</div></div>";
+  }).join("");
+
+  var TESTIS = [
+    ["Antes de ExpoBot, la semana previa a la feria era un colapso de llamadas y correos. Ahora el 90% de las dudas se resuelven solas y mi equipo se dedica a los expositores.", "Laura M.", "Directora · Feria de Muestras del Norte", "LM"],
+    ["Lo activamos para una edición y lo mantuvimos todo el año. Las empresas que quieren exponer nos llegan ya cualificadas al CRM, con sector y necesidades.", "Javier R.", "Gerente · Recinto Ferial Meseta", "JR"],
+    ["El WhatsApp con QR en los accesos fue lo más usado de toda la feria. Los visitantes preguntaban el programa desde la cola de entrada.", "Carmen S.", "Responsable de comunicación · Salón Gourmet Ibérico", "CS"]
+  ];
+  $("testimonios").innerHTML = TESTIS.map(function (t) {
+    return '<figure style="background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:30px;margin:0;display:flex;flex-direction:column;gap:18px"><div style="color:var(--ac);font-size:22px;letter-spacing:2px" aria-hidden="true">★★★★★</div><blockquote style="margin:0;font-size:15.5px;line-height:1.65;font-weight:600">«' + t[0] + '»</blockquote><figcaption style="display:flex;align-items:center;gap:12px;margin-top:auto"><span style="width:42px;height:42px;border-radius:50%;background:var(--ac-soft);color:var(--ac);display:grid;place-items:center;font-weight:800;font-size:14px;flex:none">' + t[3] + '</span><span><span style="display:block;font-weight:800;font-size:14px">' + t[1] + '</span><span style="display:block;color:var(--mut);font-size:12.5px">' + t[2] + "</span></span></figcaption></figure>";
+  }).join("");
+
+  var BARSH = [28, 40, 55, 72, 92, 100, 86, 64, 78, 58, 42, 30];
+  $("bars").innerHTML = BARSH.map(function (h, i) {
+    return '<div data-fx="bar" style="flex:1;background:' + (i === 5 ? "var(--ac)" : "rgba(47,91,255,.35)") + ";height:" + h + '%;border-radius:5px 5px 0 0;transform-origin:bottom"></div>';
+  }).join("");
+
+  /* ---------- FAQ ---------- */
+  var FAQS = [
+    ["¿Qué información necesita ExpoBot para funcionar?", "La información real de tu empresa: web, catálogos, fichas técnicas, tarifas, preguntas frecuentes y datos del evento. Con eso entrenamos las respuestas y controlamos las fuentes."],
+    ["¿Puede conectarse con nuestra web actual?", "Sí. Se instala con un pequeño script o componente, adaptado a vuestra identidad visual, sin rehacer la web."],
+    ["¿Puede funcionar en WhatsApp y Telegram al mismo tiempo?", "Sí. La misma inteligencia y la misma información responden en todos los canales simultáneamente."],
+    ["¿Puede responder en varios idiomas?", "Sí, detecta el idioma del visitante y responde en él, con la misma base de conocimiento."],
+    ["¿Puede enviar los contactos a nuestro CRM?", "Sí: HubSpot, Salesforce, Zoho y otros, además de email, hojas de cálculo o sistemas propios vía API."],
+    ["¿Qué ocurre si no sabe responder?", "Lo indica con claridad, registra la pregunta y puede derivar la conversación a una persona de tu equipo."],
+    ["¿Puede derivar la conversación a una persona?", "Sí, en cualquier momento: a un comercial concreto, a un grupo o a un canal de soporte."],
+    ["¿Cuánto tarda la implantación?", "Depende del alcance. Para una feria o campaña concreta, puede estar activo en pocos días una vez recibida la información."],
+    ["¿Podemos utilizarlo solo durante una feria?", "Sí. Existen activaciones temporales para eventos y campañas, con fecha de inicio y fin."],
+    ["¿Se puede personalizar con nuestra marca?", "Completamente: colores, logotipo, tono de la conversación y mensajes de bienvenida."],
+    ["¿Cómo se protegen los datos?", "Tratamiento seguro, minimización de datos, gestión de consentimiento y adaptación al RGPD, con políticas de conservación configurables."],
+    ["¿Podemos consultar estadísticas?", "Sí: conversaciones, preguntas frecuentes, leads, idiomas, horas de actividad y reuniones reservadas."],
+    ["¿Es necesario cambiar nuestros sistemas actuales?", "No. ExpoBot se adapta a lo que ya usáis mediante integraciones y API."],
+    ["¿Se puede integrar mediante API?", "Sí, tanto para consultar información (catálogos, stock, citas) como para enviar datos a vuestros sistemas."],
+    ["¿Puede usar catálogos y documentación técnica?", "Sí: PDFs, fichas de producto y documentación interna pueden formar parte de su conocimiento y enviarse durante la conversación."]
+  ];
+  var faqOpen = 0;
+  function renderFaq() {
+    $("faqList").innerHTML = FAQS.map(function (f, i) {
+      var open = i === faqOpen;
+      return '<div class="faq-item' + (open ? " open" : "") + '"><button aria-expanded="' + open + '" data-i="' + i + '">' + f[0] + '<span class="pl">+</span></button>' + (open ? '<div class="faq-a">' + f[1] + "</div>" : "") + "</div>";
+    }).join("");
+  }
+  renderFaq();
+  $("faqList").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-i]");
+    if (!b) return;
+    var i = +b.dataset.i;
+    faqOpen = faqOpen === i ? -1 : i;
+    renderFaq();
+  });
+
+  /* ---------- demo interactiva ---------- */
+  var SCEN = {
+    publico: { label: "Feria · público general", msgs: [
+      [1, "¿Dónde puedo comprar las entradas y cuánto cuestan?"],
+      [0, "Puedes comprarlas online o en taquilla. Te envío el enlace de venta y el plano de la feria. ¿Vienes algún día concreto? Te cuento las actividades programadas."],
+      [1, "El sábado. ¿Hay aparcamiento?"],
+      [0, "Sí, hay aparcamiento y el sábado también lanzadera desde el centro. Si me dejas tu email te mando la agenda del sábado y tu entrada."]
+    ] },
+    expositor: { label: "Feria · quiero exponer", msgs: [
+      [1, "Somos una empresa y queremos un stand en la próxima edición de la feria. ¿Cómo funciona?"],
+      [0, "Te ayudo yo mismo: puedo enviarte el dossier de expositor, las tarifas de los espacios y el plano de pabellones. ¿De qué sector es tu empresa?"],
+      [1, "Alimentación gourmet."],
+      [0, "Perfecto: el pabellón 3 concentra alimentación. Registro tus datos y el equipo comercial de la feria te contactará con una propuesta de espacio y ubicación."]
+    ] },
+    recinto: { label: "Recinto ferial", msgs: [
+      [1, "Organizamos un salón profesional y buscamos recinto para 12.000 m² en marzo."],
+      [0, "Encantado de ayudarte. Disponemos de pabellones de hasta 15.000 m², salas anexas y servicios integrales para organizadores. ¿Qué fechas de marzo tenéis en mente?"],
+      [1, "La segunda quincena, de jueves a sábado."],
+      [0, "Hay disponibilidad en esas fechas. Registro tu solicitud con los requisitos del salón y el equipo de eventos del recinto te enviará una propuesta con espacios, tarifas y servicios."]
+    ] },
+    organizador: { label: "Organizador de congresos", msgs: [
+      [1, "Organizamos un congreso con 5.000 asistentes. ¿Puede ExpoBot resolver dudas del programa?"],
+      [0, "Sí: agenda, ponentes, salas, acreditaciones y horarios. Por web, WhatsApp y Telegram a la vez, antes y durante el evento."],
+      [1, "¿Y las inscripciones?"],
+      [0, "Puedo confirmar asistencia, enviar entradas y recordatorios, y registrar cada consulta para vuestro equipo."]
+    ] },
+    agencia: { label: "Recinto · calendario ferial", msgs: [
+      [1, "Nuestro recinto acoge quince certámenes al año. ¿Un solo chatbot puede atenderlos todos?"],
+      [0, "Sí: un asistente central del recinto con contenidos por certamen. Cada feria activa su información (programa, expositores, entradas) en sus fechas, y el resto del año atiendo servicios y alquiler de espacios."],
+      [1, "¿Y las consultas de organizadores que quieren alquilar pabellones?"],
+      [0, "Las atiendo también: envío el dossier de espacios y servicios, registro los requisitos del evento y paso la solicitud a vuestro equipo comercial."]
+    ] }
+  };
+  var scen = "publico", shown = 0, demoTimer = null, demoBusy = false, demoExtra = [], demoSid = "web_" + Math.random().toString(36).slice(2);
+  function renderTabs() {
+    $("scenTabs").innerHTML = Object.keys(SCEN).map(function (k) {
+      return '<button class="scen-tab' + (k === scen ? " on" : "") + '" role="tab" aria-selected="' + (k === scen) + '" data-k="' + k + '">' + SCEN[k].label + "</button>";
+    }).join("");
+  }
+  function bubble(u, text) {
+    return '<div style="display:flex;justify-content:' + (u ? "flex-end" : "flex-start") + ';animation:popin .4s ease both"><div style="max-width:72%;padding:12px 16px;font-size:14.5px;line-height:1.55;border-radius:' + (u ? "16px 16px 4px 16px" : "16px 16px 16px 4px") + ";background:" + (u ? "var(--ac)" : "var(--bg)") + ";color:" + (u ? "#fff" : "var(--ink)") + ";border:" + (u ? "none" : "1px solid var(--line)") + '">' + esc(text) + "</div></div>";
+  }
+  function typingDots() {
+    return '<div style="display:flex;gap:5px;padding:14px 18px;background:var(--bg);border:1px solid var(--line);border-radius:16px 16px 16px 4px;width:fit-content" aria-label="ExpoBot está escribiendo"><span style="width:7px;height:7px;border-radius:50%;background:var(--mut);animation:blink 1.2s infinite"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--mut);animation:blink 1.2s .2s infinite"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--mut);animation:blink 1.2s .4s infinite"></span></div>';
+  }
+  function renderDemo(typing) {
+    var msgs = SCEN[scen].msgs.slice(0, shown);
+    $("demoLog").innerHTML = msgs.map(function (m) { return bubble(m[0], m[1]); }).join("") +
+      demoExtra.map(function (m) { return bubble(m[0], m[1]); }).join("") +
+      (typing ? typingDots() : "");
+    $("demoLog").scrollTop = $("demoLog").scrollHeight;
+  }
+  function playScen(k) {
+    clearTimeout(demoTimer);
+    scen = k; shown = 0; demoExtra = []; demoBusy = false;
+    renderTabs();
+    renderDemo(true);
+    var step = function () {
+      var total = SCEN[scen].msgs.length;
+      if (shown >= total) { renderDemo(false); return; }
+      demoTimer = setTimeout(function () {
+        shown++;
+        renderDemo(shown < total);
+        step();
+      }, shown === 0 ? 700 : 1400);
+    };
+    step();
+  }
+  $("scenTabs").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-k]");
+    if (b) playScen(b.dataset.k);
+  });
+  $("demoReplay").onclick = function () { playScen(scen); };
+  function askDemo(q) {
+    if (demoBusy) return;
+    clearTimeout(demoTimer);
+    shown = SCEN[scen].msgs.length;
+    demoBusy = true;
+    demoExtra.push([1, q]);
+    $("demoIn").value = "";
+    renderDemo(true);
+    var hist = SCEN[scen].msgs.concat(demoExtra.slice(0, -1)).map(function (m) {
+      return { role: m[0] ? "user" : "assistant", content: m[1] };
+    });
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "%%WEBKEY%%", session_id: demoSid, message: q, page_url: "https://expobot.es/#demo", history: hist.slice(-8) })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      demoBusy = false;
+      demoExtra.push([0, d.reply || "Esta demo no puede responder ahora mismo, pero un ExpoBot real entrenado con la información de tu feria sí lo haría. Solicita una demo y te lo enseñamos."]);
+      renderDemo(false);
+    }).catch(function () {
+      demoBusy = false;
+      demoExtra.push([0, "Esta demo no puede responder preguntas libres ahora mismo, pero un ExpoBot real entrenado con la información de tu feria sí lo haría. Solicita una demo y te lo enseñamos."]);
+      renderDemo(false);
+    });
+  }
+  $("demoSend").onclick = function () { var q = $("demoIn").value.trim(); if (q) askDemo(q); };
+  $("demoIn").addEventListener("keydown", function (e) { if (e.key === "Enter") { var q = $("demoIn").value.trim(); if (q) askDemo(q); } });
+  playScen("publico");
+
+  /* ---------- calculadora ---------- */
+  function calc() {
+    var v = +$("c-visitantes").value, d = +$("c-dias").value, c = +$("c-comerciales").value, m = +$("c-minutos").value, p = +$("c-pct").value;
+    $("v-visitantes").textContent = fmt(v);
+    $("v-dias").textContent = d;
+    $("v-comerciales").textContent = c;
+    $("v-minutos").textContent = m + " min";
+    $("v-pct").textContent = p + "%";
+    var conv = Math.round(v * p / 100);
+    var cap = Math.round(c * d * 8 * 60 / m);
+    var sin = Math.max(0, conv - cap);
+    var leads = Math.round(sin * 0.45 + Math.min(conv, cap) * 0.1);
+    $("r-conv").textContent = fmt(conv);
+    $("r-cap").textContent = fmt(Math.min(cap, conv));
+    $("r-sin").textContent = fmt(sin);
+    $("r-leads").textContent = fmt(leads);
+    if (!reduced) {
+      document.querySelectorAll("[data-res]").forEach(function (el) {
+        el.animate([{ transform: "translateY(10px)", opacity: 0.25 }, { transform: "none", opacity: 1 }], { duration: 650, easing: "cubic-bezier(.22,.61,.2,1)" });
+      });
+    }
+  }
+  ["c-visitantes", "c-dias", "c-comerciales", "c-minutos", "c-pct"].forEach(function (id) { $(id).addEventListener("input", calc); });
+  calc();
+
+  /* ---------- formulario multipaso ---------- */
+  var step = 1, canales = [];
+  var CANAL_OPTS = ["Web", "WhatsApp", "Telegram", "QR en stand"];
+  function renderChips() {
+    $("canalChips").innerHTML = CANAL_OPTS.map(function (c) {
+      var on = canales.indexOf(c) >= 0;
+      return '<button type="button" class="canal-chip' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-c="' + c + '">' + c + "</button>";
+    }).join("");
+  }
+  renderChips();
+  $("canalChips").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-c]");
+    if (!b) return;
+    var c = b.dataset.c, i = canales.indexOf(c);
+    if (i >= 0) canales.splice(i, 1); else canales.push(c);
+    renderChips();
+  });
+  function formErr(msg) {
+    var el = $("formError");
+    if (!msg) { el.classList.add("hide"); return; }
+    el.textContent = msg;
+    el.classList.remove("hide");
+  }
+  function showStep() {
+    $("step1").classList.toggle("hide", step !== 1);
+    $("step2").classList.toggle("hide", step !== 2);
+    $("step3").classList.toggle("hide", step !== 3);
+    $("stepNum").textContent = "Paso " + step + " de 3";
+    $("stepLabel").textContent = ["Tus datos", "Tu proyecto", "Confirmar"][step - 1];
+    $("stepBar").style.width = Math.round(step / 3 * 100) + "%";
+    $("formBack").classList.toggle("hide", step === 1);
+    $("formNext").textContent = step === 3 ? "Solicitar una demo →" : "Continuar →";
+    if (step === 3) {
+      $("formResumen").textContent = ($("fNombre").value || "—") + " · " + ($("fEmpresa").value || "—") + " · " + ($("fTipo").value || "proyecto sin definir") + ($("fFecha").value ? " · " + $("fFecha").value : "") + (canales.length ? " · " + canales.join(", ") : "");
+    }
+  }
+  $("formBack").onclick = function () { step = Math.max(1, step - 1); formErr(null); showStep(); };
+  $("formNext").onclick = function () {
+    if (step === 1) {
+      if (!$("fNombre").value.trim() || !$("fEmpresa").value.trim() || !$("fEmail").value.trim()) { formErr("Completa nombre, empresa y email o teléfono para continuar."); return; }
+      formErr(null); step = 2; showStep();
+    } else if (step === 2) {
+      if (!$("fTipo").value) { formErr("Selecciona el tipo de proyecto."); return; }
+      formErr(null); step = 3; showStep();
+    } else {
+      if (!$("fPriv").checked) { formErr("Debes aceptar la política de privacidad para enviar tus datos."); return; }
+      formErr(null);
+      $("formNext").disabled = true;
+      $("formNext").textContent = "Enviando…";
+      var contact = $("fEmail").value.trim();
+      var isMail = contact.indexOf("@") > 0;
+      var msg = "[Solicitud de demo desde expobot.es] Tipo: " + $("fTipo").value +
+        ($("fFecha").value ? " · Fecha: " + $("fFecha").value : "") +
+        (canales.length ? " · Canales: " + canales.join(", ") : "") +
+        ($("fMsg").value.trim() ? " · Mensaje: " + $("fMsg").value.trim() : "") +
+        " · Comunicaciones comerciales: " + ($("fCom").checked ? "sí" : "no");
+      fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: "%%WEBKEY%%",
+          session_id: demoSid,
+          kind: "general",
+          name: $("fNombre").value.trim(),
+          email: isMail ? contact : "sin-email@formulario.expobot.es",
+          phone: isMail ? "" : contact,
+          company: $("fEmpresa").value.trim(),
+          message: msg.slice(0, 490)
+        })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) throw new Error(d.error);
+        $("formBox").classList.add("hide");
+        $("formOk").classList.remove("hide");
+      }).catch(function (e) {
+        $("formNext").disabled = false;
+        $("formNext").textContent = "Solicitar una demo →";
+        formErr((e && e.message) || "No se ha podido enviar. Inténtalo de nuevo o escríbenos a contacto@expobot.es.");
+      });
+    }
+  };
+  showStep();
+
+  /* ---------- cookies ---------- */
+  var consent = null;
+  try { consent = localStorage.getItem("expobot-cookie-consent"); } catch (e) {}
+  if (!consent) $("cookieBanner").classList.remove("hide");
+  function setConsent(v) {
+    try {
+      localStorage.setItem("expobot-cookie-consent", v);
+      localStorage.setItem("expobot-cookie-prefs", JSON.stringify({ analiticas: v === "all", marketing: v === "all" }));
+    } catch (e) {}
+    $("cookieBanner").classList.add("hide");
+  }
+  $("ckAccept").onclick = function () { setConsent("all"); };
+  $("ckReject").onclick = function () { setConsent("none"); };
+  $("reopenCookies").onclick = function () {
+    try { localStorage.removeItem("expobot-cookie-consent"); } catch (e) {}
+    $("cookieBanner").classList.remove("hide");
+  };
+
+  /* ---------- FAQ → abrir bot ---------- */
+  $("askBotBtn").onclick = function () {
+    var btn = document.querySelector(".cb-btn");
+    if (btn) btn.click();
+    else location.hash = "#contacto";
+  };
+
+  /* ---------- motor de escenas por scroll ---------- */
+  function C(v) { return Math.max(0, Math.min(1, v)); }
+  function seg(p, a, b) { return C((p - a) / (b - a)); }
+  function S(el, o, tr) { if (el) { el.style.opacity = o; if (tr !== undefined) el.style.transform = tr; } }
+  function updateFx() {
+    var vh = window.innerHeight;
+    var doc = document.documentElement;
+    $("scrollbar").style.transform = "scaleX(" + C(doc.scrollTop / (doc.scrollHeight - vh)) + ")";
+    document.querySelectorAll("[data-scene]").forEach(function (sc) {
+      var r = sc.getBoundingClientRect();
+      if (r.bottom < -vh || r.top > vh * 2) return;
+      var pinned = sc.offsetHeight > vh * 1.5;
+      var p = pinned ? C(-r.top / (sc.offsetHeight - vh)) : C((vh - r.top) / (vh * 0.7));
+      var F = function (n) { return sc.querySelector('[data-fx="' + n + '"]'); };
+      var k = sc.dataset.scene;
+      if (k === "hero") {
+        ["q1", "q2", "q3"].forEach(function (n, i) {
+          var el = F(n); if (!el) return;
+          var tIn = seg(p, 0.04 + 0.1 * i, 0.18 + 0.1 * i), tCv = seg(p, 0.55, 0.75);
+          S(el, Math.min(tIn, 1 - 0.7 * tCv), "translate(" + (+el.dataset.cx * tCv) + "px," + (+el.dataset.cy * tCv + 18 * (1 - tIn)) + "px) scale(" + (1 - 0.25 * tCv) + ")");
+        });
+        var tb = seg(p, 0.34, 0.5); S(F("bot"), tb, "translate(-50%,-50%) scale(" + (0.4 + 0.6 * tb) + ")");
+        S(F("lines"), seg(p, 0.48, 0.6));
+        var tl = seg(p, 0.6, 0.76); S(F("lead"), tl, "translateX(" + (26 * (1 - tl)) + "px)");
+        var tm = seg(p, 0.78, 0.94); S(F("msg2"), tm, "translateY(" + (14 * (1 - tm)) + "px)");
+        var bw = F("bigword"); if (bw) bw.style.transform = "translateX(" + (-p * 90) + "px)";
+      } else if (k === "lead") {
+        var w = [[0, 0.28], [0.24, 0.52], [0.48, 0.76], [0.72, 1]];
+        for (var i = 0; i < 4; i++) {
+          var el = F("st" + (i + 1)); if (!el) continue;
+          var tIn = seg(p, w[i][0], w[i][0] + 0.08);
+          var tOut = i < 3 ? 1 - seg(p, w[i][1] - 0.07, w[i][1]) : 1;
+          S(el, Math.min(tIn, tOut), "translateY(" + (20 * (1 - tIn) - 14 * (1 - tOut)) + "px) scale(" + (0.97 + 0.03 * Math.min(tIn, tOut)) + ")");
+        }
+        var rail = F("rail"); if (rail) rail.style.transform = "scaleX(" + p + ")";
+        var lp = F("leadpath"); if (lp) lp.style.strokeDashoffset = 1 - p;
+      } else if (k === "canales") {
+        sc.querySelectorAll('[data-fx="ch"]').forEach(function (el, i) {
+          var t = seg(p, 0.08 + 0.2 * i, 0.3 + 0.2 * i); S(el, t, "translateY(" + (34 * (1 - t)) + "px)");
+        });
+        var tc = seg(p, 0.72, 0.9); S(F("conv"), tc, "translateY(" + (16 * (1 - tc)) + "px)");
+      } else if (k === "feria") {
+        if (window.innerWidth <= 760) return;
+        var tr = F("htrack"), cl = sc.querySelector(".feria-clip");
+        if (tr && cl) {
+          var max = Math.max(0, tr.scrollWidth - cl.clientWidth);
+          tr.style.transform = "translateX(" + (-seg(p, 0.05, 0.95) * max) + "px)";
+        }
+      } else if (k === "bars") {
+        sc.querySelectorAll('[data-fx="bar"]').forEach(function (el, i) {
+          el.style.transform = "scaleY(" + Math.min(1, 0.15 + 0.85 * seg(p, 0.05 + i * 0.03, 0.5 + i * 0.03)) + ")";
+        });
+        sc.querySelectorAll("[data-cnt]").forEach(function (el) {
+          var v = Math.round(+el.dataset.cnt * seg(p, 0.05, 0.6));
+          el.textContent = String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        });
+      } else if (k === "cierre") {
+        sc.querySelectorAll('[data-fx="orb"]').forEach(function (el) {
+          S(el, 0.15 + 0.85 * p, "translate(" + (+el.dataset.dx * (1 - p)) + "px," + (+el.dataset.dy * (1 - p)) + "px) scale(" + (0.85 + 0.15 * p) + ")");
+        });
+        var lg = F("corelogo"); if (lg) lg.style.transform = "translate(-50%,-50%) scale(" + (0.85 + 0.15 * p) + ")";
+      }
+    });
+  }
+  var raf = 0;
+  function onFx() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; updateFx(); }); }
+  if (!reduced) {
+    window.addEventListener("scroll", onFx, { passive: true });
+    window.addEventListener("resize", onFx);
+    updateFx();
+  } else {
+    document.querySelectorAll(".feria-clip").forEach(function (cl) { cl.style.overflowX = "auto"; });
+    document.querySelectorAll('[data-fx="st1"],[data-fx="st2"],[data-fx="st3"]').forEach(function (el) { el.style.opacity = 0; });
+  }
+
+  /* ---------- escala del visual del hero ---------- */
+  function heroScale() {
+    var el = document.querySelector(".hero-canvas");
+    if (!el || !el.parentElement) return;
+    var s = Math.min(1, el.parentElement.clientWidth / 520, el.parentElement.clientHeight / 560);
+    el.style.transform = "scale(" + s + ")";
+    el.style.transformOrigin = window.innerWidth <= 760 ? "top center" : "center";
+  }
+  window.addEventListener("resize", heroScale);
+  heroScale();
+
+  /* ---------- cursor + magnéticos + blobs + tilt ---------- */
+  if (fine && !reduced) {
+    var dot = $("cursor");
+    var x = -100, y = -100, cx = -100, cy = -100, hov = false;
+    window.addEventListener("mousemove", function (e) {
+      x = e.clientX; y = e.clientY;
+      hov = !!(e.target.closest && e.target.closest("a,button,[data-magnet]"));
+      var m = e.target.closest && e.target.closest("[data-magnet]");
+      document.querySelectorAll("[data-magnet]").forEach(function (el) {
+        if (el === m) {
+          var r = el.getBoundingClientRect();
+          el.style.transform = "translate(" + ((e.clientX - r.left - r.width / 2) * 0.18) + "px," + ((e.clientY - r.top - r.height / 2) * 0.25) + "px)";
+        } else el.style.transform = "";
+      });
+    }, { passive: true });
+    (function cloop() {
+      cx += (x - cx) * 0.2; cy += (y - cy) * 0.2;
+      var s = hov ? 52 : 34;
+      dot.style.width = s + "px"; dot.style.height = s + "px";
+      dot.style.background = hov ? "rgba(47,91,255,.12)" : "transparent";
+      dot.style.transform = "translate(" + (cx - s / 2) + "px," + (cy - s / 2) + "px)";
+      requestAnimationFrame(cloop);
+    })();
+    var blobs = Array.prototype.slice.call(document.querySelectorAll("[data-liquid]"));
+    var mx = 0, my = 0, tx = 0, ty = 0;
+    window.addEventListener("mousemove", function (e) { mx = e.clientX / window.innerWidth - 0.5; my = e.clientY / window.innerHeight - 0.5; }, { passive: true });
+    (function lloop() {
+      tx += (mx - tx) * 0.04; ty += (my - ty) * 0.04;
+      blobs.forEach(function (b, i) {
+        var f = (i % 2 ? -1 : 1) * (60 + i * 25);
+        b.style.translate = (tx * f) + "px " + (ty * f) + "px";
+      });
+      requestAnimationFrame(lloop);
+    })();
+    var card = $("caseCard");
+    if (card) {
+      card.style.transition = "transform .3s cubic-bezier(.22,.61,.2,1)";
+      card.addEventListener("mousemove", function (e) {
+        var r = card.getBoundingClientRect();
+        var rx = ((e.clientY - r.top) / r.height - 0.5) * -4, ry = ((e.clientX - r.left) / r.width - 0.5) * 4;
+        card.style.transform = "perspective(900px) rotateX(" + rx + "deg) rotateY(" + ry + "deg)";
+      });
+      card.addEventListener("mouseleave", function () { card.style.transform = ""; });
+    }
+  }
+})();
+</script>
+<script src="/widget.js" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" id="cb-widget-script"></script>
+</body>
+</html>
