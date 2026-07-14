@@ -4574,6 +4574,24 @@ const PORTAL_HTML = `<!doctype html>
         <span id="pm-msg" class="mut"></span>
       </div>
     </div>
+
+    <div class="card">
+      <h2>Mi cuenta</h2>
+      <p class="sub">Tu email de acceso (donde recibes también los informes) y tu contraseña.
+      Para guardar cualquier cambio necesitas tu contraseña actual.</p>
+      <div class="row2">
+        <div><label>Email de acceso</label><input id="ac-email" type="email" autocomplete="username"></div>
+        <div><label>Contraseña actual</label><input id="ac-cur" type="password" autocomplete="current-password"></div>
+      </div>
+      <div class="row2">
+        <div><label>Nueva contraseña (opcional, mínimo 8 caracteres)</label><input id="ac-new" type="password" autocomplete="new-password"></div>
+        <div><label>Repite la nueva contraseña</label><input id="ac-new2" type="password" autocomplete="new-password"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button id="ac-save" class="btn">Guardar cambios</button>
+        <span id="ac-msg" class="mut"></span>
+      </div>
+    </div>
   </main>
   <footer>Impulsado por <b>ExpoBot</b> — estudio de asistentes IA</footer>
 </div>
@@ -4627,6 +4645,7 @@ function load() {
       $("login").classList.add("hide");
       $("app").classList.remove("hide");
       $("c-name").textContent = d.name;
+      $("ac-email").value = d.email || "";
 
       var box = $("projects");
       box.innerHTML = "";
@@ -4732,6 +4751,33 @@ $("pm-save").onclick = function () {
     if (r.error) { $("pm-msg").textContent = r.error; $("pm-msg").className = "err"; return; }
     $("pm-msg").textContent = "Guardado ✓"; $("pm-msg").className = "ok";
   }).catch(function () { $("pm-msg").textContent = "Error al guardar."; $("pm-msg").className = "err"; });
+};
+
+$("ac-save").onclick = function () {
+  var cur = $("ac-cur").value;
+  var np = $("ac-new").value;
+  var np2 = $("ac-new2").value;
+  var em = $("ac-email").value.trim();
+  if (!cur) { $("ac-msg").textContent = "Escribe tu contraseña actual."; $("ac-msg").className = "err"; return; }
+  if (np || np2) {
+    if (np !== np2) { $("ac-msg").textContent = "Las contraseñas nuevas no coinciden."; $("ac-msg").className = "err"; return; }
+    if (np.length < 8) { $("ac-msg").textContent = "La contraseña nueva debe tener al menos 8 caracteres."; $("ac-msg").className = "err"; return; }
+  }
+  if (em.indexOf("@") < 1) { $("ac-msg").textContent = "El email no parece válido."; $("ac-msg").className = "err"; return; }
+  $("ac-msg").textContent = "Guardando…"; $("ac-msg").className = "mut";
+  fetch("/portal/account", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + TOKEN },
+    body: JSON.stringify({ current: cur, email: em, new_password: np || null }),
+  }).then(function (r) { return r.json(); }).then(function (r) {
+    if (r.error) { $("ac-msg").textContent = r.error; $("ac-msg").className = "err"; return; }
+    var did = r.changed || [];
+    $("ac-msg").textContent = did.length
+      ? "Guardado ✓" + (did.indexOf("email") >= 0 ? " A partir de ahora entra con " + em + "." : "")
+      : "No había nada que cambiar.";
+    $("ac-msg").className = "ok";
+    $("ac-cur").value = ""; $("ac-new").value = ""; $("ac-new2").value = "";
+  }).catch(function () { $("ac-msg").textContent = "Error al guardar."; $("ac-msg").className = "err"; });
 };
 
 if (TOKEN) load(); else showLogin();
@@ -5648,6 +5694,39 @@ ${inject}</body></html>`;
           `invoices?client_id=eq.${cid}&select=id,number,concept,amount_cents,currency,issued_at,status,pdf_path&order=issued_at.desc,created_at.desc`
         );
         return json({ ...client, invoices }, 200, { "Cache-Control": "no-store" });
+      }
+
+      if (url.pathname === "/portal/account" && request.method === "POST") {
+        const cid = await portalAuth();
+        if (!cid) return json({ error: "sesión caducada" }, 401);
+        const { current, email, new_password } = await request.json();
+        const [c] = await sb(env, `clients?id=eq.${cid}&select=id,email,portal_password_hash`);
+        if (!c) return json({ error: "sesión caducada" }, 401);
+        if (!current || !(await verifyPassword(String(current), c.portal_password_hash))) {
+          return json({ error: "la contraseña actual no es correcta" }, 403);
+        }
+        const changes = {};
+        const newEmail = String(email || "").trim().toLowerCase();
+        if (newEmail && newEmail !== (c.email || "").toLowerCase()) {
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) {
+            return json({ error: "el email nuevo no parece válido" }, 400);
+          }
+          const dup = await sb(
+            env,
+            `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${cid}&select=id&limit=1`
+          );
+          if (dup?.length) return json({ error: "ese email ya está en uso por otra cuenta" }, 400);
+          changes.email = newEmail;
+        }
+        if (new_password) {
+          if (String(new_password).length < 8) {
+            return json({ error: "la contraseña nueva debe tener al menos 8 caracteres" }, 400);
+          }
+          changes.portal_password_hash = await hashPassword(String(new_password));
+        }
+        if (!Object.keys(changes).length) return json({ ok: true, changed: [] });
+        await sb(env, `clients?id=eq.${cid}`, { method: "PATCH", body: changes });
+        return json({ ok: true, changed: Object.keys(changes) });
       }
 
       if (url.pathname === "/portal/payment-method" && request.method === "POST") {
