@@ -258,8 +258,12 @@ const FORM_TOOL = {
   name: "pedir_datos_contacto",
   description:
     "Muestra al visitante un formulario dentro del chat para que deje sus datos de contacto. " +
-    "Úsala en cuanto detectes interés comercial real (contratar, reservar stand, presupuesto, que le contacten...) " +
-    "en lugar de pedirle los datos mensaje a mensaje. Acompáñala siempre de una frase breve invitando a rellenarlo. " +
+    "Úsala ÚNICAMENTE en dos casos: (1) el visitante pide expresamente hablar con una persona, " +
+    "que le contacten o que le llame la organización; (2) el visitante necesita una respuesta que NO está " +
+    "en el contexto y no puedes dársela. " +
+    "NUNCA la uses solo porque el visitante diga quién es (expositor, visitante, prensa...), ni al saludar, " +
+    "ni ante preguntas que puedas responder con el contexto: en esos casos responde con normalidad. " +
+    "Antes de usarla, responde primero lo que sepas. Acompáñala siempre de una frase breve invitando a rellenarlo. " +
     "No la uses si el visitante ya envió el formulario en esta conversación.",
   input_schema: {
     type: "object",
