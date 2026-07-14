@@ -448,8 +448,12 @@ async function logError(env, route, message) {
           env,
           env.ADMIN_ALERT_EMAIL,
           "⚠ ExpoBot: error en el motor",
-          `<p>Ruta: ${h(route)}</p><p>${h(String(message).slice(0, 400))}</p>` +
-            `<p>Detalles en tu panel → Inicio → Salud del motor. (Máximo un aviso por hora.)</p>`
+          emailShell(
+            `<h2 style="margin:0 0 10px;font-size:18px;color:#b3261e">&#9888; Error en el motor</h2>` +
+              `<p style="margin:0 0 8px"><b>Ruta:</b> ${h(route)}</p>` +
+              `<p style="margin:0 0 14px;background-color:#fdf2f1;border-radius:10px;padding:10px 14px;font-family:ui-monospace,monospace;font-size:13px">${h(String(message).slice(0, 400))}</p>` +
+              `<p style="margin:0;color:#6b7590;font-size:13px">Detalles en tu panel &rarr; Inicio &rarr; Salud del motor. M&aacute;ximo un aviso por hora.</p>`
+          )
         );
       }
     }
@@ -514,6 +518,37 @@ async function answerOnce(env, tenant, question) {
   return { text, hadContext: (hits || []).length > 0 };
 }
 
+// ---------- plantilla de email con la marca ----------
+// Sin SVG ni CSS externo: Gmail y Outlook los eliminan. Todo inline y en tablas.
+
+function emailShell(inner) {
+  return `<!doctype html>
+<html><body style="margin:0;padding:0;background-color:#f5f7fc">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fc">
+<tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:16px;border:1px solid #e4e7f0">
+  <tr><td style="background-color:#3c62f0;background-image:linear-gradient(135deg,#3c62f0,#6b8cff);padding:18px 28px;border-radius:16px 16px 0 0">
+    <span style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:21px;font-weight:800;letter-spacing:-0.02em;color:#ffffff">Expo<span style="color:#c9d8ff">Bot</span></span>
+    <span style="font-family:system-ui,sans-serif;font-size:12px;color:#dbe4ff;margin-left:10px">estudio de asistentes IA</span>
+  </td></tr>
+  <tr><td style="padding:26px 28px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#10182b;font-size:15px;line-height:1.55">
+${inner}
+  </td></tr>
+  <tr><td style="padding:14px 28px;border-top:1px solid #e4e7f0;font-family:system-ui,sans-serif;font-size:12.5px;color:#6b7590;border-radius:0 0 16px 16px">
+    Impulsado por <b style="color:#3c62f0">ExpoBot</b> &middot; <a href="https://expobot.es" style="color:#6b7590">expobot.es</a>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+function emailStat(n, label) {
+  return `<td width="50%" style="padding:5px"><div style="background-color:#f0f4ff;border-radius:12px;padding:13px 16px">
+    <div style="font-family:system-ui,sans-serif;font-size:26px;font-weight:800;color:#3c62f0">${n}</div>
+    <div style="font-family:system-ui,sans-serif;font-size:12.5px;color:#6b7590">${label}</div>
+  </div></td>`;
+}
+
 // ---------- informe mensual ----------
 
 async function sendMonthlyReport(env, tenantId, toOverride) {
@@ -540,26 +575,23 @@ async function sendMonthlyReport(env, tenantId, toOverride) {
   const q = users?.length || 0;
   const rate = q ? Math.max(0, Math.round((100 * (q - (unans?.length || 0))) / q)) : 0;
 
-  const html = `
-<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#10182b">
-  <h2 style="color:#3c62f0">Informe de tu asistente — ${h(monthName)}</h2>
-  <p>Hola${t.projects?.clients?.name ? " " + h(t.projects.clients.name) : ""}, este es el resumen de la actividad de <b>${h(t.name)}</b>:</p>
-  <table style="width:100%;border-collapse:collapse;margin:14px 0">
-    <tr><td style="padding:8px;border-bottom:1px solid #eee">Conversaciones atendidas</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right"><b>${convs?.length || 0}</b></td></tr>
-    <tr><td style="padding:8px;border-bottom:1px solid #eee">Preguntas respondidas</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right"><b>${q}</b></td></tr>
-    <tr><td style="padding:8px;border-bottom:1px solid #eee">Con información de tu contenido</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right"><b>${rate}%</b></td></tr>
-    <tr><td style="padding:8px">Contactos captados (leads)</td><td style="padding:8px;text-align:right"><b>${leads?.length || 0}</b></td></tr>
+  const html = emailShell(`
+  <h2 style="margin:0 0 6px;font-size:19px;color:#10182b">Informe de tu asistente &mdash; ${h(monthName)}</h2>
+  <p style="margin:0 0 16px">Hola${t.projects?.clients?.name ? " " + h(t.projects.clients.name) : ""}, este es el resumen de la actividad de <b>${h(t.name)}</b>:</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 -5px 14px">
+    <tr>${emailStat(convs?.length || 0, "conversaciones atendidas")}${emailStat(q, "preguntas respondidas")}</tr>
+    <tr>${emailStat(rate + "%", "con información de tu contenido")}${emailStat(leads?.length || 0, "contactos captados (leads)")}</tr>
   </table>
   ${
     gaps?.length
-      ? `<p><b>Lo que más preguntan y aún no está en el contenido:</b></p><ul>${gaps
-          .slice(0, 5)
-          .map((g) => `<li>${h(g.q)}</li>`)
-          .join("")}</ul><p>Si nos das esas respuestas, el asistente las incorporará.</p>`
-      : "<p>El asistente encontró respuesta para todo lo que le preguntaron. 🎉</p>"
-  }
-  <p style="color:#6b7590;font-size:13px;margin-top:20px">Generado automáticamente por ExpoBot.</p>
-</div>`;
+      ? `<p style="margin:14px 0 8px"><b>Lo que más preguntan y aún no está en el contenido:</b></p>
+         <div style="border-left:3px solid #3c62f0;background-color:#f7f9ff;border-radius:0 10px 10px 0;padding:10px 16px;margin-bottom:12px">${gaps
+           .slice(0, 5)
+           .map((g) => `<p style="margin:6px 0">&bull; ${h(g.q)}</p>`)
+           .join("")}</div>
+         <p style="margin:0">Si nos das esas respuestas, el asistente las incorporará.</p>`
+      : `<p style="margin:14px 0 0">El asistente encontró respuesta para todo lo que le preguntaron. &#127881;</p>`
+  }`);
   const sent = await sendEmail(env, to, `Informe mensual de tu asistente — ${monthName}`, html);
   return sent.ok ? { ok: true, sent_to: to } : { ok: false, reason: sent.reason };
 }
