@@ -97,6 +97,7 @@ a:hover{color:#1D3FDB}
 input,select,textarea,button{font-family:'Manrope',system-ui,sans-serif}
 input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 @keyframes popin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes ckin{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
 nav.top{position:sticky;top:0;z-index:90;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 5vw;background:var(--bg2);background:color-mix(in srgb,var(--bg2) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 nav.top .logo img{display:block;height:32px;width:auto}
 [data-theme="dark"] nav.top .logo img{filter:brightness(0) invert(1)}
@@ -164,7 +165,7 @@ footer{border-top:1px solid var(--line);padding:30px 5vw;background:var(--bg2);d
   <span>IA conversacional para empresas que quieren aprovechar cada oportunidad.</span>
 </footer>
 
-<div id="cookieBanner" class="hide" role="dialog" aria-label="Configuración de cookies" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483100;width:min(680px,calc(100vw - 32px));background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 24px;box-shadow:0 30px 80px rgba(10,16,46,.3);animation:popin .4s ease both">
+<div id="cookieBanner" class="hide" role="dialog" aria-label="Configuración de cookies" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483100;width:min(680px,calc(100vw - 32px));background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 24px;box-shadow:0 30px 80px rgba(10,16,46,.3);animation:ckin .4s ease both">
   <div style="font-weight:800;font-size:15px;margin-bottom:6px">Esta web usa cookies</div>
   <p style="color:var(--mut);font-size:13.5px;line-height:1.6;margin:0 0 14px">Usamos cookies técnicas necesarias y, solo si las aceptas, cookies analíticas y de marketing. Puedes cambiar tu decisión cuando quieras. <a href="%%BASE%%/cookies">Más información</a></p>
   <div style="display:flex;gap:10px;flex-wrap:wrap">

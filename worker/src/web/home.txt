@@ -80,6 +80,7 @@ h2.sec{font-family:'Space Grotesk',sans-serif;font-size:clamp(36px,4.8vw,68px);l
 @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
 @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 @keyframes popin{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes ckin{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @keyframes hreveal{from{opacity:0;transform:translateY(34px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(-10% -5% -10% -5%)}}
 @keyframes wordup{from{opacity:0;transform:translateY(105%) rotate(2deg)}to{opacity:1;transform:none}}
@@ -138,7 +139,7 @@ footer a.f:hover{color:var(--ac)}
   .feria-clip{overflow-x:auto!important;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
   .feria-clip .htrack{transform:none!important}
   .feria-clip .htrack>*{scroll-snap-align:center}
-  #integraciones .g2,#analitica .g2{grid-template-columns:1fr!important}
+  .g2{grid-template-columns:1fr!important}
   .case-grid{grid-template-columns:1fr!important;padding:28px!important}
   input,select,textarea{font-size:16px!important}
   .msg2{position:static!important;margin-top:18px!important}
@@ -597,7 +598,7 @@ footer a.f:hover{color:var(--ac)}
 </footer>
 
 <!-- BANNER DE COOKIES -->
-<div id="cookieBanner" class="hide" role="dialog" aria-label="Configuración de cookies" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483100;width:min(680px,calc(100vw - 32px));background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 24px;box-shadow:0 30px 80px rgba(10,16,46,.3);animation:popin .4s ease both">
+<div id="cookieBanner" class="hide" role="dialog" aria-label="Configuración de cookies" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483100;width:min(680px,calc(100vw - 32px));box-sizing:border-box;background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 24px;box-shadow:0 30px 80px rgba(10,16,46,.3);animation:ckin .4s ease both">
   <div style="display:flex;gap:14px;align-items:flex-start">
     <img src="/brand/isotipo.png" alt="" width="30" height="32" style="display:block;flex:none;margin-top:2px">
     <div>
