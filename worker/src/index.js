@@ -1632,7 +1632,8 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
     const { status } = await request.json();
     if (!["pendiente", "pagada"].includes(status)) return json({ error: "estado no válido" }, 400);
     const rows = await sb(env, `invoices?id=eq.${mInvOne[1]}`, { method: "PATCH", body: { status } });
-    return json(rows?.[0] || { error: "factura no encontrada" });
+    if (!rows?.[0]) return json({ error: "factura no encontrada" }, 404);
+    return json(rows[0]);
   }
   if (mInvOne && request.method === "DELETE") {
     const [inv] = await sb(env, `invoices?id=eq.${mInvOne[1]}&select=pdf_path`);
@@ -3852,6 +3853,9 @@ function cvResetChat() {
   CV_SESSION = "adm_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
   CV_HISTORY = [];
   CV_BUSY = false;
+  // el modo oscuro de la vista previa es por-bot: no arrastrarlo al cambiar de bot
+  cvDark = false;
+  if ($("cv-dark")) $("cv-dark").textContent = "🌙 Oscuro";
   [].forEach.call(document.querySelectorAll("#cv-log .cv-dyn"), function (x) { x.remove(); });
   $("cv-user").classList.remove("hide");
   $("cv-reply").classList.remove("hide");
@@ -4960,7 +4964,7 @@ function showLogin(msg) {
 }
 
 function euros(cents, cur) {
-  return (cents / 100).toLocaleString("es-ES", { minimumFractionDigits: 2 }) + " " + (cur === "EUR" ? "€" : cur);
+  return (cents / 100).toLocaleString("es-ES", { minimumFractionDigits: 2 }) + " " + (!cur || cur === "EUR" ? "€" : cur);
 }
 
 function fmtd(iso) {
@@ -5342,7 +5346,7 @@ document.getElementById("send").onclick = function () {
   fetch("/faq/submit?token=" + encodeURIComponent(token), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items: items }),
+    body: JSON.stringify({ items: ready }),
   }).then(function (r) { return r.json(); }).then(function (r) {
     if (r.error) {
       msg.textContent = r.error; msg.className = "err";
@@ -5714,6 +5718,7 @@ function leadMatches(l) {
 }
 
 function renderLeads() {
+  if (!$("leads-body")) return; // la pestaña puede estar desactivada (sección quitada del DOM)
   var rows = LEADS.filter(leadMatches);
   var anyAtAll = LEADS.length > 0;
   $("leads-empty").classList.toggle("hide", anyAtAll);
@@ -5794,6 +5799,7 @@ function convMatches(c) {
 }
 
 function renderConvs() {
+  if (!$("convs-empty")) return; // pestaña desactivada
   var rows = CONVS.filter(convMatches);
   var anyAtAll = CONVS.length > 0;
   $("convs-empty").classList.toggle("hide", anyAtAll);
@@ -5867,6 +5873,7 @@ function computeGaps() {
 
 function renderGaps() {
   var box = $("gaps-list");
+  if (!box) return; // pestaña desactivada
   box.innerHTML = "";
   $("gaps-empty").classList.toggle("hide", GAPS.length > 0);
   GAPS.forEach(function (g) {
@@ -5915,6 +5922,7 @@ function renderGaps() {
 
 function renderDocs() {
   var box = $("docs-list");
+  if (!box) return; // pestaña desactivada
   box.innerHTML = "";
   if (!DOCS.length) {
     box.innerHTML = "<p class='mut'>Aún no hay contenido indexado. Sube el primero arriba.</p>";
@@ -6369,13 +6377,19 @@ ${inject}</body></html>`;
         if (ch["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, ch);
         }
-        if (!message || message.length > 2000) {
+        if (typeof message !== "string" || !message || message.length > 2000) {
           return json({ error: "mensaje no válido" }, 400, ch);
         }
         // id de sesión acotado y obligatorio: sin él, cada mensaje abriría una
         // conversación nueva (encodeURIComponent(undefined) === "undefined")
         const sid = String(session_id || "").slice(0, 80);
         if (!sid) return json({ error: "sesión no válida" }, 400, ch);
+        // historial del cliente: acotado en número y tamaño para no inflar el
+        // contexto del modelo (el mensaje ya está topado, el historial no lo estaba)
+        const safeHistory = (Array.isArray(history) ? history : [])
+          .slice(-8)
+          .filter((m) => m && (m.role === "user" || m.role === "assistant"))
+          .map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 2000) }));
 
         // límite por IP: 20 mensajes/minuto; el exceso recibe una respuesta fija
         const ip = request.headers.get("CF-Connecting-IP") || "";
@@ -6440,19 +6454,19 @@ ${inject}</body></html>`;
           .join("\n\n---\n\n");
 
         // si el modelo decide guardar un lead, lo persistimos y le devolvemos el resultado
-        const saveLead = async (l) => {
+        const saveLead = async (raw) => {
+          // mismas cotas que /api/lead: un modelo desbocado no debe guardar filas gigantes
+          const l = {
+            kind: ["expositor", "visitante", "prensa", "general"].includes(raw.kind) ? raw.kind : "general",
+            name: String(raw.name || "").trim().slice(0, 120),
+            email: String(raw.email || "").trim().slice(0, 160),
+            phone: String(raw.phone || "").trim().slice(0, 60) || null,
+            company: String(raw.company || "").trim().slice(0, 160) || null,
+            message: String(raw.message || "").trim().slice(0, 500) || null,
+          };
           await sb(env, "leads", {
             method: "POST",
-            body: {
-              tenant_id: tenant.id,
-              conversation_id: conv.id,
-              kind: l.kind,
-              name: l.name,
-              email: l.email,
-              phone: l.phone,
-              company: l.company,
-              message: l.message,
-            },
+            body: { tenant_id: tenant.id, conversation_id: conv.id, ...l },
           });
 
           if (tenant.lead_webhook_url) {
@@ -6472,7 +6486,7 @@ ${inject}</body></html>`;
         const { text, usage, leadForm } = await run(
           env,
           tenant,
-          history.slice(-8),
+          safeHistory,
           message,
           contextBlock,
           saveLead
@@ -6502,8 +6516,10 @@ ${inject}</body></html>`;
               role: "assistant",
               content: text,
               sources,
-              input_tokens: usage.input_tokens,
-              output_tokens: usage.output_tokens,
+              // ?? null: si el proveedor no devuelve uso (p. ej. bloqueo de Gemini),
+              // JSON.stringify omitiría la clave y PostgREST rechazaría el insert múltiple
+              input_tokens: usage.input_tokens ?? null,
+              output_tokens: usage.output_tokens ?? null,
               was_answered: (hits || []).length > 0,
             },
           ],
@@ -7096,13 +7112,17 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         add(`Conversaciones atendidas: ${rep.convs}`, 11, 1, 3);
         add(`Preguntas respondidas: ${rep.questions}`, 11, 1, 3);
         add(`Respondidas con información del contenido: ${rep.rate}%`, 11, 1, 3);
-        add(`Contactos captados (leads): ${rep.leads}`, 11, 1, 12);
-        if (rep.gaps.length) {
+        // las secciones desactivadas en el panel tampoco salen en el PDF
+        const pf = tenant.panel_features || {};
+        if (pf.leads !== false) {
+          add(`Contactos captados (leads): ${rep.leads}`, 11, 1, 12);
+        }
+        if (pf.gaps !== false && rep.gaps.length) {
           add("Lo que más preguntan y aún no está en el contenido:", 13, 2, 6);
           rep.gaps.slice(0, 10).forEach((g) => add(`- ${g.q}`, 11, 1, 3));
           add(" ", 10, 1, 4);
           add("Responder estas preguntas desde el panel mejora el asistente al momento.", 10, 1, 8);
-        } else {
+        } else if (pf.gaps !== false) {
           add("El asistente encontró respuesta para todo lo que le preguntaron.", 11, 1, 8);
         }
         add("Generado por ExpoBot - expobot.es", 9, 1, 0);

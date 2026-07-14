@@ -385,9 +385,8 @@
         QUAL = opt;
         sessionStorage.setItem("cb_qual", opt);
         box.remove();
-        renderSug();
         panel.querySelector("#cb-in").value = opt;
-        send();
+        send(); // send() limpia #cb-sug, así que renderSug() aquí no tenía efecto
       };
       box.appendChild(b);
     });

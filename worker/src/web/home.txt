@@ -622,16 +622,21 @@ footer a.f:hover{color:var(--ac)}
   var esc = function (t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; };
 
   /* ---------- tema ---------- */
+  // se guarda "light"/"dark" explícito (igual que las subpáginas) y, en la primera
+  // visita, se respeta la preferencia del sistema. Guardar "" rompía la coherencia:
+  // las subpáginas lo leían como «sin elegir» y volvían al tema del sistema.
   var theme = "";
   try { theme = localStorage.getItem("expobot-theme") || ""; } catch (e) {}
+  if (theme !== "light" && theme !== "dark") {
+    theme = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
   function applyTheme() {
-    if (theme) document.documentElement.dataset.theme = theme;
-    else delete document.documentElement.dataset.theme;
+    document.documentElement.dataset.theme = theme;
     $("themeBtn").textContent = theme === "dark" ? "☀" : "☾";
   }
   applyTheme();
   $("themeBtn").onclick = function () {
-    theme = theme === "dark" ? "" : "dark";
+    theme = theme === "dark" ? "light" : "dark";
     try { localStorage.setItem("expobot-theme", theme); } catch (e) {}
     applyTheme();
   };
