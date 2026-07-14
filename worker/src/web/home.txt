@@ -132,7 +132,7 @@ footer a.f:hover{color:var(--ac)}
   html,body{overflow-x:clip}
   [data-scene="hero"] header{position:relative!important;height:auto!important;min-height:0!important;overflow:hidden!important;grid-template-columns:1fr!important;padding-top:104px!important;padding-bottom:48px!important;gap:24px!important}
   .hero-wrap{height:440px!important}
-  .hero-canvas{left:calc(50% - 200px)!important;top:0!important}
+  .hero-canvas{left:calc(50% - 260px)!important;top:0!important}
   [data-scene="canales"],[data-scene="feria"]{height:auto!important}
   [data-scene="canales"]>div,[data-scene="feria"]>div{position:relative!important;min-height:0!important;overflow:visible!important;padding-top:70px!important;padding-bottom:70px!important}
   [data-scene="lead"]{height:220vh!important}
@@ -1021,6 +1021,22 @@ footer a.f:hover{color:var(--ac)}
   function C(v) { return Math.max(0, Math.min(1, v)); }
   function seg(p, a, b) { return C((p - a) / (b - a)); }
   function S(el, o, tr) { if (el) { el.style.opacity = o; if (tr !== undefined) el.style.transform = tr; } }
+  function isMob() { return window.innerWidth <= 760; }
+
+  function heroFx(sc, p) {
+    var F = function (n) { return sc.querySelector('[data-fx="' + n + '"]'); };
+    ["q1", "q2", "q3"].forEach(function (n, i) {
+      var el = F(n); if (!el) return;
+      var tIn = seg(p, 0.04 + 0.1 * i, 0.18 + 0.1 * i), tCv = seg(p, 0.55, 0.75);
+      S(el, Math.min(tIn, 1 - 0.7 * tCv), "translate(" + (+el.dataset.cx * tCv) + "px," + (+el.dataset.cy * tCv + 18 * (1 - tIn)) + "px) scale(" + (1 - 0.25 * tCv) + ")");
+    });
+    var tb = seg(p, 0.34, 0.5); S(F("bot"), tb, "translate(-50%,-50%) scale(" + (0.4 + 0.6 * tb) + ")");
+    S(F("lines"), seg(p, 0.48, 0.6));
+    var tl = seg(p, 0.6, 0.76); S(F("lead"), tl, "translateX(" + (26 * (1 - tl)) + "px)");
+    var tm = seg(p, 0.78, 0.94); S(F("msg2"), tm, "translateY(" + (14 * (1 - tm)) + "px)");
+    var bw = F("bigword"); if (bw) bw.style.transform = "translateX(" + (-p * 90) + "px)";
+  }
+
   function updateFx() {
     var vh = window.innerHeight;
     var doc = document.documentElement;
@@ -1033,16 +1049,8 @@ footer a.f:hover{color:var(--ac)}
       var F = function (n) { return sc.querySelector('[data-fx="' + n + '"]'); };
       var k = sc.dataset.scene;
       if (k === "hero") {
-        ["q1", "q2", "q3"].forEach(function (n, i) {
-          var el = F(n); if (!el) return;
-          var tIn = seg(p, 0.04 + 0.1 * i, 0.18 + 0.1 * i), tCv = seg(p, 0.55, 0.75);
-          S(el, Math.min(tIn, 1 - 0.7 * tCv), "translate(" + (+el.dataset.cx * tCv) + "px," + (+el.dataset.cy * tCv + 18 * (1 - tIn)) + "px) scale(" + (1 - 0.25 * tCv) + ")");
-        });
-        var tb = seg(p, 0.34, 0.5); S(F("bot"), tb, "translate(-50%,-50%) scale(" + (0.4 + 0.6 * tb) + ")");
-        S(F("lines"), seg(p, 0.48, 0.6));
-        var tl = seg(p, 0.6, 0.76); S(F("lead"), tl, "translateX(" + (26 * (1 - tl)) + "px)");
-        var tm = seg(p, 0.78, 0.94); S(F("msg2"), tm, "translateY(" + (14 * (1 - tm)) + "px)");
-        var bw = F("bigword"); if (bw) bw.style.transform = "translateX(" + (-p * 90) + "px)";
+        if (isMob()) return; // en móvil el hero se anima por tiempo, no por scroll (ver playHero)
+        heroFx(sc, p);
       } else if (k === "lead") {
         var w = [[0, 0.28], [0.24, 0.52], [0.48, 0.76], [0.72, 1]];
         for (var i = 0; i < 4; i++) {
@@ -1102,6 +1110,35 @@ footer a.f:hover{color:var(--ac)}
   }
   window.addEventListener("resize", heroScale);
   heroScale();
+
+  /* ---------- hero en móvil: la escena no se fija, así que se anima por tiempo al entrar en pantalla ---------- */
+  var heroSc = document.querySelector('[data-scene="hero"]');
+  var heroPlayed = false;
+  function playHero() {
+    if (heroPlayed || !heroSc) return;
+    heroPlayed = true;
+    var t0 = null, DUR = 5200;
+    function stepH(ts) {
+      if (t0 === null) t0 = ts;
+      var p = Math.min(1, (ts - t0) / DUR);
+      heroFx(heroSc, p);
+      if (p < 1 && isMob()) requestAnimationFrame(stepH); else heroFx(heroSc, 1);
+    }
+    requestAnimationFrame(stepH);
+  }
+  if (heroSc && reduced) {
+    heroFx(heroSc, 1); // sin animaciones: estado final visible
+  } else if (heroSc && isMob()) {
+    heroFx(heroSc, 0); // estado inicial oculto hasta que el visual entra en pantalla
+    var hw = document.querySelector(".hero-wrap");
+    if (hw && "IntersectionObserver" in window) {
+      new IntersectionObserver(function (es, io) {
+        if (es[0].isIntersecting) { io.disconnect(); playHero(); }
+      }, { threshold: 0.4 }).observe(hw);
+    } else {
+      playHero();
+    }
+  }
 
   /* ---------- cursor + magnéticos + blobs + tilt ---------- */
   if (fine && !reduced) {
