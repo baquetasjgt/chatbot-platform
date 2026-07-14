@@ -42,7 +42,7 @@ async function siteSignals(domain) {
 
 // ---------- utilidades Supabase (REST con service key) ----------
 
-async function sb(env, path, { method = "GET", body, headers = {} } = {}) {
+async function sb(env, path, { method = "GET", body, headers = {} } = {}, _retry = true) {
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
     method,
     headers: {
@@ -54,7 +54,16 @@ async function sb(env, path, { method = "GET", body, headers = {} } = {}) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    // PGRST303 «JWT issued at future»: desfase puntual de reloj en la pasarela
+    // de Supabase al canjear la clave sb_secret. Un reintento corto lo resuelve.
+    if (_retry && res.status === 401 && errText.includes("PGRST303")) {
+      await new Promise((r) => setTimeout(r, 800));
+      return sb(env, path, { method, body, headers }, false);
+    }
+    throw new Error(`Supabase ${res.status}: ${errText}`);
+  }
   // con Prefer: return=minimal el cuerpo llega vacío aunque el estado sea 201
   const text = await res.text();
   return text ? JSON.parse(text) : null;
