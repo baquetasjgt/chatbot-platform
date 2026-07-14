@@ -167,7 +167,7 @@ footer a.f:hover{color:var(--ac)}
     <a href="#casos">Casos de uso</a>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <a href="https://chatbot-engine.baquetasjgt.workers.dev/acceso" class="navclient">Acceso clientes</a>
+    <a href="/acceso" class="navclient">Acceso clientes</a>
     <button id="themeBtn" class="theme-btn" aria-label="Cambiar entre modo claro y oscuro">☾</button>
     <a href="#contacto" class="btn-grad" data-magnet>Solicitar demo</a>
   </div>
@@ -182,7 +182,7 @@ footer a.f:hover{color:var(--ac)}
     <a href="#funcionalidades" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Funcionalidades</a>
     <a href="#integraciones" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Integraciones</a>
     <a href="#casos" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Casos de uso</a>
-    <a href="https://chatbot-engine.baquetasjgt.workers.dev/acceso" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Acceso clientes</a>
+    <a href="/acceso" class="grotesk" style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--ink);padding:8px 0;border-bottom:1px solid var(--line)">Acceso clientes</a>
     <a href="#contacto" style="margin-top:22px;background:var(--ac);color:#fff;padding:18px;border-radius:99px;font-weight:800;font-size:17px;text-align:center">Solicitar una demo</a>
   </div>
   <button id="menuClose" aria-label="Cerrar menú" style="position:absolute;top:22px;right:22px;cursor:pointer;background:var(--bg2);border:1px solid var(--line);border-radius:50%;width:46px;height:46px;font-size:18px;color:var(--ink)">✕</button>
