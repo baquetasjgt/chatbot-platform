@@ -1664,6 +1664,8 @@ const ADMIN_HTML = `<!doctype html>
   .wrap{display:grid;grid-template-columns:250px 1fr;gap:20px;max-width:1420px;margin:0 auto;
     padding:20px 16px}
   #edit-col{min-width:0}
+  #main{min-width:0}
+  aside{min-width:0}
   @media(max-width:760px){.wrap{grid-template-columns:1fr}}
   aside .primary{width:100%;margin-bottom:12px}
   #tree button,#proj-list button,#bot-list button{display:block;width:100%;text-align:left;
@@ -1786,10 +1788,29 @@ const ADMIN_HTML = `<!doctype html>
   #ck-list button.sel{background:var(--bg)}
   #ck-list button .mut{margin-left:auto;white-space:nowrap}
   #menu-btn{display:none}
+  .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .twrap table.home{min-width:600px}
   @media(max-width:760px){
+    body{overflow-x:hidden}
     aside{display:none}
     aside.open{display:block}
-    #menu-btn{display:inline-block;margin-right:8px}
+    #menu-btn{display:inline-block}
+    header{padding:10px 12px;gap:6px}
+    header>div:last-child{display:flex;gap:6px;align-items:center;flex:none}
+    header .ghost.small{padding:6px 9px;font-size:12.5px}
+    #logout{margin-left:0!important}
+    .brand{font-size:16px;gap:7px;min-width:0}
+    .brand svg{width:24px;height:21px}
+    .brand em{display:none}
+    .wrap{padding:12px 10px;gap:12px}
+    .card{padding:16px 14px;border-radius:14px}
+    .kpi{min-width:calc(50% - 6px)}
+    .kpi b{font-size:20px}
+    #crumb{font-size:12.5px}
+    #bot-tabs button{padding:8px 11px;font-size:13px}
+    #cv-frame{padding:10px}
+    .copyrow{flex-wrap:wrap}
+    .copyrow input,.copyrow textarea{min-width:0}
   }
   .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:fit-content}
   .seg button{border:0;background:#fff;padding:8px 16px;font-size:13.5px;cursor:pointer;color:#555}
@@ -1901,10 +1922,10 @@ const ADMIN_HTML = `<!doctype html>
           <div class="kpi"><b id="k-l">–</b><span>leads</span></div>
           <div class="kpi"><b id="k-b">–</b><span>chatbots activos</span></div>
         </div>
-        <table class="home">
+        <div class="twrap"><table class="home">
           <thead><tr><th>Chatbot</th><th>Cliente</th><th>Preguntas</th><th>Leads</th><th>Sin respuesta</th><th>Estado</th></tr></thead>
           <tbody id="home-body"></tbody>
-        </table>
+        </table></div>
         <label style="margin-top:20px">📥 Últimos leads
           <button id="home-leads-all" class="ghost small" style="margin-left:8px">Ver todos</button></label>
         <div id="home-leads" class="mut">Cargando…</div>
