@@ -61,6 +61,8 @@
   .cb-btn svg{width:46%;height:46%;fill:none;stroke:var(--cbt,#fff);stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round}
   .cb-btn.cb-pill svg{width:24px;height:24px;flex:0 0 auto}
+  .cb-btn img.cb-btn-img{width:60%;height:60%;object-fit:contain;display:block;pointer-events:none}
+  .cb-btn.cb-pill img.cb-btn-img{width:26px;height:26px;flex:0 0 auto}
   .cb-pill-t{color:var(--cbt,#fff);font:600 15px/1 var(--cbf,system-ui,sans-serif);white-space:nowrap}
   .cb-panel{position:fixed;bottom:calc(var(--cbbtn,56px) + 36px);right:24px;width:var(--cbw,380px);
     max-width:calc(100vw - 32px);height:var(--cbh,560px);max-height:calc(100vh - 130px);
@@ -178,8 +180,14 @@
     var pill = TH.btn_shape === "pastilla";
     btn.classList.toggle("cb-pill", pill);
     btn.classList.toggle("cb-square", TH.btn_shape === "redondeado");
-    btn.innerHTML = '<svg viewBox="0 0 24 24">' + icon + "</svg>" +
+    // icono propio (p. ej. el isotipo de la marca) en lugar del dibujo genérico
+    var glyph = TH.btn_icon_url
+      ? '<img class="cb-btn-img" src="' + esc(TH.btn_icon_url) + '" alt="">'
+      : '<svg viewBox="0 0 24 24">' + icon + "</svg>";
+    btn.innerHTML = glyph +
       (pill ? '<span class="cb-pill-t">' + esc(TH.btn_label || "Chat") + "</span>" : "");
+    if (TH.btn_bg) btn.style.background = TH.btn_bg;
+    if (TH.btn_border) btn.style.border = TH.btn_border;
   }
 
   var panel = document.createElement("div");
