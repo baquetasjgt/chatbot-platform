@@ -311,6 +311,15 @@ function leadCaptureEnabled(tenant) {
   return !(tenant.features && tenant.features.leads === false);
 }
 
+// el modelo manda sobre el proveedor guardado: una combinación incoherente
+// (p. ej. provider=google con un modelo claude-*) no debe tumbar el chat
+function pickRunner(tenant) {
+  const m = (tenant.model || "").toLowerCase();
+  if (m.startsWith("claude")) return runClaude;
+  if (m.startsWith("gemini")) return runGemini;
+  return tenant.provider === "google" ? runGemini : runClaude;
+}
+
 async function runClaude(env, tenant, history, message, contextBlock, saveLead) {
   const msgs = [...history, { role: "user", content: message }];
   let reply = await callClaude(env, tenant, msgs, contextBlock);
@@ -561,7 +570,7 @@ async function answerOnce(env, tenant, question) {
   const contextBlock = (hits || [])
     .map((x, i) => `[${i + 1}] ${x.title || ""}\n${x.content}`)
     .join("\n\n---\n\n");
-  const run = tenant.provider === "google" ? runGemini : runClaude;
+  const run = pickRunner(tenant);
   const { text } = await run(env, tenant, [], question, contextBlock, async () => {});
   return { text, hadContext: (hits || []).length > 0 };
 }
@@ -4207,6 +4216,17 @@ $("save").onclick = function () {
     $("save-msg").className = "err";
     return;
   }
+  var mdl = (d.model || "").toLowerCase();
+  if (d.provider === "google" && mdl.indexOf("claude") === 0) {
+    $("save-msg").textContent = "«" + d.model + "» es un modelo de Anthropic: cambia el proveedor a Anthropic (Claude) o elige un modelo Gemini.";
+    $("save-msg").className = "err";
+    return;
+  }
+  if (d.provider === "anthropic" && mdl.indexOf("gemini") === 0) {
+    $("save-msg").textContent = "«" + d.model + "» es un modelo de Google: cambia el proveedor a Google (Gemini) o elige un modelo Claude.";
+    $("save-msg").className = "err";
+    return;
+  }
   if (sel.isNew) d.project_id = sel.parentId;
   $("save-msg").textContent = "Guardando…"; $("save-msg").className = "mut";
   var req = sel.isNew
@@ -6268,7 +6288,7 @@ ${inject}</body></html>`;
         };
 
         // generación (proveedor y modelo configurables por tenant)
-        const run = tenant.provider === "google" ? runGemini : runClaude;
+        const run = pickRunner(tenant);
         const { text, usage, leadForm } = await run(
           env,
           tenant,
