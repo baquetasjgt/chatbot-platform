@@ -14,6 +14,7 @@
   var history = [];
   var open = false;
   var busy = false;
+  var QUAL = sessionStorage.getItem("cb_qual") || "";
   var teaser = null;
   var cfg = { primary_color: "#111", name: "Asistente", welcome_message: "¡Hola!", suggested_questions: [], theme: {} };
   var TH = {};
@@ -103,6 +104,28 @@
   .cb-brand{flex:0 0 auto;text-align:center;font-size:11px;color:#999;padding:0 0 7px}
   .cb-brand a{color:#999;text-decoration:none}
   .cb-brand a:hover{text-decoration:underline}
+  .cb-qual{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start;max-width:85%}
+  .cb-qual button{background:var(--cbg,#fff);border:1.5px solid var(--cb);color:inherit;
+    border-radius:var(--cbr,14px);padding:9px 14px;font:600 14px/1.2 var(--cbf,system-ui,sans-serif);
+    cursor:pointer}
+  .cb-qual button:hover{background:var(--cb);color:var(--cbt,#fff)}
+  .cb-dark .cb-qual button{background:#232327}
+  .cb-form{background:var(--cb2,#f2f2f0);color:var(--cb2t,#1a1a1a);border-radius:var(--cbr,14px);
+    border-bottom-left-radius:4px;padding:14px;align-self:flex-start;width:92%;max-width:92%;
+    display:flex;flex-direction:column;gap:8px}
+  .cb-dark .cb-form{background:#2a2a2e;color:#ececec}
+  .cb-form input,.cb-form textarea{border:1px solid #ddd;border-radius:9px;padding:9px 11px;
+    font:14px/1.4 var(--cbf,system-ui,sans-serif);outline:0;background:#fff;color:#1a1a1a;
+    width:100%;box-sizing:border-box;resize:vertical}
+  .cb-dark .cb-form input,.cb-dark .cb-form textarea{background:#17171a;border-color:#3a3a40;color:#ececec}
+  .cb-form input:focus,.cb-form textarea:focus{border-color:var(--cb)}
+  .cb-form .cb-fsend{background:var(--cb);color:var(--cbt,#fff);border:0;border-radius:9px;
+    padding:11px;font:600 14px var(--cbf,system-ui,sans-serif);cursor:pointer}
+  .cb-form .cb-fsend:disabled{opacity:.5;cursor:default}
+  .cb-form .cb-ferr{color:#b3261e;font-size:12.5px;display:none}
+  .cb-dark .cb-form .cb-ferr{color:#ff8a80}
+  .cb-form .cb-fskip{background:0;border:0;color:inherit;opacity:.55;font:12.5px var(--cbf,system-ui,sans-serif);
+    cursor:pointer;text-decoration:underline;padding:0}
   .cb-dots span{display:inline-block;width:6px;height:6px;margin-right:3px;border-radius:3px;
     background:#bbb;animation:cbd 1.2s infinite}
   .cb-dots span:nth-child(2){animation-delay:.18s}
@@ -312,7 +335,16 @@
 
     add("bot", cfg.welcome_message);
 
+    if ((TH.qualify_opts || []).length && !QUAL) {
+      showQualify();
+    } else {
+      renderSug();
+    }
+  }
+
+  function renderSug() {
     var sug = panel.querySelector("#cb-sug");
+    if (!sug || sug.childNodes.length) return;
     (cfg.suggested_questions || []).forEach(function (q) {
       var b = document.createElement("button");
       b.textContent = q;
@@ -322,6 +354,112 @@
       };
       sug.appendChild(b);
     });
+  }
+
+  function showQualify() {
+    add("bot", TH.qualify_q || "Para ayudarte mejor, cuéntame quién eres:");
+    var log = panel.querySelector("#cb-log");
+    var box = document.createElement("div");
+    box.className = "cb-qual";
+    (TH.qualify_opts || []).slice(0, 4).forEach(function (opt) {
+      var b = document.createElement("button");
+      b.textContent = opt;
+      b.onclick = function () {
+        QUAL = opt;
+        sessionStorage.setItem("cb_qual", opt);
+        box.remove();
+        renderSug();
+        panel.querySelector("#cb-in").value = opt;
+        send();
+      };
+      box.appendChild(b);
+    });
+    log.appendChild(box);
+    scrollLog();
+  }
+
+  function kindFromQual(k) {
+    var s = (k || QUAL || "").toLowerCase();
+    if (s.indexOf("exposit") >= 0) return "expositor";
+    if (s.indexOf("visit") >= 0) return "visitante";
+    if (s.indexOf("prensa") >= 0 || s.indexOf("medio") >= 0) return "prensa";
+    return k || "general";
+  }
+
+  function showLeadForm(kind) {
+    if (sessionStorage.getItem("cb_lead_done") || panel.querySelector(".cb-form")) return;
+    var log = panel.querySelector("#cb-log");
+    var f = document.createElement("div");
+    f.className = "cb-form";
+    function field(ph, type, req) {
+      var i = document.createElement(type === "area" ? "textarea" : "input");
+      if (type !== "area") i.type = type;
+      i.placeholder = ph + (req ? " *" : "");
+      if (type === "area") i.rows = 2;
+      f.appendChild(i);
+      return i;
+    }
+    var fn = field("Tu nombre", "text", true);
+    var fe = field("Tu email", "email", true);
+    var fp = field("Teléfono (opcional)", "tel");
+    var fc = field("Empresa (opcional)", "text");
+    var fm = field("¿Qué necesitas? (opcional)", "area");
+    var err = document.createElement("div");
+    err.className = "cb-ferr";
+    f.appendChild(err);
+    var go = document.createElement("button");
+    go.className = "cb-fsend";
+    go.textContent = "Enviar mis datos";
+    f.appendChild(go);
+    var skip = document.createElement("button");
+    skip.className = "cb-fskip";
+    skip.textContent = "Prefiero seguir escribiendo";
+    skip.onclick = function () { f.remove(); };
+    f.appendChild(skip);
+    go.onclick = function () {
+      var nm = fn.value.trim();
+      var em = fe.value.trim();
+      if (!nm || em.indexOf("@") < 1) {
+        err.textContent = "Necesitamos al menos tu nombre y un email válido.";
+        err.style.display = "block";
+        return;
+      }
+      err.style.display = "none";
+      go.disabled = true;
+      go.textContent = "Enviando…";
+      fetch(API + "/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: KEY,
+          session_id: sid,
+          kind: kindFromQual(kind),
+          name: nm,
+          email: em,
+          phone: fp.value.trim(),
+          company: fc.value.trim(),
+          message: fm.value.trim(),
+        }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) throw new Error(d.error);
+          sessionStorage.setItem("cb_lead_done", "1");
+          f.remove();
+          add("bot", "¡Gracias, " + nm.split(" ")[0] + "! Hemos recibido tus datos y el equipo te contactará muy pronto. ¿Puedo ayudarte con algo más?");
+          history.push({ role: "user", content: "(He enviado mis datos de contacto en el formulario: " + nm + ", " + em + ")" });
+          history.push({ role: "assistant", content: "Datos recibidos. El equipo le contactará pronto." });
+        })
+        .catch(function (e) {
+          go.disabled = false;
+          go.textContent = "Enviar mis datos";
+          err.textContent = (e && e.message) || "No se ha podido enviar. Prueba otra vez.";
+          err.style.display = "block";
+        });
+    };
+    log.appendChild(f);
+    scrollLog();
+    fn.focus();
   }
 
   function scrollLog() {
@@ -405,6 +543,10 @@
         add("bot", d.reply, d.sources, true);
         history.push({ role: "user", content: text });
         history.push({ role: "assistant", content: d.reply });
+        if (d.lead_form) {
+          var delay = reduced ? 0 : Math.min(d.reply.length * 9, 1800);
+          setTimeout(function () { showLeadForm(d.lead_form.kind); }, delay);
+        }
       })
       .catch(function () {
         wait.remove();

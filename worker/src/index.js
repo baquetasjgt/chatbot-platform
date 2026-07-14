@@ -252,6 +252,28 @@ const LEAD_TOOL = {
   },
 };
 
+// segunda herramienta: en vez de pedir los datos por mensajes, el bot muestra
+// un formulario dentro del chat (el widget lo pinta al recibir lead_form)
+const FORM_TOOL = {
+  name: "pedir_datos_contacto",
+  description:
+    "Muestra al visitante un formulario dentro del chat para que deje sus datos de contacto. " +
+    "Úsala en cuanto detectes interés comercial real (contratar, reservar stand, presupuesto, que le contacten...) " +
+    "en lugar de pedirle los datos mensaje a mensaje. Acompáñala siempre de una frase breve invitando a rellenarlo. " +
+    "No la uses si el visitante ya envió el formulario en esta conversación.",
+  input_schema: {
+    type: "object",
+    properties: {
+      kind: {
+        type: "string",
+        enum: ["expositor", "visitante", "prensa", "general"],
+        description: "Tipo de interés del contacto, si ya se deduce de la conversación",
+      },
+    },
+    required: [],
+  },
+};
+
 // ---------- llamada a Claude ----------
 
 async function callClaude(env, tenant, messages, contextBlock) {
@@ -277,7 +299,7 @@ async function callClaude(env, tenant, messages, contextBlock) {
       max_tokens: 800,
       system,
       messages,
-      tools: leadCaptureEnabled(tenant) ? [LEAD_TOOL] : [],
+      tools: leadCaptureEnabled(tenant) ? [LEAD_TOOL, FORM_TOOL] : [],
     }),
   });
 
@@ -292,9 +314,13 @@ function leadCaptureEnabled(tenant) {
 async function runClaude(env, tenant, history, message, contextBlock, saveLead) {
   const msgs = [...history, { role: "user", content: message }];
   let reply = await callClaude(env, tenant, msgs, contextBlock);
+  let leadForm = null;
 
   const toolUse = reply.content.find((b) => b.type === "tool_use");
-  if (toolUse) {
+  if (toolUse && toolUse.name === FORM_TOOL.name) {
+    // el widget pinta el formulario; el texto que acompañe a la llamada es la invitación
+    leadForm = { kind: toolUse.input?.kind || null };
+  } else if (toolUse) {
     await saveLead(toolUse.input);
     msgs.push({ role: "assistant", content: reply.content });
     msgs.push({
@@ -310,14 +336,16 @@ async function runClaude(env, tenant, history, message, contextBlock, saveLead) 
     reply = await callClaude(env, tenant, msgs, contextBlock);
   }
 
-  const text = reply.content
+  let text = reply.content
     .filter((b) => b.type === "text")
     .map((b) => b.text)
     .join("\n")
     .trim();
+  if (!text && leadForm) text = "¡Genial! Déjame tus datos y el equipo te contactará muy pronto 👇";
 
   return {
     text,
+    leadForm,
     usage: {
       input_tokens: reply.usage?.input_tokens,
       output_tokens: reply.usage?.output_tokens,
@@ -355,6 +383,11 @@ async function callGemini(env, tenant, contents, contextBlock) {
                     description: LEAD_TOOL.description,
                     parameters: LEAD_TOOL.input_schema,
                   },
+                  {
+                    name: FORM_TOOL.name,
+                    description: FORM_TOOL.description,
+                    parameters: FORM_TOOL.input_schema,
+                  },
                 ],
               },
             ]
@@ -381,9 +414,13 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
   ];
   let reply = await callGemini(env, tenant, contents, contextBlock);
   let cand = reply.candidates?.[0];
+  let leadForm = null;
 
   const call = cand?.content?.parts?.find((p) => p.functionCall);
-  if (call) {
+  if (call && call.functionCall.name === FORM_TOOL.name) {
+    // el widget pinta el formulario; el texto que acompañe a la llamada es la invitación
+    leadForm = { kind: call.functionCall.args?.kind || null };
+  } else if (call) {
     await saveLead(call.functionCall.args);
     // el content vuelve tal cual: Gemini 3 exige conservar las thought signatures
     contents.push(cand.content);
@@ -402,14 +439,16 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
     cand = reply.candidates?.[0];
   }
 
-  const text = (cand?.content?.parts || [])
+  let text = (cand?.content?.parts || [])
     .filter((p) => p.text && !p.thought)
     .map((p) => p.text)
     .join("\n")
     .trim();
+  if (!text && leadForm) text = "¡Genial! Déjame tus datos y el equipo te contactará muy pronto 👇";
 
   return {
     text,
+    leadForm,
     usage: {
       input_tokens: reply.usageMetadata?.promptTokenCount,
       output_tokens: reply.usageMetadata?.candidatesTokenCount,
@@ -2086,6 +2125,12 @@ const ADMIN_HTML = `<!doctype html>
           <input id="f-welcome">
           <label>Preguntas sugeridas (una por línea)</label>
           <textarea id="f-sugg" rows="3"></textarea>
+          <label>Pregunta de clasificación al abrir el chat (opcional)</label>
+          <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
+          <label>Opciones de respuesta (una por línea, máx. 4; vacío = sin pregunta)</label>
+          <textarea id="f-qualopts" rows="2" placeholder="🏢 Soy expositor&#10;🙋 Soy visitante"></textarea>
+          <p class="mut" style="margin-top:4px">El visitante elige con un botón antes de empezar; su elección
+          clasifica el lead (si la opción contiene «expositor», «visitante» o «prensa») y el bot la conoce.</p>
           <div class="row">
             <div>
               <label>Proveedor de IA</label>
@@ -3328,6 +3373,8 @@ function selTenant(id, projectId) {
   $("f-prompt").value = isNew ? "" : t.system_prompt || "";
   $("f-welcome").value = isNew ? "¡Hola! ¿En qué puedo ayudarte?" : t.welcome_message || "";
   $("f-sugg").value = isNew ? "" : (t.suggested_questions || []).join("\\n");
+  $("f-qualq").value = (t && t.theme && t.theme.qualify_q) || "";
+  $("f-qualopts").value = ((t && t.theme && t.theme.qualify_opts) || []).join("\\n");
   $("f-provider").value = isNew ? "google" : t.provider || "anthropic";
   $("f-model").value = isNew ? "gemini-3.5-flash" : t.model || "";
   $("f-color").value = isNew ? "#111111" : t.primary_color || "#111111";
@@ -3787,6 +3834,9 @@ function cvSend(text) {
     CV_BUSY = false;
     typing.classList.remove("cv-typing");
     typing.textContent = r.reply || r.error || "(sin respuesta)";
+    if (r.lead_form) {
+      cvBubble("cv-b", "📋 Aquí el visitante vería el formulario de contacto (nombre, email, teléfono…) dentro del chat.");
+    }
     CV_HISTORY.push({ role: "user", content: q });
     CV_HISTORY.push({ role: "assistant", content: typing.textContent });
     CV_HISTORY = CV_HISTORY.slice(-12);
@@ -4140,6 +4190,8 @@ function collect() {
       icon_send: iconSendSel,
       btn_shape: $("f-btnshape").value,
       btn_label: $("f-btnlabel").value.trim(),
+      qualify_q: $("f-qualq").value.trim(),
+      qualify_opts: lines($("f-qualopts").value).slice(0, 4),
     },
   };
   var lim = parseInt($("f-limit").value, 10);
@@ -6217,7 +6269,7 @@ ${inject}</body></html>`;
 
         // generación (proveedor y modelo configurables por tenant)
         const run = tenant.provider === "google" ? runGemini : runClaude;
-        const { text, usage } = await run(
+        const { text, usage, leadForm } = await run(
           env,
           tenant,
           history.slice(-8),
@@ -6262,7 +6314,55 @@ ${inject}</body></html>`;
           body: { last_message_at: new Date().toISOString() },
         });
 
-        return json({ reply: text, sources }, 200, ch);
+        return json({ reply: text, sources, lead_form: leadForm || undefined }, 200, ch);
+      }
+
+      // --- lead enviado desde el formulario del widget ---
+      if (url.pathname === "/api/lead" && request.method === "POST") {
+        const { key, session_id, name, email, phone, company, message, kind } = await request.json();
+        const tenant = await getTenant(env, key);
+        if (!tenant) return json({ error: "clave no válida" }, 401);
+        const ch = cors(origin, [...tenant.allowed_domains, url.hostname]);
+        if (ch["Access-Control-Allow-Origin"] === "null") {
+          return json({ error: "dominio no autorizado" }, 403, ch);
+        }
+        if (!leadCaptureEnabled(tenant)) return json({ error: "no disponible" }, 403, ch);
+        const nm = String(name || "").trim().slice(0, 120);
+        const em = String(email || "").trim().slice(0, 160);
+        if (!nm || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) {
+          return json({ error: "pon al menos tu nombre y un email válido" }, 400, ch);
+        }
+        let convId = null;
+        if (session_id) {
+          const rows = await sb(
+            env,
+            `conversations?tenant_id=eq.${tenant.id}&session_id=eq.${encodeURIComponent(String(session_id).slice(0, 80))}&select=id&limit=1`
+          );
+          convId = rows?.[0]?.id || null;
+        }
+        const l = {
+          kind: ["expositor", "visitante", "prensa", "general"].includes(kind) ? kind : "general",
+          name: nm,
+          email: em,
+          phone: String(phone || "").trim().slice(0, 60) || null,
+          company: String(company || "").trim().slice(0, 160) || null,
+          message: String(message || "").trim().slice(0, 500) || null,
+        };
+        await sb(env, "leads", {
+          method: "POST",
+          body: { tenant_id: tenant.id, conversation_id: convId, ...l },
+        });
+        if (tenant.lead_webhook_url) {
+          ctx.waitUntil(
+            fetch(tenant.lead_webhook_url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tenant: tenant.slug, ...l }),
+            }).catch(() => {})
+          );
+        }
+        ctx.waitUntil(notifyLeadInstant(env, tenant, l));
+        return json({ ok: true }, 200, ch);
       }
 
       // --- panel de administración ---
