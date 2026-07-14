@@ -5346,6 +5346,8 @@ const PANEL_HTML = `<!doctype html>
     </div>
   </div>
   <div class="hspacer"></div>
+  <a class="ghost" href="/acceso" target="_blank" rel="noopener"
+     style="text-decoration:none;display:inline-block">💳 Mi facturación</a>
   <button id="pdf" class="ghost">📄 Informe del mes (PDF)</button>
 </header>
 <main>
