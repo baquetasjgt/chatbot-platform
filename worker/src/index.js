@@ -831,19 +831,28 @@ function portalSecret(env) {
   return env.PORTAL_SECRET || env.ADMIN_TOKEN;
 }
 
-async function makePortalToken(env, clientId) {
-  const exp = Date.now() + 30 * 24 * 3600 * 1000; // 30 días
-  const body = `${clientId}.${exp}`;
+// huella de la contraseña incluida en el token: si el cliente la cambia, los
+// tokens antiguos dejan de valer (revocación de sesiones al cambiar contraseña)
+function pwFingerprint(hash) {
+  return (hash || "none").slice(-16);
+}
+
+async function makePortalToken(env, clientId, pwHash) {
+  const exp = Date.now() + 7 * 24 * 3600 * 1000; // 7 días
+  const body = `${clientId}.${exp}.${pwFingerprint(pwHash)}`;
   return `${body}.${await hmacSign(body, portalSecret(env))}`;
 }
 
 async function portalClientId(env, token) {
   if (!token) return null;
   const p = token.split(".");
-  if (p.length !== 3) return null;
-  const body = `${p[0]}.${p[1]}`;
-  if (!safeEqual(await hmacSign(body, portalSecret(env)), p[2])) return null;
+  if (p.length !== 4) return null;
+  const body = `${p[0]}.${p[1]}.${p[2]}`;
+  if (!safeEqual(await hmacSign(body, portalSecret(env)), p[3])) return null;
   if (Date.now() > parseInt(p[1], 10)) return null;
+  // revocación: comprueba que la huella de contraseña sigue vigente
+  const [c] = await sb(env, `clients?id=eq.${encodeURIComponent(p[0])}&select=portal_password_hash`);
+  if (!c || pwFingerprint(c.portal_password_hash) !== p[2]) return null;
   return p[0];
 }
 
@@ -5164,7 +5173,16 @@ function load() {
           b.className = "ghost small";
           b.textContent = "PDF";
           b.onclick = function () {
-            window.open("/portal/invoice?id=" + v.id + "&pt=" + encodeURIComponent(TOKEN), "_blank");
+            // se abre la pestaña ya (gesto del usuario) y se navega tras pedir el enlace
+            var w = window.open("", "_blank");
+            fetch("/portal/invoice-link", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + TOKEN },
+              body: JSON.stringify({ id: v.id }),
+            }).then(function (r) { return r.json(); }).then(function (d) {
+              if (d.token && w) { w.location = "/portal/invoice?dl=" + encodeURIComponent(d.token); }
+              else if (w) { w.close(); }
+            }).catch(function () { if (w) w.close(); });
           };
           dl.appendChild(b);
         }
@@ -5214,6 +5232,8 @@ $("ac-save").onclick = function () {
     body: JSON.stringify({ current: cur, email: em, new_password: np || null }),
   }).then(function (r) { return r.json(); }).then(function (r) {
     if (r.error) { $("ac-msg").textContent = r.error; $("ac-msg").className = "err"; return; }
+    // al cambiar la contraseña el servidor entrega un token nuevo (el anterior se revoca)
+    if (r.token) { TOKEN = r.token; localStorage.setItem("cb_portal", TOKEN); }
     var did = r.changed || [];
     $("ac-msg").textContent = did.length
       ? "Guardado ✓" + (did.indexOf("email") >= 0 ? " A partir de ahora entra con " + em + "." : "")
@@ -6702,7 +6722,7 @@ ${inject}</body></html>`;
         if (c.portal_enabled === false) {
           return json({ error: "el acceso al portal está desactivado; contacta con nosotros" }, 403);
         }
-        return json({ token: await makePortalToken(env, c.id) });
+        return json({ token: await makePortalToken(env, c.id, c.portal_password_hash) });
       }
 
       if (url.pathname === "/portal/forgot" && request.method === "POST") {
@@ -6790,8 +6810,8 @@ ${inject}</body></html>`;
       }
 
       const portalAuth = async () => {
-        const auth = (request.headers.get("Authorization") || "").replace(/^Bearer /, "") ||
-          url.searchParams.get("pt") || "";
+        // solo por cabecera: el token de sesión ya no viaja en la URL
+        const auth = (request.headers.get("Authorization") || "").replace(/^Bearer /, "");
         return portalClientId(env, auth);
       };
 
@@ -6860,10 +6880,16 @@ ${inject}</body></html>`;
         if (Object.keys(changes).length) {
           await sb(env, `clients?id=eq.${cid}`, { method: "PATCH", body: changes });
         }
+        // al cambiar la contraseña se revocan las demás sesiones; a la actual se le
+        // entrega un token nuevo para que el propio cliente no se quede fuera
+        const freshToken = changes.portal_password_hash
+          ? await makePortalToken(env, cid, changes.portal_password_hash)
+          : null;
         return json({
           ok: true,
           changed: Object.keys(changes),
           email_pending: emailPending,
+          token: freshToken,
         });
       }
 
@@ -6884,12 +6910,26 @@ ${inject}</body></html>`;
         return json({ ok: true });
       }
 
-      if (url.pathname === "/portal/invoice") {
+      // enlace de descarga de un solo uso y corta duración para el PDF de factura:
+      // así el token de sesión no viaja en la URL (ni acaba en el historial/logs)
+      if (url.pathname === "/portal/invoice-link" && request.method === "POST") {
         const cid = await portalAuth();
-        if (!cid) return new Response("Sesión caducada", { status: 401 });
+        if (!cid) return json({ error: "sesión caducada" }, 401);
+        const { id } = await request.json();
+        if (!/^[0-9a-f-]{36}$/.test(id || "")) return json({ error: "id no válido" }, 400);
+        const [inv] = await sb(env, `invoices?id=eq.${id}&client_id=eq.${cid}&select=id`);
+        if (!inv) return json({ error: "factura no encontrada" }, 404);
+        return json({ token: await makeActionToken(env, "invpdf", cid, id, 120 * 1000) });
+      }
+
+      if (url.pathname === "/portal/invoice") {
+        const t = await readActionToken(env, "invpdf", url.searchParams.get("dl"));
+        if (!t || !/^[0-9a-f-]{36}$/.test(t.extra || "")) {
+          return new Response("Enlace caducado o no válido", { status: 401 });
+        }
         const [inv] = await sb(
           env,
-          `invoices?id=eq.${encodeURIComponent(url.searchParams.get("id") || "")}&client_id=eq.${cid}&select=pdf_path,number`
+          `invoices?id=eq.${encodeURIComponent(t.extra)}&client_id=eq.${encodeURIComponent(t.clientId)}&select=pdf_path,number`
         );
         if (!inv?.pdf_path) return new Response("Factura no encontrada", { status: 404 });
         const pdf = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${inv.pdf_path}`, {
