@@ -21,3 +21,5 @@ binding = "AI"
 #   GEMINI_API_KEY (solo si algún tenant usa provider = 'google')
 #   RESEND_API_KEY + EMAIL_FROM (emails: informes y alertas; cuenta gratis en resend.com)
 #   ADMIN_ALERT_EMAIL (tu email para avisos de error, máx. 1/hora)
+#   PORTAL_SECRET (opcional pero recomendado): clave propia para firmar las sesiones
+#     del portal de clientes, separada de ADMIN_TOKEN. Si no está, se usa ADMIN_TOKEN.

@@ -824,10 +824,17 @@ async function hmacSign(data, secret) {
   return b64(sig).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// clave de firma del portal de clientes, separada del ADMIN_TOKEN de administración:
+// si un secreto se filtra no compromete al otro, y rotar el de admin no echa a los
+// clientes. Si aún no está configurado PORTAL_SECRET, cae al ADMIN_TOKEN (sin cortes).
+function portalSecret(env) {
+  return env.PORTAL_SECRET || env.ADMIN_TOKEN;
+}
+
 async function makePortalToken(env, clientId) {
   const exp = Date.now() + 30 * 24 * 3600 * 1000; // 30 días
   const body = `${clientId}.${exp}`;
-  return `${body}.${await hmacSign(body, env.ADMIN_TOKEN)}`;
+  return `${body}.${await hmacSign(body, portalSecret(env))}`;
 }
 
 async function portalClientId(env, token) {
@@ -835,7 +842,7 @@ async function portalClientId(env, token) {
   const p = token.split(".");
   if (p.length !== 3) return null;
   const body = `${p[0]}.${p[1]}`;
-  if (!safeEqual(await hmacSign(body, env.ADMIN_TOKEN), p[2])) return null;
+  if (!safeEqual(await hmacSign(body, portalSecret(env)), p[2])) return null;
   if (Date.now() > parseInt(p[1], 10)) return null;
   return p[0];
 }
@@ -854,14 +861,14 @@ function b64urlDecode(s) {
 
 async function makeActionToken(env, kind, clientId, extra, ttlMs) {
   const body = `${kind}.${clientId}.${extra ? b64url(extra) : "-"}.${Date.now() + ttlMs}`;
-  return `${body}.${await hmacSign(body, env.ADMIN_TOKEN)}`;
+  return `${body}.${await hmacSign(body, portalSecret(env))}`;
 }
 
 async function readActionToken(env, kind, token) {
   const p = String(token || "").split(".");
   if (p.length !== 5 || p[0] !== kind) return null;
   const body = p.slice(0, 4).join(".");
-  if (!safeEqual(await hmacSign(body, env.ADMIN_TOKEN), p[4])) return null;
+  if (!safeEqual(await hmacSign(body, portalSecret(env)), p[4])) return null;
   if (Date.now() > parseInt(p[3], 10)) return null;
   return { clientId: p[1], extra: p[2] === "-" ? null : b64urlDecode(p[2]) };
 }
