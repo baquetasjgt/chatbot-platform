@@ -3986,11 +3986,20 @@ $("i-demo-open").onclick = function () { window.open($("i-demo").value, "_blank"
 
 $("rep-send").onclick = function () {
   if (!curTenant()) return;
-  if (!confirm("Se enviará al cliente por email el informe de actividad del mes pasado. ¿Enviar ahora?")) return;
+  var f = findTenant(sel.id);
+  var def = (f && f.client && f.client.email) || "";
+  var to = prompt(
+    "¿A qué email envío el informe de actividad del mes pasado?\\n" +
+    "Por defecto va al del cliente; cámbialo por el tuyo si es una prueba.",
+    def
+  );
+  if (to === null) return;
+  to = to.trim();
+  if (!to) { toast("Escribe un email de destino.", true); return; }
   $("integ-msg").textContent = "Enviando informe…";
-  api("/admin/api/tenants/" + sel.id + "/send-report", { method: "POST", body: "{}" })
+  api("/admin/api/tenants/" + sel.id + "/send-report", { method: "POST", body: JSON.stringify({ to: to }) })
     .then(function (r) {
-      $("integ-msg").textContent = r.ok ? "Informe enviado a " + r.sent_to + " ✓" : (r.reason || r.error || "No se pudo enviar");
+      $("integ-msg").textContent = r.ok ? "Informe enviado a " + (r.sent_to || to) + " ✓" : (r.reason || r.error || "No se pudo enviar");
       if (r.ok) toast("Informe enviado ✓");
     })
     .catch(function () { $("integ-msg").textContent = "Error al enviar."; });
