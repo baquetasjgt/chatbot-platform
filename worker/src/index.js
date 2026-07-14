@@ -1827,8 +1827,10 @@ const ADMIN_HTML = `<!doctype html>
     <div class="brand" style="margin-bottom:12px"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
     <h1>Bienvenido a tu estudio</h1>
     <p class="mut">Introduce tu clave de acceso para gestionar tus clientes y sus asistentes.</p>
-    <input id="tok" type="password" placeholder="Token" autocomplete="current-password">
+    <input id="tok" type="password" placeholder="Token" autocomplete="current-password"
+      autocapitalize="off" autocorrect="off" spellcheck="false">
     <button id="enter" class="primary">Entrar</button>
+    <button id="paste-tok" class="ghost" type="button" style="width:100%;margin-top:10px">📋 Pegar el token y entrar</button>
     <p id="login-err" class="err"></p>
   </div>
 </div>
@@ -2437,6 +2439,20 @@ $("enter").onclick = function () {
   load();
 };
 $("tok").addEventListener("keydown", function (e) { if (e.key === "Enter") $("enter").click(); });
+$("paste-tok").onclick = function () {
+  if (!navigator.clipboard || !navigator.clipboard.readText) {
+    $("login-err").textContent = "Tu navegador no deja leer el portapapeles: mantén pulsado el campo y elige Pegar.";
+    return;
+  }
+  navigator.clipboard.readText().then(function (t) {
+    t = (t || "").trim();
+    if (!t) { $("login-err").textContent = "El portapapeles está vacío. Copia el token primero."; return; }
+    $("tok").value = t;
+    $("enter").click();
+  }).catch(function () {
+    $("login-err").textContent = "No se ha podido leer el portapapeles: mantén pulsado el campo y elige Pegar.";
+  });
+};
 [].forEach.call(document.querySelectorAll('input[type="password"]'), function (inp) {
   var w = document.createElement("span");
   w.style.cssText = "position:relative;display:block";
