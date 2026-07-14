@@ -561,15 +561,7 @@ function emailStat(n, label) {
 
 // ---------- informe mensual ----------
 
-async function sendMonthlyReport(env, tenantId, toOverride) {
-  const [t] = await sb(
-    env,
-    `tenants?id=eq.${tenantId}&select=*,projects(name,clients(name,email))`
-  );
-  if (!t) return { ok: false, reason: "tenant no encontrado" };
-  const to = toOverride || t.projects?.clients?.email || t.handoff_email;
-  if (!to) return { ok: false, reason: "el cliente no tiene email (ficha del cliente) ni handoff_email" };
-
+async function monthlyReportData(env, t) {
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -581,9 +573,33 @@ async function sendMonthlyReport(env, tenantId, toOverride) {
     sb(env, `leads?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
     rpc(env, "unanswered_questions", { p_tenant_id: t.id, p_days: 45 }),
   ]);
-  const monthName = start.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
   const q = users?.length || 0;
-  const rate = q ? Math.max(0, Math.round((100 * (q - (unans?.length || 0))) / q)) : 0;
+  return {
+    monthName: start.toLocaleDateString("es-ES", { month: "long", year: "numeric" }),
+    convs: convs?.length || 0,
+    questions: q,
+    rate: q ? Math.max(0, Math.round((100 * (q - (unans?.length || 0))) / q)) : 0,
+    leads: leads?.length || 0,
+    gaps: gaps || [],
+  };
+}
+
+async function sendMonthlyReport(env, tenantId, toOverride) {
+  const [t] = await sb(
+    env,
+    `tenants?id=eq.${tenantId}&select=*,projects(name,clients(name,email))`
+  );
+  if (!t) return { ok: false, reason: "tenant no encontrado" };
+  const to = toOverride || t.projects?.clients?.email || t.handoff_email;
+  if (!to) return { ok: false, reason: "el cliente no tiene email (ficha del cliente) ni handoff_email" };
+
+  const rep = await monthlyReportData(env, t);
+  const monthName = rep.monthName;
+  const convs = { length: rep.convs };
+  const leads = { length: rep.leads };
+  const gaps = rep.gaps;
+  const q = rep.questions;
+  const rate = rep.rate;
 
   const html = emailShell(`
   <h2 style="margin:0 0 6px;font-size:19px;color:#10182b">Informe de tu asistente &mdash; ${h(monthName)}</h2>
@@ -604,6 +620,85 @@ async function sendMonthlyReport(env, tenantId, toOverride) {
   }`);
   const sent = await sendEmail(env, to, `Informe mensual de tu asistente — ${monthName}`, html);
   return sent.ok ? { ok: true, sent_to: to } : { ok: false, reason: sent.reason };
+}
+
+// aviso de lead nuevo (según tenants.features.lead_notify: off | instant | daily)
+
+async function leadNotifyEmail(env, tenant) {
+  if (tenant.projects?.clients?.email) return tenant.projects.clients.email;
+  if (tenant.project_id) {
+    const [p] = await sb(env, `projects?id=eq.${tenant.project_id}&select=clients(email)`);
+    if (p?.clients?.email) return p.clients.email;
+  }
+  return tenant.handoff_email || null;
+}
+
+function leadRowsHtml(list) {
+  return list
+    .map(
+      (l) =>
+        `<div style="border-left:3px solid #3c62f0;background-color:#f7f9ff;border-radius:0 10px 10px 0;padding:10px 16px;margin-bottom:10px">` +
+        `<p style="margin:0;font-weight:600">${h(l.name || "(sin nombre)")}${l.company ? " · " + h(l.company) : ""} <span style="color:#6b7590;font-weight:400">— ${h(l.kind || "")}</span></p>` +
+        `<p style="margin:4px 0 0;color:#3c62f0">${h([l.email, l.phone].filter(Boolean).join(" · "))}</p>` +
+        (l.message ? `<p style="margin:4px 0 0;color:#6b7590">${h(l.message)}</p>` : "") +
+        `</div>`
+    )
+    .join("");
+}
+
+async function notifyLeadInstant(env, tenant, l) {
+  try {
+    if (tenant.features?.lead_notify !== "instant") return;
+    const to = await leadNotifyEmail(env, tenant);
+    if (!to) return;
+    await sendEmail(
+      env,
+      to,
+      `🎉 Nuevo contacto captado por ${tenant.name}`,
+      emailShell(
+        `<h2 style="margin:0 0 10px;font-size:18px">Tu asistente ha captado un contacto</h2>` +
+          `<p style="margin:0 0 14px">Acaba de dejar sus datos en el chat de <b>${h(tenant.name)}</b>:</p>` +
+          leadRowsHtml([l]) +
+          `<p style="margin:10px 0 0;color:#6b7590;font-size:13px">Tienes todos los detalles y el historial en tu panel.</p>`
+      )
+    );
+  } catch (e) {
+    await logError(env, "lead-notify/" + tenant.slug, e?.message || e).catch(() => {});
+  }
+}
+
+async function runDailyLeadDigests(env) {
+  const tenants = await sb(
+    env,
+    "tenants?active=is.true&select=id,slug,name,handoff_email,project_id,features,projects(clients(email))"
+  );
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  for (const t of tenants || []) {
+    try {
+      if (t.features?.lead_notify !== "daily") continue;
+      const leads = await sb(
+        env,
+        `leads?tenant_id=eq.${t.id}&created_at=gte.${since}` +
+          `&select=kind,name,email,phone,company,message&order=created_at.desc&limit=50`
+      );
+      if (!leads?.length) continue;
+      const to = await leadNotifyEmail(env, t);
+      if (!to) continue;
+      await sendEmail(
+        env,
+        to,
+        `${leads.length === 1 ? "1 contacto nuevo" : leads.length + " contactos nuevos"} — ${t.name}`,
+        emailShell(
+          `<h2 style="margin:0 0 10px;font-size:18px">Contactos captados en las últimas 24 horas</h2>` +
+            `<p style="margin:0 0 14px">Resumen diario de <b>${h(t.name)}</b>:</p>` +
+            leadRowsHtml(leads) +
+            `<p style="margin:10px 0 0;color:#6b7590;font-size:13px">Tienes todos los detalles y el historial en tu panel.</p>`
+        )
+      );
+    } catch (err) {
+      await logError(env, "lead-digest/" + t.slug, err?.message || err);
+    }
+  }
 }
 
 async function runMonthlyReports(env) {
@@ -2112,6 +2207,14 @@ const ADMIN_HTML = `<!doctype html>
             <div><label>Email para leads / handoff</label><input id="f-email" type="email"></div>
             <div><label>Webhook de leads (Zapier, Make, CRM…)</label><input id="f-webhook" type="url"></div>
           </div>
+          <label>Aviso al cliente por email cuando el bot capte un lead</label>
+          <select id="f-leadnotify" style="max-width:340px">
+            <option value="off">Sin aviso (solo panel y webhook)</option>
+            <option value="instant">Al momento — un email por cada lead</option>
+            <option value="daily">Resumen diario — un email a las 07:00 con los del día</option>
+          </select>
+          <p class="mut" style="margin-top:4px">Se envía al email de la ficha del cliente (o al de leads
+          si no tiene). Necesita Resend configurado.</p>
           <p class="mut" style="margin-top:10px">El webhook recibe cada lead al momento; con Zapier o Make
           puedes reenviarlo a email, hoja de cálculo o CRM sin programar.</p>
         </div>
@@ -3189,6 +3292,7 @@ function selTenant(id, projectId) {
   $("f-active").checked = isNew ? true : !!t.active;
   var feats = (t && t.features) || {};
   $("f-featleads").checked = feats.leads !== false;
+  $("f-leadnotify").value = feats.lead_notify || "off";
   $("f-panelon").checked = !t || t.panel_enabled !== false;
   var pf = (t && t.panel_features) || {};
   $("f-pfleads").checked = pf.leads !== false;
@@ -3955,7 +4059,7 @@ function collect() {
     handoff_email: $("f-email").value.trim() || null,
     lead_webhook_url: $("f-webhook").value.trim() || null,
     active: $("f-active").checked,
-    features: { leads: $("f-featleads").checked },
+    features: { leads: $("f-featleads").checked, lead_notify: $("f-leadnotify").value },
     panel_enabled: $("f-panelon").checked,
     panel_features: {
       leads: $("f-pfleads").checked,
@@ -5126,108 +5230,195 @@ const PANEL_HTML = `<!doctype html>
 <meta name="robots" content="noindex">
 <title>Panel del asistente — ExpoBot</title>
 <style>
-  :root{--ink:#10182b;--mut:#6b7590;--line:#e4e7f0;--bg:#f5f7fc;--acc:#3c62f0;
-    --grad:linear-gradient(135deg,#3c62f0,#6b8cff)}
+  :root{--ink:#10182b;--mut:#6b7590;--line:#e4e7f0;--bg:#f5f7fc;--card:#ffffff;--soft:#f0f4ff;
+    --acc:#3c62f0;--grad:linear-gradient(135deg,#3c62f0,#6b8cff);--ok:#0a7a4b;--err:#b3261e;
+    --chip:#eef1f8;--userbub:#e8eefc;--botbub:#eef1f8}
+  @media(prefers-color-scheme:dark){
+    :root{--ink:#e8ecf6;--mut:#93a0bd;--line:#2a3350;--bg:#0f1526;--card:#171e33;--soft:#1d2743;
+      --ok:#4cc38a;--err:#ff8a80;--chip:#222b47;--userbub:#26335c;--botbub:#1e2740}
+    .brandimg{filter:brightness(0) invert(1)}
+  }
   *{box-sizing:border-box;margin:0}
   body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
-  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;
-    display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:-.02em}
-  .brand svg{width:28px;height:25px;flex:0 0 auto}
-  .brand b{color:var(--acc);font-weight:800}
-  .brand svg.bub{width:.82em;height:.6em;display:inline;vertical-align:-2%;margin:0 .5px}
-  .brand-sep{width:1px;height:26px;background:var(--line)}
-  h1{font-size:17px;font-weight:600}
-  .sub{color:var(--mut);font-size:13px}
-  main{max-width:960px;margin:0 auto;padding:24px 16px}
-  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:150px;flex:1}
-  .stat b{display:block;font-size:24px}
-  .stat span{color:var(--mut);font-size:13px}
-  nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-  nav button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 16px;cursor:pointer;font-size:14px;color:var(--ink)}
+  .hide{display:none!important}
+  button{font:inherit;cursor:pointer}
+  input,select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 12px;
+    background:var(--card);color:var(--ink)}
+  input:focus,select:focus{outline:0;border-color:var(--acc)}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 22px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+  .brandimg{height:26px;width:auto;display:block}
+  .brand-sep{width:1px;height:28px;background:var(--line)}
+  .who{display:flex;align-items:center;gap:10px;min-width:0}
+  #clogo{width:34px;height:34px;border-radius:10px;object-fit:cover;display:none}
+  #cdot{width:34px;height:34px;border-radius:10px;background:var(--grad);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-weight:700;font-size:15px}
+  h1{font-size:16px;font-weight:700;line-height:1.2}
+  .sub{color:var(--mut);font-size:12.5px}
+  .hspacer{flex:1}
+  .ghost{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 13px;
+    color:var(--ink);font-size:13.5px}
+  main{max-width:1020px;margin:0 auto;padding:22px 16px 40px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    flex-wrap:wrap;margin-bottom:14px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+  .seg button{border:0;background:transparent;padding:7px 14px;font-size:13px;color:var(--mut)}
+  .seg button.on{background:var(--grad);color:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    display:flex;gap:12px;align-items:center}
+  .kpi .ic{width:38px;height:38px;border-radius:11px;background:var(--soft);display:flex;
+    align-items:center;justify-content:center;font-size:18px;flex:none}
+  .kpi b{display:block;font-size:22px;line-height:1.15}
+  .kpi span{color:var(--mut);font-size:12px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .chartbox{margin-bottom:16px}
+  #chart{display:flex;align-items:flex-end;gap:3px;height:76px;margin-top:10px}
+  #chart div{flex:1;background:#b9c8f2;border-radius:3px 3px 0 0;min-height:3px;transition:opacity .15s}
+  #chart div:hover{opacity:.65}
+  .axis{display:flex;justify-content:space-between;color:var(--mut);font-size:11px;margin-top:6px}
+  nav{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}
+  nav button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:8px 16px;
+    font-size:14px;color:var(--ink);display:flex;gap:7px;align-items:center}
   nav button.on{background:var(--grad);color:#fff;border-color:transparent}
+  nav .badge{background:var(--err);color:#fff;border-radius:9px;font-size:11px;padding:1px 7px;font-weight:700}
+  nav button.on .badge{background:rgba(255,255,255,.28)}
   section{display:none}
   section.on{display:block}
-  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .filters input[type="search"]{flex:1;min-width:170px}
+  .filters .count{color:var(--mut);font-size:13px;white-space:nowrap}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;overflow:hidden}
   th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
-  th{background:#fafaf8;color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  th{background:var(--soft);color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
   tr:last-child td{border-bottom:0}
   .mut{color:var(--mut);font-size:13px}
-  .conv{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
-  .conv>button{width:100%;text-align:left;background:none;border:0;padding:12px 16px;cursor:pointer;font:inherit;display:flex;justify-content:space-between;gap:12px}
-  .conv .meta{color:var(--mut);font-size:13px;white-space:nowrap}
+  .ok{color:var(--ok);font-size:13px}
+  .err{color:var(--err);font-size:13px}
+  .conv{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+  .conv>button{width:100%;text-align:left;background:none;border:0;padding:13px 16px;cursor:pointer;
+    font:inherit;color:var(--ink);display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .conv .meta{color:var(--mut);font-size:12.5px;white-space:nowrap}
   .msgs{display:none;border-top:1px solid var(--line);padding:14px 16px}
   .conv.open .msgs{display:block}
-  .m{width:fit-content;max-width:80%;padding:8px 12px;border-radius:12px;margin-bottom:8px;white-space:pre-wrap;font-size:14px}
-  .m.user{background:#e8eefc;margin-left:auto}
-  .m.assistant{background:#eef1f8}
-  .box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px}
-  .btn{background:var(--grad);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font:inherit;font-weight:600}
+  .m{width:fit-content;max-width:80%;padding:8px 12px;border-radius:12px;margin-bottom:8px;
+    white-space:pre-wrap;font-size:14px}
+  .m.user{background:var(--userbub);margin-left:auto;border-bottom-right-radius:4px}
+  .m.assistant{background:var(--botbub);border-bottom-left-radius:4px}
+  .convdel{margin-top:6px;text-align:right}
+  .btn{background:var(--grad);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
   .btn:disabled{opacity:.5;cursor:default}
-  .ok{color:#0a7a4b;font-size:13px}
-  .err{color:#b3261e;font-size:13px}
-  #up-files{border:1px dashed var(--line);border-radius:10px;padding:16px;width:100%;background:#fff}
-  #dot{display:inline-block;width:10px;height:10px;border-radius:5px;background:var(--acc);margin-right:8px}
-  #chart{display:flex;align-items:flex-end;gap:3px;height:72px}
-  #chart div{flex:1;background:#b9c8f2;border-radius:3px 3px 0 0;min-height:3px}
+  .mini{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 10px;
+    font-size:13px;cursor:pointer;white-space:nowrap;color:var(--ink)}
+  .del{background:none;border:0;font-size:15px;opacity:.5;padding:3px 6px}
+  .del:hover{opacity:1}
+  .done{color:var(--ok);font-size:13px;white-space:nowrap}
+  .gapcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:10px}
+  .gapcard .q{font-weight:600;margin-bottom:2px}
+  .gapcard textarea{width:100%;font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 12px;
+    background:var(--bg);color:var(--ink);margin-top:10px;resize:vertical}
+  .gapcard textarea:focus{outline:0;border-color:var(--acc)}
+  .garow{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .doc{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:14px}
+  .doc .meta{color:var(--mut);font-size:12.5px}
+  #up-files{border:1px dashed var(--line);border-radius:10px;padding:16px;width:100%;background:var(--bg);color:var(--ink)}
+  .empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:26px;
+    text-align:center;color:var(--mut)}
+  .empty b{color:var(--ink);display:block;margin-bottom:6px;font-size:15px}
   footer{text-align:center;color:var(--mut);font-size:12.5px;padding:10px 0 26px}
   footer b{color:var(--acc)}
-  .mini{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;
-    font:13px system-ui,sans-serif;cursor:pointer;white-space:nowrap}
-  .done{color:#0a7a4b;font-size:13px;white-space:nowrap}
-  section{overflow-x:auto}
-  section table{min-width:640px}
+  .twrap{overflow-x:auto;border-radius:14px}
+  .twrap table{min-width:680px}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
+  <img class="brandimg" src="/brand/logo.png" alt="ExpoBot">
   <div class="brand-sep"></div>
-  <div>
-    <h1><span id="dot"></span><span id="name">Cargando…</span></h1>
-    <div class="sub">Conversaciones, leads, contenido y pruebas de tu asistente</div>
+  <div class="who">
+    <img id="clogo" alt=""><div id="cdot">·</div>
+    <div style="min-width:0">
+      <h1 id="name">Cargando…</h1>
+      <div class="sub">Panel de tu asistente</div>
+    </div>
   </div>
+  <div class="hspacer"></div>
+  <button id="pdf" class="ghost">📄 Informe del mes (PDF)</button>
 </header>
 <main>
-  <div class="stats">
-    <div class="stat"><b id="s-convs">–</b><span>conversaciones</span></div>
-    <div class="stat"><b id="s-msgs">–</b><span>preguntas recibidas</span></div>
-    <div class="stat"><b id="s-rate">–</b><span>respondidas con contexto</span></div>
-    <div class="stat"><b id="s-leads">–</b><span>leads</span></div>
+  <div class="topbar">
+    <div class="mut">Actividad y resultados de tu asistente</div>
+    <div class="seg" id="period">
+      <button data-d="7">7 días</button>
+      <button data-d="30" class="on">30 días</button>
+      <button data-d="90">90 días</button>
+    </div>
   </div>
-  <div class="box" style="margin-bottom:20px">
-    <div class="mut" style="margin-bottom:10px">Actividad — preguntas por día, últimos 30 días</div>
+  <div class="kpis">
+    <div class="kpi"><div class="ic">💬</div><div><b id="s-convs">–</b><span>conversaciones</span></div></div>
+    <div class="kpi"><div class="ic">❓</div><div><b id="s-msgs">–</b><span>preguntas recibidas</span></div></div>
+    <div class="kpi"><div class="ic">🎯</div><div><b id="s-rate">–</b><span>respondidas con tu contenido</span></div></div>
+    <div class="kpi"><div class="ic">📥</div><div><b id="s-leads">–</b><span>contactos captados</span></div></div>
+  </div>
+  <div class="box chartbox">
+    <div class="mut">Preguntas por día</div>
     <div id="chart"></div>
+    <div class="axis"><span id="ax-from"></span><span id="ax-to"></span></div>
   </div>
   <nav>
-    <button class="on" data-tab="t-leads">Leads</button>
-    <button data-tab="t-convs">Conversaciones</button>
-    <button data-tab="t-gaps">Preguntas sin respuesta</button>
-    <button data-tab="t-add">Añadir contenido</button>
-    <button data-tab="t-test">Probar el bot</button>
+    <button class="on" data-tab="t-leads">📥 Leads <span class="badge hide" id="bg-leads"></span></button>
+    <button data-tab="t-convs">💬 Conversaciones <span class="badge hide" id="bg-convs"></span></button>
+    <button data-tab="t-gaps">🧩 Preguntas sin respuesta</button>
+    <button data-tab="t-add">📚 Contenido</button>
+    <button data-tab="t-test">🤖 Probar el bot</button>
   </nav>
   <section id="t-leads" class="on">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button id="csv" class="btn" style="padding:8px 14px;font-size:13px">Descargar CSV</button>
+    <div class="filters">
+      <input id="lf-q" type="search" placeholder="Buscar por nombre, email, empresa…">
+      <select id="lf-status">
+        <option value="">Todos</option>
+        <option value="nuevo">Nuevos</option>
+        <option value="contactado">Contactados</option>
+      </select>
+      <input id="lf-from" type="date" title="Desde">
+      <input id="lf-to" type="date" title="Hasta">
+      <span class="count" id="lf-count"></span>
+      <button id="csv" class="ghost">⬇ CSV</button>
     </div>
-    <table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th><th>Estado</th></tr></thead>
+    <div class="twrap"><table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th><th>Estado</th><th></th></tr></thead>
       <tbody id="leads-body"></tbody>
-    </table>
+    </table></div>
+    <div id="leads-empty" class="empty hide"><b>Todavía no hay leads</b>
+      Cuando un visitante deje sus datos de contacto en el chat, aparecerán aquí al momento
+      y podrás filtrarlos, marcarlos como contactados y descargarlos en CSV.</div>
   </section>
-  <section id="t-convs"><div id="convs"></div></section>
+  <section id="t-convs">
+    <div class="filters">
+      <input id="cf-q" type="search" placeholder="Buscar en las conversaciones…">
+      <input id="cf-from" type="date" title="Desde">
+      <input id="cf-to" type="date" title="Hasta">
+      <span class="count" id="cf-count"></span>
+      <button id="ccsv" class="ghost">⬇ CSV</button>
+    </div>
+    <div id="convs"></div>
+    <div id="convs-empty" class="empty hide"><b>Todavía no hay conversaciones</b>
+      En cuanto alguien hable con tu asistente (o lo pruebes tú en «Probar el bot»),
+      verás aquí cada conversación completa.</div>
+  </section>
   <section id="t-gaps">
-    <p class="mut" style="margin-bottom:10px">Preguntas para las que el asistente no encontró información.
-    Son la lista de tareas para ampliar el contenido.</p>
-    <table>
-      <thead><tr><th>Fecha</th><th>Pregunta</th></tr></thead>
-      <tbody id="gaps-body"></tbody>
-    </table>
+    <p class="mut" style="margin-bottom:12px">Preguntas reales de tus visitantes para las que el asistente
+    no encontró información. <b>Respóndelas aquí</b> y el asistente las aprenderá al momento.</p>
+    <div id="gaps-list"></div>
+    <div id="gaps-empty" class="empty hide"><b>Ninguna pendiente 🎉</b>
+      El asistente ha encontrado respuesta para todo lo que le han preguntado últimamente.</div>
   </section>
   <section id="t-add">
-    <div class="box">
-      <p style="margin-bottom:10px">Sube documentos con información que el asistente deba conocer:
+    <div class="box" style="margin-bottom:14px">
+      <p style="margin-bottom:10px"><b>Sube documentos</b> con información que el asistente deba conocer:
       tarifas, horarios, catálogos, preguntas frecuentes… <span class="mut">(PDF, TXT, CSV o imágenes;
       máx. 10 MB por archivo. Subir un archivo con el mismo nombre sustituye al anterior.)</span></p>
       <input id="up-files" type="file" multiple
@@ -5238,10 +5429,13 @@ const PANEL_HTML = `<!doctype html>
       </div>
       <div id="up-report" class="mut" style="margin-top:10px"></div>
     </div>
+    <p class="mut" style="margin-bottom:10px"><b>Lo que tu asistente ya conoce.</b> Puedes eliminar lo que
+    esté obsoleto; deja de usarse al momento.</p>
+    <div id="docs-list"></div>
   </section>
   <section id="t-test">
     <div class="box">
-      <p><b>Tu asistente está en la esquina inferior derecha</b> — el botón redondo de chat.
+      <p><b>Tu asistente está en la esquina inferior derecha</b> — el botón de chat.
       Pruébalo exactamente igual que lo verán tus visitantes.</p>
       <p class="mut" style="margin-top:8px">Las conversaciones de prueba también quedan registradas en
       la pestaña Conversaciones. Si acabas de subir contenido nuevo, pregúntale sobre ello para
@@ -5252,12 +5446,21 @@ const PANEL_HTML = `<!doctype html>
 <footer>Impulsado por <b>ExpoBot</b> — estudio de asistentes IA</footer>
 <script>
 var token = new URLSearchParams(location.search).get("token") || "";
-var LEADS = [];
+var LEADS = [], CONVS = [], GAPS = [], DOCS = [], ACT = [];
+var PERIOD = 30;
+var PRIMARY = "#3c62f0";
+var SEEN_KEY = "cb_seen_" + token.slice(-10);
+var LAST_VISIT = localStorage.getItem(SEEN_KEY) || "";
 
+function $(id) { return document.getElementById(id); }
 function esc(t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; }
 function fmt(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+function day(iso) { return (iso || "").slice(0, 10); }
+function sinceDate() {
+  return new Date(Date.now() - PERIOD * 24 * 3600 * 1000).toISOString();
 }
 
 document.querySelectorAll("nav button").forEach(function (b) {
@@ -5265,23 +5468,357 @@ document.querySelectorAll("nav button").forEach(function (b) {
     document.querySelectorAll("nav button").forEach(function (x) { x.classList.remove("on"); });
     document.querySelectorAll("section").forEach(function (x) { x.classList.remove("on"); });
     b.classList.add("on");
-    document.getElementById(b.dataset.tab).classList.add("on");
+    $(b.dataset.tab).classList.add("on");
   };
 });
+
+[].forEach.call(document.querySelectorAll("#period button"), function (b) {
+  b.onclick = function () {
+    PERIOD = parseInt(b.dataset.d, 10);
+    [].forEach.call(document.querySelectorAll("#period button"), function (x) {
+      x.classList.toggle("on", x === b);
+    });
+    renderStats();
+    renderChart();
+  };
+});
+
+$("pdf").onclick = function () {
+  window.open("/panel/report.pdf?token=" + encodeURIComponent(token), "_blank");
+};
+
+function renderStats() {
+  var since = sinceDate();
+  var convs = CONVS.filter(function (c) { return (c.last_message_at || c.created_at) >= since; });
+  var leads = LEADS.filter(function (l) { return l.created_at >= since; });
+  var userMsgs = 0, answered = 0, assistantMsgs = 0;
+  convs.forEach(function (c) {
+    (c.messages || []).forEach(function (m) {
+      if (m.created_at && m.created_at < since) return;
+      if (m.role === "user") userMsgs++;
+      if (m.role === "assistant") {
+        assistantMsgs++;
+        if (m.was_answered !== false) answered++;
+      }
+    });
+  });
+  $("s-convs").textContent = convs.length;
+  $("s-msgs").textContent = userMsgs;
+  $("s-leads").textContent = leads.length;
+  $("s-rate").textContent = assistantMsgs ? Math.round((100 * answered) / assistantMsgs) + "%" : "–";
+}
+
+function renderChart() {
+  var act = ACT.slice(-PERIOD);
+  var mx = 1;
+  act.forEach(function (a) { if (a.n > mx) mx = a.n; });
+  var ch = $("chart");
+  ch.innerHTML = "";
+  act.forEach(function (a) {
+    var bar = document.createElement("div");
+    bar.style.height = Math.max(4, Math.round((a.n / mx) * 100)) + "%";
+    if (a.n) bar.style.background = PRIMARY;
+    bar.title = a.day + ": " + a.n + (a.n === 1 ? " pregunta" : " preguntas");
+    ch.appendChild(bar);
+  });
+  if (act.length) {
+    $("ax-from").textContent = act[0].day;
+    $("ax-to").textContent = act[act.length - 1].day;
+  }
+}
+
+function leadMatches(l) {
+  var q = $("lf-q").value.trim().toLowerCase();
+  var st = $("lf-status").value;
+  var from = $("lf-from").value, to = $("lf-to").value;
+  if (st && (l.status || "nuevo") !== st) return false;
+  if (from && day(l.created_at) < from) return false;
+  if (to && day(l.created_at) > to) return false;
+  if (q) {
+    var blob = [l.name, l.email, l.phone, l.company, l.message, l.kind].join(" ").toLowerCase();
+    if (blob.indexOf(q) < 0) return false;
+  }
+  return true;
+}
+
+function renderLeads() {
+  var rows = LEADS.filter(leadMatches);
+  var anyAtAll = LEADS.length > 0;
+  $("leads-empty").classList.toggle("hide", anyAtAll);
+  $("lf-count").textContent = anyAtAll
+    ? rows.length + (rows.length === 1 ? " lead" : " leads")
+    : "";
+  var tb = $("leads-body");
+  tb.innerHTML = "";
+  if (anyAtAll && !rows.length) {
+    tb.innerHTML = "<tr><td colspan='7' class='mut'>Nada coincide con esos filtros.</td></tr>";
+  }
+  rows.forEach(function (l) {
+    var tr = document.createElement("tr");
+    function td(html) { var c = document.createElement("td"); c.innerHTML = html; return c; }
+    tr.appendChild(td(esc(fmt(l.created_at))));
+    tr.appendChild(td(esc(l.kind)));
+    tr.appendChild(td(esc(l.name) + (l.company ? "<div class='mut'>" + esc(l.company) + "</div>" : "")));
+    tr.appendChild(td(esc(l.email) + (l.phone ? "<div class='mut'>" + esc(l.phone) + "</div>" : "")));
+    tr.appendChild(td(esc(l.message)));
+    var st = document.createElement("td");
+    if (l.status === "contactado") {
+      st.innerHTML = "<span class='done'>✓ contactado</span>";
+    } else {
+      var b = document.createElement("button");
+      b.className = "mini";
+      b.textContent = "Marcar contactado";
+      b.onclick = function () {
+        b.disabled = true;
+        fetch("/panel/lead-status?token=" + encodeURIComponent(token), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: l.id, status: "contactado" }),
+        }).then(function (r) { return r.json(); }).then(function (r) {
+          if (r.ok) { l.status = "contactado"; renderLeads(); }
+          else b.disabled = false;
+        }).catch(function () { b.disabled = false; });
+      };
+      st.appendChild(b);
+    }
+    tr.appendChild(st);
+    var delTd = document.createElement("td");
+    var del = document.createElement("button");
+    del.className = "del";
+    del.textContent = "🗑";
+    del.title = "Eliminar este lead";
+    del.onclick = function () {
+      if (!confirm("¿Eliminar este lead? No se puede deshacer.")) return;
+      del.disabled = true;
+      fetch("/panel/delete?token=" + encodeURIComponent(token), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "lead", id: l.id }),
+      }).then(function (r) { return r.json(); }).then(function (r) {
+        if (r.ok) {
+          LEADS = LEADS.filter(function (x) { return x.id !== l.id; });
+          renderLeads();
+          renderStats();
+        } else del.disabled = false;
+      }).catch(function () { del.disabled = false; });
+    };
+    delTd.appendChild(del);
+    tr.appendChild(delTd);
+    tb.appendChild(tr);
+  });
+}
+
+function convMatches(c) {
+  var q = $("cf-q").value.trim().toLowerCase();
+  var from = $("cf-from").value, to = $("cf-to").value;
+  var when = c.last_message_at || c.created_at;
+  if (from && day(when) < from) return false;
+  if (to && day(when) > to) return false;
+  if (q) {
+    var blob = (c.messages || []).map(function (m) { return m.content; }).join(" ").toLowerCase();
+    if (blob.indexOf(q) < 0) return false;
+  }
+  return true;
+}
+
+function renderConvs() {
+  var rows = CONVS.filter(convMatches);
+  var anyAtAll = CONVS.length > 0;
+  $("convs-empty").classList.toggle("hide", anyAtAll);
+  $("cf-count").textContent = anyAtAll
+    ? rows.length + (rows.length === 1 ? " conversación" : " conversaciones")
+    : "";
+  var cv = $("convs");
+  cv.innerHTML = "";
+  if (anyAtAll && !rows.length) {
+    cv.innerHTML = "<p class='mut'>Nada coincide con esos filtros.</p>";
+  }
+  rows.forEach(function (c) {
+    var ms = c.messages || [];
+    var first = "";
+    for (var i = 0; i < ms.length; i++) if (ms[i].role === "user") { first = ms[i].content; break; }
+    var box = document.createElement("div");
+    box.className = "conv";
+    var head = document.createElement("button");
+    head.innerHTML = "<span>" + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
+      "<span class='meta'>" + ms.length + " mensajes · " + esc(fmt(c.last_message_at)) + "</span>";
+    head.onclick = function () { box.classList.toggle("open"); };
+    var body = document.createElement("div");
+    body.className = "msgs";
+    body.innerHTML = ms.map(function (m) {
+      return "<div class='m " + (m.role === "user" ? "user" : "assistant") + "'>" + esc(m.content) + "</div>";
+    }).join("");
+    var delRow = document.createElement("div");
+    delRow.className = "convdel";
+    var del = document.createElement("button");
+    del.className = "mini";
+    del.textContent = "🗑 Eliminar esta conversación";
+    del.onclick = function () {
+      if (!confirm("¿Eliminar esta conversación entera? No se puede deshacer.")) return;
+      del.disabled = true;
+      fetch("/panel/delete?token=" + encodeURIComponent(token), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "conversation", id: c.id }),
+      }).then(function (r) { return r.json(); }).then(function (r) {
+        if (r.ok) {
+          CONVS = CONVS.filter(function (x) { return x.id !== c.id; });
+          computeGaps();
+          renderConvs();
+          renderGaps();
+          renderStats();
+          renderChart();
+        } else del.disabled = false;
+      }).catch(function () { del.disabled = false; });
+    };
+    delRow.appendChild(del);
+    body.appendChild(delRow);
+    box.appendChild(head);
+    box.appendChild(body);
+    cv.appendChild(box);
+  });
+}
+
+function computeGaps() {
+  GAPS = [];
+  CONVS.forEach(function (c) {
+    var ms = c.messages || [];
+    ms.forEach(function (m, i) {
+      if (m.role === "assistant" && m.was_answered === false) {
+        var q = null;
+        for (var j = i - 1; j >= 0; j--) if (ms[j].role === "user") { q = ms[j]; break; }
+        if (q) GAPS.push({ q: q.content, at: m.created_at });
+      }
+    });
+  });
+}
+
+function renderGaps() {
+  var box = $("gaps-list");
+  box.innerHTML = "";
+  $("gaps-empty").classList.toggle("hide", GAPS.length > 0);
+  GAPS.forEach(function (g) {
+    var card = document.createElement("div");
+    card.className = "gapcard";
+    var q = document.createElement("div");
+    q.className = "q";
+    q.textContent = "❓ " + g.q;
+    var when = document.createElement("div");
+    when.className = "mut";
+    when.textContent = "Preguntado el " + fmt(g.at);
+    var ta = document.createElement("textarea");
+    ta.rows = 2;
+    ta.placeholder = "Escribe aquí la respuesta oficial (precios, horarios, condiciones…) y el asistente la aprenderá al momento.";
+    var row = document.createElement("div");
+    row.className = "garow";
+    var send = document.createElement("button");
+    send.className = "btn";
+    send.textContent = "Enseñar al asistente";
+    var msg = document.createElement("span");
+    msg.className = "mut";
+    send.onclick = function () {
+      var a = ta.value.trim();
+      if (a.length < 10) { msg.textContent = "Escribe la respuesta con algo más de detalle."; msg.className = "err"; return; }
+      send.disabled = true;
+      msg.textContent = "Guardando…"; msg.className = "mut";
+      fetch("/panel/gap-answer?token=" + encodeURIComponent(token), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: g.q, answer: a }),
+      }).then(function (r) { return r.json(); }).then(function (r) {
+        if (r.error) { msg.textContent = r.error; msg.className = "err"; send.disabled = false; return; }
+        card.innerHTML = "<div class='q'>✓ " + esc(g.q) + "</div>" +
+          "<p class='ok' style='margin-top:6px'>El asistente ya conoce esta respuesta. Pruébalo en «Probar el bot».</p>";
+      }).catch(function () { msg.textContent = "Error al guardar."; msg.className = "err"; send.disabled = false; });
+    };
+    row.appendChild(send);
+    row.appendChild(msg);
+    card.appendChild(q);
+    card.appendChild(when);
+    card.appendChild(ta);
+    card.appendChild(row);
+    box.appendChild(card);
+  });
+}
+
+function renderDocs() {
+  var box = $("docs-list");
+  box.innerHTML = "";
+  if (!DOCS.length) {
+    box.innerHTML = "<p class='mut'>Aún no hay contenido indexado. Sube el primero arriba.</p>";
+    return;
+  }
+  DOCS.forEach(function (d) {
+    var row = document.createElement("div");
+    row.className = "doc";
+    var left = document.createElement("div");
+    var icon = d.source_type === "url" ? "🌐 " : d.source_type === "file" ? "📄 " : "✍️ ";
+    var t1 = document.createElement("div");
+    t1.textContent = icon + (d.title || d.source_url || "(sin título)");
+    var meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = fmt(d.indexed_at || d.created_at);
+    left.appendChild(t1);
+    left.appendChild(meta);
+    var del = document.createElement("button");
+    del.className = "del";
+    del.textContent = "🗑";
+    del.title = "Eliminar del conocimiento del asistente";
+    del.onclick = function () {
+      if (!confirm("¿Eliminar «" + (d.title || "este documento") + "» del conocimiento del asistente?")) return;
+      del.disabled = true;
+      fetch("/panel/doc-delete?token=" + encodeURIComponent(token), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: d.id }),
+      }).then(function (r) { return r.json(); }).then(function (r) {
+        if (r.ok) {
+          DOCS = DOCS.filter(function (x) { return x.id !== d.id; });
+          renderDocs();
+        } else del.disabled = false;
+      }).catch(function () { del.disabled = false; });
+    };
+    row.appendChild(left);
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+function renderBadges() {
+  if (!LAST_VISIT) return;
+  var nl = LEADS.filter(function (l) { return l.created_at > LAST_VISIT; }).length;
+  var nc = CONVS.filter(function (c) { return (c.last_message_at || c.created_at) > LAST_VISIT; }).length;
+  if (nl) { $("bg-leads").textContent = nl; $("bg-leads").classList.remove("hide"); }
+  if (nc) { $("bg-convs").textContent = nc; $("bg-convs").classList.remove("hide"); }
+}
+
+["lf-q", "lf-from", "lf-to"].forEach(function (id) { $(id).oninput = renderLeads; });
+$("lf-status").onchange = renderLeads;
+["cf-q", "cf-from", "cf-to"].forEach(function (id) { $(id).oninput = renderConvs; });
 
 fetch("/panel/data?token=" + encodeURIComponent(token))
   .then(function (r) { return r.json(); })
   .then(function (d) {
-    if (d.error) { document.getElementById("name").textContent = "Enlace no válido"; return; }
-    var convs = d.conversations || [], leads = d.leads || [];
-    document.getElementById("name").textContent = d.name;
-    if (d.primary_color) document.getElementById("dot").style.background = d.primary_color;
+    if (d.error) { $("name").textContent = "Enlace no válido"; return; }
+    CONVS = d.conversations || [];
+    LEADS = d.leads || [];
+    DOCS = d.documents || [];
+    ACT = d.activity || [];
+    PRIMARY = d.primary_color || "#3c62f0";
+    $("name").textContent = d.name;
+    if (d.logo_url) {
+      $("clogo").src = d.logo_url;
+      $("clogo").style.display = "block";
+      $("cdot").style.display = "none";
+    } else {
+      $("cdot").textContent = (d.name || "A").charAt(0).toUpperCase();
+    }
     var FEAT = d.features || {};
     var featTab = { leads: "t-leads", convs: "t-convs", gaps: "t-gaps", uploads: "t-add", test: "t-test" };
     var hiddenFirst = false;
     Object.keys(featTab).forEach(function (k) {
       if (FEAT[k] === false) {
-        var sec = document.getElementById(featTab[k]);
+        var sec = $(featTab[k]);
         var btn = document.querySelector('nav button[data-tab="' + featTab[k] + '"]');
         if (sec) sec.remove();
         if (btn) { if (btn.classList.contains("on")) hiddenFirst = true; btn.remove(); }
@@ -5299,105 +5836,23 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
       ws.setAttribute("data-api", location.origin);
       document.body.appendChild(ws);
     }
-
-    var act = d.activity || [];
-    var mx = 1;
-    act.forEach(function (a) { if (a.n > mx) mx = a.n; });
-    var ch = document.getElementById("chart");
-    ch.innerHTML = "";
-    act.forEach(function (a) {
-      var bar = document.createElement("div");
-      bar.style.height = Math.max(4, Math.round((a.n / mx) * 100)) + "%";
-      bar.style.background = a.n ? (d.primary_color || "#111") : "#e8e8e5";
-      bar.title = a.day + ": " + a.n + (a.n === 1 ? " pregunta" : " preguntas");
-      ch.appendChild(bar);
-    });
-
-    var gaps = [], userMsgs = 0, answered = 0, assistantMsgs = 0;
-    convs.forEach(function (c) {
-      var ms = c.messages || [];
-      ms.forEach(function (m, i) {
-        if (m.role === "user") userMsgs++;
-        if (m.role === "assistant") {
-          assistantMsgs++;
-          if (m.was_answered !== false) answered++;
-          else {
-            var q = null;
-            for (var j = i - 1; j >= 0; j--) if (ms[j].role === "user") { q = ms[j]; break; }
-            gaps.push({ q: q ? q.content : "(pregunta no registrada)", at: m.created_at });
-          }
-        }
-      });
-    });
-
-    document.getElementById("s-convs").textContent = convs.length;
-    document.getElementById("s-msgs").textContent = userMsgs;
-    document.getElementById("s-leads").textContent = leads.length;
-    document.getElementById("s-rate").textContent =
-      assistantMsgs ? Math.round((100 * answered) / assistantMsgs) + "%" : "–";
-
-    LEADS = leads;
-    document.getElementById("leads-body").innerHTML = leads.length
-      ? leads.map(function (l) {
-          return "<tr><td>" + fmt(l.created_at) + "</td><td>" + esc(l.kind) + "</td><td>" + esc(l.name) +
-            (l.company ? "<div class='mut'>" + esc(l.company) + "</div>" : "") + "</td><td>" + esc(l.email) +
-            (l.phone ? "<div class='mut'>" + esc(l.phone) + "</div>" : "") + "</td><td>" + esc(l.message) + "</td><td>" +
-            (l.status === "contactado"
-              ? "<span class='done'>✓ contactado</span>"
-              : "<button class='mini' data-lead='" + l.id + "'>Marcar contactado</button>") +
-            "</td></tr>";
-        }).join("")
-      : "<tr><td colspan='6' class='mut'>Todavía no hay leads. Cuando un visitante deje sus datos de contacto en el chat, aparecerán aquí y podrás descargarlos.</td></tr>";
-
-    [].forEach.call(document.querySelectorAll("[data-lead]"), function (b) {
-      b.onclick = function () {
-        b.disabled = true;
-        fetch("/panel/lead-status?token=" + encodeURIComponent(token), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: b.getAttribute("data-lead"), status: "contactado" }),
-        }).then(function (r) { return r.json(); }).then(function (r) {
-          if (r.ok) {
-            var sp = document.createElement("span");
-            sp.className = "done";
-            sp.textContent = "✓ contactado";
-            b.replaceWith(sp);
-          } else { b.disabled = false; }
-        }).catch(function () { b.disabled = false; });
-      };
-    });
-
-    var cv = document.getElementById("convs");
-    if (!convs.length) cv.innerHTML = "<p class='mut'>Todavía no hay conversaciones.</p>";
-    convs.forEach(function (c) {
-      var ms = c.messages || [];
-      var first = "";
-      for (var i = 0; i < ms.length; i++) if (ms[i].role === "user") { first = ms[i].content; break; }
-      var box = document.createElement("div");
-      box.className = "conv";
-      box.innerHTML =
-        "<button><span>" + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
-        "<span class='meta'>" + ms.length + " mensajes · " + fmt(c.last_message_at) + "</span></button>" +
-        "<div class='msgs'>" + ms.map(function (m) {
-          return "<div class='m " + (m.role === "user" ? "user" : "assistant") + "'>" + esc(m.content) + "</div>";
-        }).join("") + "</div>";
-      box.querySelector("button").onclick = function () { box.classList.toggle("open"); };
-      cv.appendChild(box);
-    });
-
-    document.getElementById("gaps-body").innerHTML = gaps.length
-      ? gaps.map(function (g) {
-          return "<tr><td>" + fmt(g.at) + "</td><td>" + esc(g.q) + "</td></tr>";
-        }).join("")
-      : "<tr><td colspan='2' class='mut'>Ninguna: el asistente ha encontrado contexto para todo lo que le han preguntado.</td></tr>";
+    computeGaps();
+    renderStats();
+    renderChart();
+    renderLeads();
+    renderConvs();
+    renderGaps();
+    renderDocs();
+    renderBadges();
+    localStorage.setItem(SEEN_KEY, new Date().toISOString());
   })
   .catch(function () {
-    document.getElementById("name").textContent = "No se ha podido cargar el panel";
+    $("name").textContent = "No se ha podido cargar el panel";
   });
 
-document.getElementById("csv").onclick = function () {
+$("csv").onclick = function () {
   var rows = [["Fecha", "Tipo", "Nombre", "Email", "Telefono", "Empresa", "Mensaje", "Estado"]].concat(
-    LEADS.map(function (l) {
+    LEADS.filter(leadMatches).map(function (l) {
       return [l.created_at, l.kind, l.name, l.email, l.phone, l.company, l.message, l.status];
     })
   );
@@ -5410,9 +5865,26 @@ document.getElementById("csv").onclick = function () {
   a.click();
 };
 
-document.getElementById("up-run").onclick = function () {
-  var files = document.getElementById("up-files").files;
-  var msg = document.getElementById("up-msg");
+$("ccsv").onclick = function () {
+  var rows = [["Fecha", "Rol", "Mensaje"]];
+  CONVS.filter(convMatches).forEach(function (c) {
+    (c.messages || []).forEach(function (m) {
+      rows.push([m.created_at, m.role === "user" ? "visitante" : "asistente", m.content]);
+    });
+    rows.push(["", "", ""]);
+  });
+  var csv = rows.map(function (r) {
+    return r.map(function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }).join(";");
+  }).join("\\n");
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "conversaciones.csv";
+  a.click();
+};
+
+$("up-run").onclick = function () {
+  var files = $("up-files").files;
+  var msg = $("up-msg");
   if (!files.length) { msg.textContent = "Elige uno o varios archivos primero."; msg.className = "err"; return; }
   for (var i = 0; i < files.length; i++) {
     if (files[i].size > 10 * 1024 * 1024) {
@@ -5439,12 +5911,16 @@ document.getElementById("up-run").onclick = function () {
     if (r.error) { msg.textContent = r.error; msg.className = "err"; return; }
     msg.textContent = "Hecho. El asistente ya conoce este contenido: pruébalo en la pestaña «Probar el bot».";
     msg.className = "ok";
-    document.getElementById("up-report").innerHTML = (r.indexed || []).map(function (x) {
+    $("up-report").innerHTML = (r.indexed || []).map(function (x) {
       var dv = document.createElement("div");
       dv.textContent = (x.ok ? "✓ " : "✗ ") + x.source + (x.ok ? "" : " — " + (x.reason || "error"));
       return dv.outerHTML;
     }).join("");
-    document.getElementById("up-files").value = "";
+    $("up-files").value = "";
+    fetch("/panel/data?token=" + encodeURIComponent(token))
+      .then(function (r2) { return r2.json(); })
+      .then(function (d2) { DOCS = d2.documents || DOCS; renderDocs(); })
+      .catch(function () {});
   }).catch(function () { msg.textContent = "Error al subir."; msg.className = "err"; });
 };
 </script>
@@ -5455,8 +5931,9 @@ document.getElementById("up-run").onclick = function () {
 
 export default {
   async scheduled(event, env, ctx) {
-    // día 1 de cada mes: informes automáticos a los clientes
-    ctx.waitUntil(runMonthlyReports(env));
+    // día 1 de cada mes: informes a los clientes; a diario: resumen de leads (si está activado)
+    if (event.cron === "0 7 1 * *") ctx.waitUntil(runMonthlyReports(env));
+    else ctx.waitUntil(runDailyLeadDigests(env));
   },
 
   async fetch(request, env, ctx) {
@@ -5685,6 +6162,9 @@ ${inject}</body></html>`;
               body: JSON.stringify({ tenant: tenant.slug, ...l }),
             }).catch(() => {});
           }
+
+          // aviso por email al cliente sin retrasar la respuesta del chat
+          ctx.waitUntil(notifyLeadInstant(env, tenant, l));
         };
 
         // generación (proveedor y modelo configurables por tenant)
@@ -6191,6 +6671,86 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         });
       }
 
+      if (url.pathname === "/panel/delete" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        const { kind, id } = await request.json();
+        if (!/^[0-9a-f-]{36}$/.test(id || "")) return json({ error: "id no válido" }, 400);
+        if (kind === "lead") {
+          if (tenant.panel_features?.leads === false) return json({ error: "no disponible" }, 403);
+          await sb(env, `leads?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "DELETE" });
+        } else if (kind === "conversation") {
+          if (tenant.panel_features?.convs === false) return json({ error: "no disponible" }, 403);
+          await sb(env, `conversations?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "DELETE" });
+        } else {
+          return json({ error: "tipo no válido" }, 400);
+        }
+        return json({ ok: true });
+      }
+
+      if (url.pathname === "/panel/gap-answer" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        if (tenant.panel_features?.gaps === false) return json({ error: "no disponible" }, 403);
+        const { question, answer } = await request.json();
+        const q = String(question || "").trim().slice(0, 300);
+        const a = String(answer || "").trim().slice(0, 4000);
+        if (!q || a.length < 10) return json({ error: "escribe una respuesta con algo más de detalle" }, 400);
+        const res = await indexDocument(env, tenant.id, {
+          source_type: "text",
+          title: `Respuesta del cliente: ${q.slice(0, 90)}`,
+          content:
+            `Pregunta frecuente de los visitantes: ${q}\n\n` +
+            `Respuesta oficial del negocio (fuente fiable, actualizada por el propio negocio): ${a}`,
+        });
+        if (!res.ok) return json({ error: res.reason || "no se ha podido indexar" }, 400);
+        return json({ ok: true, chunks: res.chunks });
+      }
+
+      if (url.pathname === "/panel/doc-delete" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        if (tenant.panel_features?.uploads === false) return json({ error: "no disponible" }, 403);
+        const { id } = await request.json();
+        if (!/^[0-9a-f-]{36}$/.test(id || "")) return json({ error: "id no válido" }, 400);
+        await sb(env, `documents?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "DELETE" });
+        return json({ ok: true });
+      }
+
+      if (url.pathname === "/panel/report.pdf") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return new Response("Enlace no válido", { status: 401 });
+        const rep = await monthlyReportData(env, tenant);
+        const L = [];
+        const add = (t, size, font, gap, x) =>
+          wrapLine(t, font === 3 ? 78 : Math.round(950 / (size || 11))).forEach((w, i, arr) =>
+            L.push({ t: w, size, font, x, gap: i === arr.length - 1 ? gap : 0 })
+          );
+        add("Informe mensual del asistente", 17, 2, 4);
+        add(`${tenant.name} - ${rep.monthName}`, 12, 1, 14);
+        add("Resumen de actividad", 13, 2, 6);
+        add(`Conversaciones atendidas: ${rep.convs}`, 11, 1, 3);
+        add(`Preguntas respondidas: ${rep.questions}`, 11, 1, 3);
+        add(`Respondidas con información del contenido: ${rep.rate}%`, 11, 1, 3);
+        add(`Contactos captados (leads): ${rep.leads}`, 11, 1, 12);
+        if (rep.gaps.length) {
+          add("Lo que más preguntan y aún no está en el contenido:", 13, 2, 6);
+          rep.gaps.slice(0, 10).forEach((g) => add(`- ${g.q}`, 11, 1, 3));
+          add(" ", 10, 1, 4);
+          add("Responder estas preguntas desde el panel mejora el asistente al momento.", 10, 1, 8);
+        } else {
+          add("El asistente encontró respuesta para todo lo que le preguntaron.", 11, 1, 8);
+        }
+        add("Generado por ExpoBot - expobot.es", 9, 1, 0);
+        return new Response(buildPdf(L), {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="informe-${tenant.slug}.pdf"`,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+
       if (url.pathname === "/panel/data") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
         if (!tenant) return json({ error: "token no válido" }, 401);
@@ -6208,17 +6768,24 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
               `&order=created_at.desc&limit=200`
           ),
           sb(env, `tenant_keys?tenant_id=eq.${tenant.id}&revoked_at=is.null&select=public_key`),
-          rpc(env, "daily_activity", { p_tenant_id: tenant.id, p_days: 30 }),
+          rpc(env, "daily_activity", { p_tenant_id: tenant.id, p_days: 90 }),
         ]);
+        const documents = await sb(
+          env,
+          `documents?tenant_id=eq.${tenant.id}` +
+            `&select=id,title,source_type,source_url,created_at,indexed_at&order=created_at.desc&limit=100`
+        );
         return json(
           {
             name: tenant.name,
             primary_color: tenant.primary_color,
+            logo_url: tenant.theme?.logo_url || null,
             public_key: keys?.[keys.length - 1]?.public_key || null,
             features: tenant.panel_features || {},
             conversations,
             leads,
             activity,
+            documents,
           },
           200,
           { "Cache-Control": "no-store" }
