@@ -649,6 +649,32 @@ async function portalClientId(env, token) {
   return p[0];
 }
 
+// tokens firmados de un solo propósito (restablecer contraseña, confirmar email nuevo)
+function b64url(s) {
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64urlDecode(s) {
+  try {
+    return decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
+  } catch {
+    return null;
+  }
+}
+
+async function makeActionToken(env, kind, clientId, extra, ttlMs) {
+  const body = `${kind}.${clientId}.${extra ? b64url(extra) : "-"}.${Date.now() + ttlMs}`;
+  return `${body}.${await hmacSign(body, env.ADMIN_TOKEN)}`;
+}
+
+async function readActionToken(env, kind, token) {
+  const p = String(token || "").split(".");
+  if (p.length !== 5 || p[0] !== kind) return null;
+  const body = p.slice(0, 4).join(".");
+  if ((await hmacSign(body, env.ADMIN_TOKEN)) !== p[4]) return null;
+  if (Date.now() > parseInt(p[3], 10)) return null;
+  return { clientId: p[1], extra: p[2] === "-" ? null : b64urlDecode(p[2]) };
+}
+
 async function hashPassword(pw, saltB64) {
   const salt = saltB64
     ? Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0))
@@ -2299,6 +2325,26 @@ $("enter").onclick = function () {
   load();
 };
 $("tok").addEventListener("keydown", function (e) { if (e.key === "Enter") $("enter").click(); });
+[].forEach.call(document.querySelectorAll('input[type="password"]'), function (inp) {
+  var w = document.createElement("span");
+  w.style.cssText = "position:relative;display:block";
+  inp.parentNode.insertBefore(w, inp);
+  w.appendChild(inp);
+  inp.style.paddingRight = "42px";
+  var b = document.createElement("button");
+  b.type = "button";
+  b.textContent = "👁";
+  b.title = "Mostrar u ocultar";
+  b.style.cssText = "position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;" +
+    "background:none;cursor:pointer;font-size:16px;padding:4px 6px;opacity:.55;line-height:1";
+  b.onclick = function () {
+    var show = inp.type === "password";
+    inp.type = show ? "text" : "password";
+    b.style.opacity = show ? "1" : ".55";
+    inp.focus();
+  };
+  w.appendChild(b);
+});
 $("logout").onclick = function () {
   localStorage.removeItem("cb_admin");
   TOKEN = "";
@@ -4529,6 +4575,36 @@ const PORTAL_HTML = `<!doctype html>
       <button id="l-go" class="btn">Entrar</button>
       <span id="l-msg" class="err"></span>
     </div>
+    <p style="margin-top:14px"><a href="#" id="l-forgot" style="color:var(--mut);font-size:13px">¿Has olvidado tu contraseña?</a></p>
+  </div>
+</div>
+
+<div id="forgot" class="login hide">
+  <div class="card">
+    <h2>Recuperar el acceso</h2>
+    <p class="sub">Dinos tu email y te enviaremos un enlace para crear una contraseña nueva.</p>
+    <label>Email</label>
+    <input id="fg-email" type="email" autocomplete="username">
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+      <button id="fg-go" class="btn">Enviarme el enlace</button>
+      <span id="fg-msg" class="mut"></span>
+    </div>
+    <p style="margin-top:14px"><a href="#" id="fg-back" style="color:var(--mut);font-size:13px">← Volver al acceso</a></p>
+  </div>
+</div>
+
+<div id="resetv" class="login hide">
+  <div class="card">
+    <h2>Crea tu contraseña nueva</h2>
+    <p class="sub">Mínimo 8 caracteres. Al guardarla podrás entrar con ella.</p>
+    <label>Contraseña nueva</label>
+    <input id="rs-p1" type="password" autocomplete="new-password">
+    <label>Repítela</label>
+    <input id="rs-p2" type="password" autocomplete="new-password">
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+      <button id="rs-go" class="btn">Guardar contraseña</button>
+      <span id="rs-msg" class="err"></span>
+    </div>
   </div>
 </div>
 
@@ -4603,6 +4679,8 @@ function $(id) { return document.getElementById(id); }
 
 function showLogin(msg) {
   $("app").classList.add("hide");
+  $("forgot").classList.add("hide");
+  $("resetv").classList.add("hide");
   $("login").classList.remove("hide");
   $("l-msg").textContent = msg || "";
 }
@@ -4636,6 +4714,86 @@ $("logout").onclick = function () {
   TOKEN = "";
   showLogin();
 };
+
+// ----- olvido y restablecimiento de contraseña -----
+
+var RESET_TOKEN = new URLSearchParams(location.search).get("reset") || "";
+
+$("l-forgot").onclick = function (e) {
+  e.preventDefault();
+  $("login").classList.add("hide");
+  $("forgot").classList.remove("hide");
+  $("fg-msg").textContent = "";
+  $("fg-email").value = $("l-email").value;
+  $("fg-email").focus();
+};
+$("fg-back").onclick = function (e) { e.preventDefault(); showLogin(); };
+
+$("fg-go").onclick = function () {
+  var em = $("fg-email").value.trim();
+  if (em.indexOf("@") < 1) { $("fg-msg").textContent = "Escribe tu email."; $("fg-msg").className = "err"; return; }
+  $("fg-go").disabled = true;
+  $("fg-msg").textContent = "Enviando…"; $("fg-msg").className = "mut";
+  fetch("/portal/forgot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: em }),
+  }).then(function (r) { return r.json(); }).then(function () {
+    $("fg-msg").textContent = "Hecho: si ese email está registrado, te llegará un enlace en unos minutos (mira también en spam).";
+    $("fg-msg").className = "ok";
+  }).catch(function () {
+    $("fg-go").disabled = false;
+    $("fg-msg").textContent = "No se ha podido conectar."; $("fg-msg").className = "err";
+  });
+};
+
+$("rs-go").onclick = function () {
+  var p1 = $("rs-p1").value, p2 = $("rs-p2").value;
+  if (p1.length < 8) { $("rs-msg").textContent = "Mínimo 8 caracteres."; return; }
+  if (p1 !== p2) { $("rs-msg").textContent = "No coinciden."; return; }
+  $("rs-msg").textContent = "";
+  fetch("/portal/reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: RESET_TOKEN, new_password: p1 }),
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.error) { $("rs-msg").textContent = d.error; return; }
+    history.replaceState(null, "", "/acceso");
+    RESET_TOKEN = "";
+    showLogin();
+    $("l-msg").textContent = "Contraseña guardada ✓ Entra con ella.";
+    $("l-msg").className = "ok";
+  }).catch(function () { $("rs-msg").textContent = "No se ha podido conectar."; });
+};
+
+// ----- ojo para mostrar/ocultar contraseñas -----
+
+function addEyes() {
+  [].forEach.call(document.querySelectorAll('input[type="password"]'), function (inp) {
+    if (inp.dataset.eye) return;
+    inp.dataset.eye = "1";
+    var w = document.createElement("span");
+    w.style.cssText = "position:relative;display:block";
+    inp.parentNode.insertBefore(w, inp);
+    w.appendChild(inp);
+    inp.style.paddingRight = "42px";
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = "👁";
+    b.title = "Mostrar u ocultar";
+    b.setAttribute("aria-label", "Mostrar u ocultar la contraseña");
+    b.style.cssText = "position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;" +
+      "background:none;cursor:pointer;font-size:16px;padding:4px 6px;opacity:.55;line-height:1";
+    b.onclick = function () {
+      var show = inp.type === "password";
+      inp.type = show ? "text" : "password";
+      b.style.opacity = show ? "1" : ".55";
+      inp.focus();
+    };
+    w.appendChild(b);
+  });
+}
+addEyes();
 
 function load() {
   fetch("/portal/data", { headers: { Authorization: "Bearer " + TOKEN } })
@@ -4780,7 +4938,14 @@ $("ac-save").onclick = function () {
   }).catch(function () { $("ac-msg").textContent = "Error al guardar."; $("ac-msg").className = "err"; });
 };
 
-if (TOKEN) load(); else showLogin();
+if (RESET_TOKEN) {
+  $("login").classList.add("hide");
+  $("resetv").classList.remove("hide");
+} else if (TOKEN) {
+  load();
+} else {
+  showLogin();
+}
 </script>
 </body>
 </html>`;
@@ -5674,6 +5839,89 @@ ${inject}</body></html>`;
         return json({ token: await makePortalToken(env, c.id) });
       }
 
+      if (url.pathname === "/portal/forgot" && request.method === "POST") {
+        // respuesta idéntica exista o no el email: no se filtra quién es cliente
+        const generic = { ok: true };
+        const { email } = await request.json().catch(() => ({}));
+        const em = String(email || "").trim();
+        if (!em) return json(generic);
+        const ip = request.headers.get("CF-Connecting-IP") || "";
+        if (ip) {
+          const okRate = await rpc(env, "check_rate", { p_ip: "pw:" + ip, p_limit: 5 });
+          if (okRate === false) return json(generic);
+        }
+        const rows = await sb(
+          env,
+          `clients?email=ilike.${encodeURIComponent(em)}&select=id,name,email,portal_enabled,portal_password_hash`
+        );
+        const c = rows?.[0];
+        if (c && c.portal_enabled !== false) {
+          // ligado a la contraseña actual: al cambiarla, el enlace deja de valer
+          const bind = (c.portal_password_hash || "none").slice(-16);
+          const tok = await makeActionToken(env, "pwreset", c.id, bind, 3600 * 1000);
+          const link = `${url.origin}/acceso?reset=${encodeURIComponent(tok)}`;
+          const sent = await sendEmail(
+            env,
+            c.email,
+            "Restablece tu contraseña — ExpoBot",
+            emailShell(
+              `<h2 style="margin:0 0 10px;font-size:18px">Restablecer tu contraseña</h2>` +
+                `<p style="margin:0 0 16px">Hola${c.name ? " " + h(c.name) : ""}, hemos recibido una solicitud para restablecer la contraseña de tu portal de cliente. Si no has sido tú, ignora este email.</p>` +
+                `<p style="margin:0 0 18px"><a href="${link}" style="background-color:#3c62f0;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;display:inline-block">Crear contraseña nueva</a></p>` +
+                `<p style="margin:0;color:#6b7590;font-size:13px">El enlace caduca en 1 hora y solo puede usarse una vez.</p>`
+            )
+          );
+          if (!sent.ok) await logError(env, "portal/forgot", sent.reason || "fallo al enviar");
+        }
+        return json(generic);
+      }
+
+      if (url.pathname === "/portal/reset" && request.method === "POST") {
+        const { token, new_password } = await request.json().catch(() => ({}));
+        const t = await readActionToken(env, "pwreset", token);
+        if (!t) return json({ error: "el enlace no es válido o ha caducado; pide uno nuevo desde «¿Has olvidado tu contraseña?»" }, 400);
+        if (!new_password || String(new_password).length < 8) {
+          return json({ error: "la contraseña debe tener al menos 8 caracteres" }, 400);
+        }
+        const [c] = await sb(env, `clients?id=eq.${t.clientId}&select=id,portal_password_hash,portal_enabled`);
+        if (!c || c.portal_enabled === false) return json({ error: "el acceso está desactivado; contacta con nosotros" }, 403);
+        if ((c.portal_password_hash || "none").slice(-16) !== t.extra) {
+          return json({ error: "este enlace ya se usó; pide uno nuevo si lo necesitas" }, 400);
+        }
+        await sb(env, `clients?id=eq.${t.clientId}`, {
+          method: "PATCH",
+          body: { portal_password_hash: await hashPassword(String(new_password)) },
+        });
+        return json({ ok: true });
+      }
+
+      if (url.pathname === "/portal/confirm-email") {
+        const t = await readActionToken(env, "chmail", url.searchParams.get("token"));
+        const page = (title, body) =>
+          new Response(
+            `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png"><title>${title} — ExpoBot</title></head>` +
+              `<body style="margin:0;font:16px/1.6 system-ui,sans-serif;background:#f5f7fc;color:#10182b;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px">` +
+              `<div style="background:#fff;border:1px solid #e4e7f0;border-radius:16px;padding:34px;max-width:420px;text-align:center">` +
+              `<img src="/brand/logo.png" alt="ExpoBot" style="height:36px;margin-bottom:18px"><h1 style="font-size:19px;margin:0 0 10px">${title}</h1><p style="margin:0;color:#6b7590">${body}</p></div></body></html>`,
+            { headers: { "Content-Type": "text/html;charset=utf-8" } }
+          );
+        if (!t || !t.extra) {
+          return page("Enlace no válido", "El enlace ha caducado o ya se usó. Vuelve a solicitar el cambio de email desde tu portal.");
+        }
+        const newEmail = t.extra;
+        const dup = await sb(
+          env,
+          `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${t.clientId}&select=id&limit=1`
+        );
+        if (dup?.length) return page("Email en uso", "Ese email ya pertenece a otra cuenta. Contacta con nosotros.");
+        const rows = await sb(env, `clients?id=eq.${t.clientId}`, { method: "PATCH", body: { email: newEmail } });
+        if (!rows?.length) return page("Enlace no válido", "No hemos encontrado la cuenta. Contacta con nosotros.");
+        return page(
+          "Email confirmado ✓",
+          `A partir de ahora entras al portal con <b>${h(newEmail)}</b>, y ahí recibirás también los informes. <a href="/acceso" style="color:#3c62f0">Ir al portal</a>`
+        );
+      }
+
       const portalAuth = async () => {
         const auth = (request.headers.get("Authorization") || "").replace(/^Bearer /, "") ||
           url.searchParams.get("pt") || "";
@@ -5706,6 +5954,7 @@ ${inject}</body></html>`;
           return json({ error: "la contraseña actual no es correcta" }, 403);
         }
         const changes = {};
+        let emailPending = null;
         const newEmail = String(email || "").trim().toLowerCase();
         if (newEmail && newEmail !== (c.email || "").toLowerCase()) {
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) {
@@ -5716,7 +5965,24 @@ ${inject}</body></html>`;
             `clients?email=ilike.${encodeURIComponent(newEmail)}&id=neq.${cid}&select=id&limit=1`
           );
           if (dup?.length) return json({ error: "ese email ya está en uso por otra cuenta" }, 400);
-          changes.email = newEmail;
+          // el cambio no se aplica hasta que el dueño del email nuevo lo confirme
+          const tok = await makeActionToken(env, "chmail", cid, newEmail, 24 * 3600 * 1000);
+          const link = `${url.origin}/portal/confirm-email?token=${encodeURIComponent(tok)}`;
+          const sent = await sendEmail(
+            env,
+            newEmail,
+            "Confirma tu nuevo email — ExpoBot",
+            emailShell(
+              `<h2 style="margin:0 0 10px;font-size:18px">Confirma tu nuevo email</h2>` +
+                `<p style="margin:0 0 16px">Has pedido usar esta dirección para entrar a tu portal de cliente y recibir los informes. Confírmalo con el botón; si no has sido tú, ignora este email y no cambiará nada.</p>` +
+                `<p style="margin:0 0 18px"><a href="${link}" style="background-color:#3c62f0;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;display:inline-block">Confirmar este email</a></p>` +
+                `<p style="margin:0;color:#6b7590;font-size:13px">El enlace caduca en 24 horas. Hasta entonces sigues entrando con tu email actual.</p>`
+            )
+          );
+          if (!sent.ok) {
+            return json({ error: "no se ha podido enviar el email de confirmación; inténtalo más tarde" }, 502);
+          }
+          emailPending = newEmail;
         }
         if (new_password) {
           if (String(new_password).length < 8) {
@@ -5724,9 +5990,14 @@ ${inject}</body></html>`;
           }
           changes.portal_password_hash = await hashPassword(String(new_password));
         }
-        if (!Object.keys(changes).length) return json({ ok: true, changed: [] });
-        await sb(env, `clients?id=eq.${cid}`, { method: "PATCH", body: changes });
-        return json({ ok: true, changed: Object.keys(changes) });
+        if (Object.keys(changes).length) {
+          await sb(env, `clients?id=eq.${cid}`, { method: "PATCH", body: changes });
+        }
+        return json({
+          ok: true,
+          changed: Object.keys(changes),
+          email_pending: emailPending,
+        });
       }
 
       if (url.pathname === "/portal/payment-method" && request.method === "POST") {
