@@ -5,6 +5,14 @@
   var AUTO = parseInt(s.getAttribute("data-open") || "0", 10);
   if (!KEY || !API) return console.error("[chatbot] faltan data-key o data-api");
 
+  // en la demo (data-fresh) cada visita arranca de cero: nueva sesión,
+  // pregunta de clasificación y formulario disponibles otra vez
+  if (s.getAttribute("data-fresh") === "1") {
+    ["cb_sid", "cb_qual", "cb_lead_done", "cb_teased"].forEach(function (k) {
+      sessionStorage.removeItem(k);
+    });
+  }
+
   var sid = sessionStorage.getItem("cb_sid");
   if (!sid) {
     sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
