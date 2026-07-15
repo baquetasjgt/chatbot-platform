@@ -101,6 +101,14 @@ webhook), Telegram (primer canal recomendado), WhatsApp (Meta Cloud API), sync
 de Google Drive, plantillas de bot, dominio expobot.es como custom domain del
 Worker.
 
+Proyecto futuro — **Bloque de facturación completo** (es un proyecto en sí mismo, para
+más adelante): integración con un proveedor **VeriFactu** (facturación electrónica
+verificable, obligatoria en España); **envío automático** del PDF de la factura al
+cliente por email al emitirla; y **envío trimestral automático al gestor/asesor** con
+todas las facturas para contabilizar. Hoy ya existe: facturación por cliente, una
+factura por producto con su periodo, y generador de PDF con la marca (emisor con datos
+fiscales placeholder en `INVOICE_ISSUER`, a completar).
+
 Cómo se prueba (el contenedor no puede llegar a *.workers.dev): HTTP vía
 Supabase `pg_net` (`net.http_get` → poll `net._http_response`); las 4 páginas
 embebidas (ADMIN/PANEL/PORTAL/FAQ_HTML) se extraen del template literal y se
