@@ -5445,229 +5445,221 @@ const PANEL_HTML = `<!doctype html>
 <meta name="robots" content="noindex">
 <title>Panel del asistente — ExpoBot</title>
 <style>
-  :root{--ink:#10182b;--mut:#6b7590;--line:#e4e7f0;--bg:#f5f7fc;--card:#ffffff;--soft:#f0f4ff;
-    --acc:#3c62f0;--grad:linear-gradient(135deg,#3c62f0,#6b8cff);--ok:#0a7a4b;--err:#b3261e;
-    --chip:#eef1f8;--userbub:#e8eefc;--botbub:#eef1f8}
-  @media(prefers-color-scheme:dark){
-    :root{--ink:#e8ecf6;--mut:#93a0bd;--line:#2a3350;--bg:#0f1526;--card:#171e33;--soft:#1d2743;
-      --ok:#4cc38a;--err:#ff8a80;--chip:#222b47;--userbub:#26335c;--botbub:#1e2740}
-    .brandimg{filter:brightness(0) invert(1)}
-  }
+  :root{--ink:#111;--mut:#6b6b67;--line:#deded9;--bg:#f3f3f0;--card:#fff;--soft:#f6f6f2;
+    --acc:#f9be00;--ok:#238a57;--err:#b3261e;--chip:#eeeeea;--userbub:#f9be00;--botbub:#eeeeea}
   *{box-sizing:border-box;margin:0}
-  body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  html{background:var(--bg)}
+  body.panel-client{font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink);background:var(--bg);min-height:100vh}
   .hide{display:none!important}
-  button{font:inherit;cursor:pointer}
-  input,select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 12px;
-    background:var(--card);color:var(--ink)}
-  input:focus,select:focus{outline:0;border-color:var(--acc)}
-  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 22px;
-    display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-  .brandimg{height:26px;width:auto;display:block}
-  .brand-sep{width:1px;height:28px;background:var(--line)}
-  .who{display:flex;align-items:center;gap:10px;min-width:0}
-  #clogo{width:34px;height:34px;border-radius:10px;object-fit:cover;display:none}
-  #cdot{width:34px;height:34px;border-radius:10px;background:var(--grad);color:#fff;display:flex;
-    align-items:center;justify-content:center;font-weight:700;font-size:15px}
-  h1{font-size:16px;font-weight:700;line-height:1.2}
-  .sub{color:var(--mut);font-size:12.5px}
-  .hspacer{flex:1}
-  .ghost{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 13px;
-    color:var(--ink);font-size:13.5px}
-  main{max-width:1020px;margin:0 auto;padding:22px 16px 40px}
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
-    flex-wrap:wrap;margin-bottom:14px}
-  .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
-  .seg button{border:0;background:transparent;padding:7px 14px;font-size:13px;color:var(--mut)}
-  .seg button.on{background:var(--grad);color:#fff}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
-  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
-  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
-    display:flex;gap:12px;align-items:center}
-  .kpi .ic{width:38px;height:38px;border-radius:11px;background:var(--soft);display:flex;
-    align-items:center;justify-content:center;font-size:18px;flex:none}
-  .kpi b{display:block;font-size:22px;line-height:1.15}
-  .kpi span{color:var(--mut);font-size:12px}
-  .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-  .chartbox{margin-bottom:16px}
-  #chart{display:flex;align-items:flex-end;gap:3px;height:76px;margin-top:10px}
-  #chart div{flex:1;background:#b9c8f2;border-radius:3px 3px 0 0;min-height:3px;transition:opacity .15s}
-  #chart div:hover{opacity:.65}
-  .axis{display:flex;justify-content:space-between;color:var(--mut);font-size:11px;margin-top:6px}
-  nav{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}
-  nav button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:8px 16px;
-    font-size:14px;color:var(--ink);display:flex;gap:7px;align-items:center}
-  nav button.on{background:var(--grad);color:#fff;border-color:transparent}
-  nav .badge{background:var(--err);color:#fff;border-radius:9px;font-size:11px;padding:1px 7px;font-weight:700}
-  nav button.on .badge{background:rgba(255,255,255,.28)}
-  section{display:none}
-  section.on{display:block}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  input,select,textarea{border:1px solid var(--line);border-radius:3px;padding:9px 11px;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:0;border-color:#111;box-shadow:0 0 0 2px rgba(249,190,0,.42)}
+  .panel-shell{display:grid;grid-template-columns:108px minmax(0,1fr);min-height:100vh}
+  #client-sidebar{position:sticky;top:0;height:100vh;background:#111;padding:25px 14px 20px!important;
+    display:flex;flex-direction:column;align-items:center;z-index:20;min-height:0!important}
+  .side-logo{width:66px;height:auto;display:block;margin:10px auto 58px}
+  #client-nav{display:flex;flex-direction:column;gap:12px;width:100%;margin:0}
+  body.panel-client #client-nav button{width:52px;height:52px;margin:0 auto;border:1px solid #4d4d4d;background:transparent!important;
+    color:#bdbdb7!important;border-radius:5px!important;display:grid;place-items:center;padding:0;position:relative}
+  body.panel-client #client-nav button:hover{border-color:var(--acc);color:#fff!important}
+  body.panel-client #client-nav button.on{background:var(--acc)!important;border-color:var(--acc)!important;color:#111!important}
+  .nav-ico{font-size:20px;line-height:1;font-weight:700}
+  .nav-label{position:absolute;left:66px;top:50%;transform:translateY(-50%);background:#111;color:#fff;
+    border:1px solid #3a3a3a;padding:6px 9px;white-space:nowrap;font-size:12px;opacity:0;pointer-events:none;z-index:3}
+  #client-nav button:hover .nav-label,#client-nav button:focus-visible .nav-label{opacity:1}
+  #client-nav .badge{position:absolute;right:-6px;top:-6px;background:var(--err);color:#fff;border-radius:10px;
+    min-width:19px;padding:1px 5px;font-size:10px;font-weight:800}
+  .side-bottom{margin-top:auto;display:grid;gap:12px;justify-items:center}
+  .side-link{width:44px;height:44px;border:1px solid #4d4d4d;color:#ddd;text-decoration:none;display:grid;place-items:center;border-radius:50%}
+  #cdot,#clogo{width:44px;height:44px;border-radius:50%;border:1px solid #666;object-fit:cover}
+  #clogo{display:none}
+  #cdot{display:grid;place-items:center;background:#3d3d3d;color:#fff;font-weight:750}
+  .panel-page{min-width:0}
+  body.panel-client #main{max-width:1600px;margin:0 auto;padding:44px 48px 54px!important}
+  .client-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:28px}
+  .eyebrow{font-size:11px;text-transform:uppercase;font-weight:800;color:#8a8a84;letter-spacing:0}
+  .live-tag{display:inline-flex;background:#111;color:#fff;padding:9px 14px;font-size:10px;font-weight:800;
+    text-transform:uppercase;margin-bottom:16px}
+  h1{font-size:32px;line-height:1.08;letter-spacing:0;font-weight:790;margin-top:4px}
+  .top-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+  .period-control{display:flex;background:#fff;border:1px solid var(--line);padding:3px}
+  .period-control button{border:0;background:transparent;padding:8px 11px;color:var(--mut);font-size:12px}
+  .period-control button.on{background:#111!important;color:#fff!important}
+  .ghost,.mini{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:3px;padding:8px 12px;font-size:13px}
+  .ghost:hover,.mini:hover{border-color:#111}
+  .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}
+  .kpi{background:#fff;border:1px solid var(--line);min-height:126px;padding:24px 26px;display:flex;flex-direction:column;
+    align-items:flex-start;justify-content:space-between}
+  .kpi.accent{background:var(--acc);border-color:var(--acc)}
+  .kpi-label{font-size:13px;color:var(--mut)}
+  .kpi.accent .kpi-label{color:#4b3900}
+  .kpi-line{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .kpi b{font-size:42px;line-height:1;font-weight:780;font-variant-numeric:tabular-nums}
+  .trend{font-size:12px;font-weight:700;color:#777}
+  .trend.up{color:var(--ok)}.trend.down{color:var(--err)}.kpi.accent .trend{color:#5c4700}
+  section{display:none}section.on{display:block}
+  .overview-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);gap:16px;margin-bottom:16px}
+  .box{background:#fff;border:1px solid var(--line);padding:22px}
+  .panel-title{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+  .panel-title h2{font-size:15px}.panel-title span{font-size:12px;color:var(--mut)}
+  #chart{height:174px;display:flex;align-items:flex-end;gap:10px;padding-top:8px;border-bottom:1px solid var(--line)}
+  body.panel-client #chart div{flex:1;background:#d7d7d2!important;min-height:3px;transition:opacity .15s;position:relative}
+  body.panel-client #chart div.hot{background:var(--acc)!important}
+  #chart div:hover{opacity:.68}
+  .axis{display:flex;justify-content:space-between;color:#8a8a84;font-size:10px;margin-top:8px;text-transform:uppercase}
+  #topics{display:grid;gap:0}
+  .topic{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .topic:last-child{border-bottom:0}.topic strong{text-align:right;color:#9a7400;font-size:12px}
+  .recent-box{margin-bottom:18px}
+  .recent-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .recent-head h2{font-size:15px}
+  .text-link{background:none;border:0;padding:4px;color:#222;font-size:13px}
+  .recent-lead{display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(240px,1.4fr) 86px;
+    gap:14px;align-items:center;padding:10px 8px;border-top:1px solid var(--line);font-size:12px}
+  .recent-lead.is-new{background:#fff8dc}
+  .lead-person{display:flex;align-items:center;gap:10px;min-width:0}.lead-avatar{width:32px;height:32px;border-radius:50%;
+    background:#e6e6e2;display:grid;place-items:center;font-weight:750;flex:none}
+  .lead-person b,.lead-person span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lead-person span,.lead-time{color:var(--mut)}.lead-intent{background:#fff4c8;padding:7px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .section-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
+  .section-head h2{font-size:25px;line-height:1.1}.section-head p{color:var(--mut);font-size:13px;margin-top:6px}
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  .filters input[type="search"]{flex:1;min-width:170px}
-  .filters .count{color:var(--mut);font-size:13px;white-space:nowrap}
-  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
-    border-radius:14px;overflow:hidden}
-  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
-  th{background:var(--soft);color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
-  tr:last-child td{border-bottom:0}
-  .mut{color:var(--mut);font-size:13px}
-  .ok{color:var(--ok);font-size:13px}
-  .err{color:var(--err);font-size:13px}
-  .conv{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
-  .conv>button{width:100%;text-align:left;background:none;border:0;padding:13px 16px;cursor:pointer;
-    font:inherit;color:var(--ink);display:flex;justify-content:space-between;gap:12px;align-items:center}
-  .conv .meta{color:var(--mut);font-size:12.5px;white-space:nowrap}
-  .msgs{display:none;border-top:1px solid var(--line);padding:14px 16px}
-  .conv.open .msgs{display:block}
-  .m{width:fit-content;max-width:80%;padding:8px 12px;border-radius:12px;margin-bottom:8px;
-    white-space:pre-wrap;font-size:14px}
-  .m.user{background:var(--userbub);margin-left:auto;border-bottom-right-radius:4px}
-  .m.assistant{background:var(--botbub);border-bottom-left-radius:4px}
-  .convdel{margin-top:6px;text-align:right}
-  .btn{background:var(--grad);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
-  .btn:disabled{opacity:.5;cursor:default}
-  .mini{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 10px;
-    font-size:13px;cursor:pointer;white-space:nowrap;color:var(--ink)}
-  .del{background:none;border:0;font-size:15px;opacity:.5;padding:3px 6px}
-  .del:hover{opacity:1}
-  .done{color:var(--ok);font-size:13px;white-space:nowrap}
-  .gapcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:10px}
-  .gapcard .q{font-weight:600;margin-bottom:2px}
-  .gapcard textarea{width:100%;font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 12px;
-    background:var(--bg);color:var(--ink);margin-top:10px;resize:vertical}
-  .gapcard textarea:focus{outline:0;border-color:var(--acc)}
-  .garow{display:flex;gap:10px;align-items:center;margin-top:8px}
-  .doc{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);
-    border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:14px}
-  .doc .meta{color:var(--mut);font-size:12.5px}
-  #up-files{border:1px dashed var(--line);border-radius:10px;padding:16px;width:100%;background:var(--bg);color:var(--ink)}
-  .empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:26px;
-    text-align:center;color:var(--mut)}
-  .empty b{color:var(--ink);display:block;margin-bottom:6px;font-size:15px}
-  footer{text-align:center;color:var(--mut);font-size:12.5px;padding:10px 0 26px}
-  footer b{color:var(--acc)}
-  .twrap{overflow-x:auto;border-radius:14px}
-  .twrap table{min-width:680px}
+  .filters input[type="search"]{flex:1;min-width:210px}.filters .count{color:var(--mut);font-size:13px;white-space:nowrap}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);overflow:hidden}
+  th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+  th{background:#111!important;color:#fff!important;font-weight:650;font-size:10px;text-transform:uppercase;letter-spacing:0}
+  tr:last-child td{border-bottom:0}.mut{color:var(--mut);font-size:13px}.ok{color:var(--ok);font-size:13px}.err{color:var(--err);font-size:13px}
+  .twrap{overflow-x:auto}.twrap table{min-width:760px}
+  .conv{background:#fff;border:1px solid var(--line);margin-bottom:9px;overflow:hidden}
+  .conv>button{width:100%;text-align:left;background:none;border:0;padding:14px 16px;color:var(--ink);display:flex;
+    justify-content:space-between;gap:12px;align-items:center}.conv .meta{color:var(--mut);font-size:12px;white-space:nowrap}
+  .msgs{display:none;border-top:1px solid var(--line);padding:16px}.conv.open .msgs{display:block}
+  .m{width:fit-content;max-width:80%;padding:9px 12px;margin-bottom:8px;white-space:pre-wrap;font-size:14px}
+  .m.user{background:var(--userbub);margin-left:auto}.m.assistant{background:var(--botbub)}.convdel{margin-top:8px;text-align:right}
+  .btn{background:#111;color:#fff;border:.75px solid var(--acc);border-radius:3px;padding:10px 15px;font-weight:650}
+  .btn:disabled{opacity:.5;cursor:default}.mini{padding:5px 9px}.del{background:none;border:0;font-size:15px;opacity:.55;padding:3px 6px}.del:hover{opacity:1}
+  .done{color:var(--ok);font-size:12px;white-space:nowrap}
+  .gapcard{background:#fff;border:1px solid var(--line);padding:16px;margin-bottom:9px}.gapcard .q{font-weight:650;margin-bottom:2px}
+  .gapcard textarea{width:100%;margin-top:10px;resize:vertical}.garow{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .doc{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);
+    padding:11px 14px;margin-bottom:8px;font-size:14px}.doc .meta{color:var(--mut);font-size:12px}
+  #up-files{border:1px dashed #aaa;padding:18px;width:100%;background:var(--soft)}
+  .empty{background:#fff;border:1px dashed #aaa;padding:28px;text-align:center;color:var(--mut)}.empty b{color:var(--ink);display:block;margin-bottom:6px}
+  .panel-footer{color:var(--mut);font-size:12px;padding:28px 0 4px;border-top:1px solid var(--line);margin-top:26px}
+  @media(max-width:980px){.panel-shell{grid-template-columns:82px minmax(0,1fr)}body.panel-client #main{padding:30px 24px 42px!important}
+    .overview-grid{grid-template-columns:1fr}.nav-label{display:none}.side-logo{width:54px}.kpi b{font-size:35px}}
+  @media(max-width:720px){.panel-shell{display:block}#client-sidebar{height:auto;position:sticky;top:0;display:flex;flex-direction:row;
+      overflow-x:auto;padding:9px 12px!important;gap:10px;align-items:center}.side-logo{width:78px;margin:0 10px 0 0;flex:none}
+    #client-nav{flex-direction:row;gap:7px;width:auto;margin:0}body.panel-client #client-nav button{width:42px;height:42px;flex:none}
+    .nav-ico{font-size:17px}.side-bottom{margin:0 0 0 auto;display:flex}.side-link{display:none}#cdot,#clogo{width:38px;height:38px;flex:none}
+    body.panel-client #main{padding:24px 14px 38px!important}.client-top{display:block}.top-actions{justify-content:flex-start;margin-top:18px}
+    h1{font-size:27px}.kpis{grid-template-columns:1fr}.kpi{min-height:105px}.overview-grid{grid-template-columns:1fr}
+    #chart{height:140px;gap:5px}.recent-lead{grid-template-columns:minmax(0,1fr) 62px}.lead-intent{display:none}
+    .section-head{display:block}.filters>*{flex:1 1 140px}.filters .count{flex-basis:100%}.m{max-width:92%}}
+  @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
 </style>
 </head>
-<body>
-<header>
-  <img class="brandimg" src="/brand/logo.png" alt="ExpoBot">
-  <div class="brand-sep"></div>
-  <div class="who">
-    <img id="clogo" alt=""><div id="cdot">·</div>
-    <div style="min-width:0">
-      <h1 id="name">Cargando…</h1>
-      <div class="sub">Panel de tu asistente</div>
+<body class="panel-client">
+<div class="panel-shell">
+  <aside id="client-sidebar" aria-label="Navegación del panel">
+    <img class="side-logo" src="/brand/logo.png" alt="ExpoBot">
+    <nav id="client-nav">
+      <button class="on" data-tab="t-overview" aria-label="Resumen"><span class="nav-ico" aria-hidden="true">⌂</span><span class="nav-label">Resumen</span></button>
+      <button data-tab="t-leads" aria-label="Leads"><span class="nav-ico" aria-hidden="true">◎</span><span class="nav-label">Leads</span><span class="badge hide" id="bg-leads"></span></button>
+      <button data-tab="t-convs" aria-label="Conversaciones"><span class="nav-ico" aria-hidden="true">□</span><span class="nav-label">Conversaciones</span><span class="badge hide" id="bg-convs"></span></button>
+      <button data-tab="t-gaps" aria-label="Preguntas pendientes"><span class="nav-ico" aria-hidden="true">?</span><span class="nav-label">Preguntas pendientes</span></button>
+      <button data-tab="t-add" aria-label="Conocimiento"><span class="nav-ico" aria-hidden="true">+</span><span class="nav-label">Conocimiento</span></button>
+      <button data-tab="t-test" aria-label="Probar asistente"><span class="nav-ico" aria-hidden="true">▷</span><span class="nav-label">Probar asistente</span></button>
+    </nav>
+    <div class="side-bottom">
+      <a class="side-link" href="/acceso" target="_blank" rel="noopener" aria-label="Facturación" title="Facturación">€</a>
+      <img id="clogo" alt=""><div id="cdot" aria-label="Cuenta del asistente">·</div>
     </div>
-  </div>
-  <div class="hspacer"></div>
-  <a class="ghost" href="/acceso" target="_blank" rel="noopener"
-     style="text-decoration:none;display:inline-block">💳 Mi facturación</a>
-  <button id="pdf" class="ghost">📄 Informe del mes (PDF)</button>
-</header>
-<main>
-  <div class="topbar">
-    <div class="mut">Actividad y resultados de tu asistente</div>
-    <div class="seg" id="period">
-      <button data-d="7">7 días</button>
-      <button data-d="30" class="on">30 días</button>
-      <button data-d="90">90 días</button>
-    </div>
-  </div>
-  <div class="kpis">
-    <div class="kpi"><div class="ic">💬</div><div><b id="s-convs">–</b><span>conversaciones</span></div></div>
-    <div class="kpi"><div class="ic">❓</div><div><b id="s-msgs">–</b><span>preguntas recibidas</span></div></div>
-    <div class="kpi"><div class="ic">🎯</div><div><b id="s-rate">–</b><span>respondidas con tu contenido</span></div></div>
-    <div class="kpi"><div class="ic">📥</div><div><b id="s-leads">–</b><span>contactos captados</span></div></div>
-  </div>
-  <div class="box chartbox">
-    <div class="mut">Preguntas por día</div>
-    <div id="chart"></div>
-    <div class="axis"><span id="ax-from"></span><span id="ax-to"></span></div>
-  </div>
-  <nav>
-    <button class="on" data-tab="t-leads">📥 Leads <span class="badge hide" id="bg-leads"></span></button>
-    <button data-tab="t-convs">💬 Conversaciones <span class="badge hide" id="bg-convs"></span></button>
-    <button data-tab="t-gaps">🧩 Preguntas sin respuesta</button>
-    <button data-tab="t-add">📚 Contenido</button>
-    <button data-tab="t-test">🤖 Probar el bot</button>
-  </nav>
-  <section id="t-leads" class="on">
-    <div class="filters">
-      <input id="lf-q" type="search" placeholder="Buscar por nombre, email, empresa…">
-      <select id="lf-status">
-        <option value="">Todos</option>
-        <option value="nuevo">Nuevos</option>
-        <option value="contactado">Contactados</option>
-      </select>
-      <input id="lf-from" type="date" title="Desde">
-      <input id="lf-to" type="date" title="Hasta">
-      <span class="count" id="lf-count"></span>
-      <button id="csv" class="ghost">⬇ CSV</button>
-    </div>
-    <div class="twrap"><table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th><th>Estado</th><th></th></tr></thead>
-      <tbody id="leads-body"></tbody>
-    </table></div>
-    <div id="leads-empty" class="empty hide"><b>Todavía no hay leads</b>
-      Cuando un visitante deje sus datos de contacto en el chat, aparecerán aquí al momento
-      y podrás filtrarlos, marcarlos como contactados y descargarlos en CSV.</div>
-  </section>
-  <section id="t-convs">
-    <div class="filters">
-      <input id="cf-q" type="search" placeholder="Buscar en las conversaciones…">
-      <input id="cf-from" type="date" title="Desde">
-      <input id="cf-to" type="date" title="Hasta">
-      <span class="count" id="cf-count"></span>
-      <button id="ccsv" class="ghost">⬇ CSV</button>
-    </div>
-    <div id="convs"></div>
-    <div id="convs-empty" class="empty hide"><b>Todavía no hay conversaciones</b>
-      En cuanto alguien hable con tu asistente (o lo pruebes tú en «Probar el bot»),
-      verás aquí cada conversación completa.</div>
-  </section>
-  <section id="t-gaps">
-    <p class="mut" style="margin-bottom:12px">Preguntas reales de tus visitantes para las que el asistente
-    no encontró información. <b>Respóndelas aquí</b> y el asistente las aprenderá al momento.</p>
-    <div id="gaps-list"></div>
-    <div id="gaps-empty" class="empty hide"><b>Ninguna pendiente 🎉</b>
-      El asistente ha encontrado respuesta para todo lo que le han preguntado últimamente.</div>
-  </section>
-  <section id="t-add">
-    <div class="box" style="margin-bottom:14px">
-      <p style="margin-bottom:10px"><b>Sube documentos</b> con información que el asistente deba conocer:
-      tarifas, horarios, catálogos, preguntas frecuentes… <span class="mut">(PDF, TXT, CSV o imágenes;
-      máx. 10 MB por archivo. Subir un archivo con el mismo nombre sustituye al anterior.)</span></p>
-      <input id="up-files" type="file" multiple
-        accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
-      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
-        <button id="up-run" class="btn">Subir e indexar</button>
-        <span id="up-msg" class="mut"></span>
+  </aside>
+  <div class="panel-page">
+    <main id="main">
+      <div class="client-top">
+        <div>
+          <div class="live-tag">Actividad en tiempo real</div>
+          <div class="eyebrow" id="greeting">Buenos días</div>
+          <h1>Panel de actividad</h1>
+          <div class="mut" id="name">Cargando…</div>
+        </div>
+        <div class="top-actions">
+          <div class="period-control" id="period" aria-label="Periodo analizado">
+            <button data-d="7">7 días</button><button data-d="30" class="on">30 días</button><button data-d="90">90 días</button>
+          </div>
+          <button id="pdf" class="ghost">Informe PDF</button>
+        </div>
       </div>
-      <div id="up-report" class="mut" style="margin-top:10px"></div>
-    </div>
-    <p class="mut" style="margin-bottom:10px"><b>Lo que tu asistente ya conoce.</b> Puedes eliminar lo que
-    esté obsoleto; deja de usarse al momento.</p>
-    <div id="docs-list"></div>
-  </section>
-  <section id="t-test">
-    <div class="box">
-      <p><b>Tu asistente está en la esquina inferior derecha</b> — el botón de chat.
-      Pruébalo exactamente igual que lo verán tus visitantes.</p>
-      <p class="mut" style="margin-top:8px">Las conversaciones de prueba también quedan registradas en
-      la pestaña Conversaciones. Si acabas de subir contenido nuevo, pregúntale sobre ello para
-      comprobar que lo ha aprendido.</p>
-    </div>
-  </section>
-</main>
-<footer>Impulsado por <b>ExpoBot</b> — estudio de asistentes IA</footer>
-<script>
+
+      <div class="kpis">
+        <div class="kpi"><span class="kpi-label">Conversaciones</span><div class="kpi-line"><b id="s-convs">–</b><span class="trend" id="tr-convs"></span></div></div>
+        <div class="kpi accent"><span class="kpi-label">Leads captados</span><div class="kpi-line"><b id="s-leads">–</b><span class="trend" id="tr-leads"></span></div></div>
+        <div class="kpi"><span class="kpi-label">Tasa de resolución</span><div class="kpi-line"><b id="s-rate">–</b><span class="trend" id="tr-rate"></span></div></div>
+      </div>
+
+      <section id="t-overview" class="on">
+        <div class="overview-grid">
+          <div class="box chartbox">
+            <div class="panel-title"><h2>Actividad</h2><span><b id="s-msgs">–</b> preguntas recibidas</span></div>
+            <div id="chart"></div><div class="axis"><span id="ax-from"></span><span id="ax-to"></span></div>
+          </div>
+          <div class="box"><div class="panel-title"><h2>Temas más consultados</h2><span id="topics-total"></span></div><div id="topics"></div></div>
+        </div>
+        <div class="box recent-box">
+          <div class="recent-head"><h2>Últimos leads</h2><button class="text-link" id="recent-all">Ver todos →</button></div>
+          <div id="recent-leads"></div>
+        </div>
+      </section>
+
+      <section id="t-leads">
+        <div class="section-head"><div><h2>Leads</h2><p>Contactos captados y estado de seguimiento comercial.</p></div></div>
+        <div class="filters"><input id="lf-q" type="search" placeholder="Buscar por nombre, email o empresa">
+          <select id="lf-status"><option value="">Todos</option><option value="nuevo">Nuevos</option><option value="contactado">Contactados</option></select>
+          <input id="lf-from" type="date" title="Desde"><input id="lf-to" type="date" title="Hasta"><span class="count" id="lf-count"></span><button id="csv" class="ghost">Descargar CSV</button></div>
+        <div class="twrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Contacto</th><th>Qué necesita</th><th>Estado</th><th></th></tr></thead><tbody id="leads-body"></tbody></table></div>
+        <div id="leads-empty" class="empty hide"><b>Todavía no hay leads</b>Cuando un visitante deje sus datos en el chat aparecerá aquí al momento.</div>
+      </section>
+
+      <section id="t-convs">
+        <div class="section-head"><div><h2>Conversaciones</h2><p>Historial completo de consultas y respuestas del asistente.</p></div></div>
+        <div class="filters"><input id="cf-q" type="search" placeholder="Buscar en las conversaciones"><input id="cf-from" type="date" title="Desde"><input id="cf-to" type="date" title="Hasta"><span class="count" id="cf-count"></span><button id="ccsv" class="ghost">Descargar CSV</button></div>
+        <div id="convs"></div><div id="convs-empty" class="empty hide"><b>Todavía no hay conversaciones</b>En cuanto alguien hable con tu asistente verás aquí cada conversación completa.</div>
+      </section>
+
+      <section id="t-gaps">
+        <div class="section-head"><div><h2>Preguntas pendientes</h2><p>Responde las consultas para las que el asistente todavía no encontró información.</p></div></div>
+        <div id="gaps-list"></div><div id="gaps-empty" class="empty hide"><b>Ninguna pendiente</b>El asistente ha encontrado respuesta para todo lo que le han preguntado últimamente.</div>
+      </section>
+
+      <section id="t-add">
+        <div class="section-head"><div><h2>Conocimiento</h2><p>Documentos e información que utiliza el asistente para responder.</p></div></div>
+        <div class="box" style="margin-bottom:14px"><p style="margin-bottom:10px"><b>Subir documentos</b> <span class="mut">PDF, TXT, CSV o imágenes; máximo 10 MB por archivo.</span></p>
+          <input id="up-files" type="file" multiple accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
+          <div style="margin-top:12px;display:flex;gap:10px;align-items:center"><button id="up-run" class="btn">Subir e indexar</button><span id="up-msg" class="mut"></span></div><div id="up-report" class="mut" style="margin-top:10px"></div></div>
+        <p class="mut" style="margin-bottom:10px"><b>Contenido indexado.</b> Puedes retirar la información obsoleta; dejará de utilizarse al momento.</p><div id="docs-list"></div>
+      </section>
+
+      <section id="t-test">
+        <div class="section-head"><div><h2>Probar el asistente</h2><p>Comprueba la experiencia exactamente como la verá un visitante.</p></div></div>
+        <div class="box"><p><b>El botón del asistente está en la esquina inferior derecha.</b></p><p class="mut" style="margin-top:8px">Las conversaciones de prueba también quedan registradas. Si acabas de subir contenido, pregúntale sobre ello para comprobarlo.</p></div>
+      </section>
+
+      <footer class="panel-footer">© 2026 · Panel privado del cliente.</footer>
+    </main>
+  </div>
+</div><script>
 var token = new URLSearchParams(location.search).get("token") || "";
 var LEADS = [], CONVS = [], GAPS = [], DOCS = [], ACT = [];
 var PERIOD = 30;
 var PRIMARY = "#3c62f0";
 var SEEN_KEY = "cb_seen_" + token.slice(-10);
 var LAST_VISIT = localStorage.getItem(SEEN_KEY) || "";
+var hourNow = new Date().getHours();
+$("greeting").textContent = hourNow < 12 ? "Buenos días" : hourNow < 20 ? "Buenas tardes" : "Buenas noches";
 
 function $(id) { return document.getElementById(id); }
 function esc(t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; }
@@ -5700,18 +5692,36 @@ document.querySelectorAll("nav button").forEach(function (b) {
   };
 });
 
+$("recent-all").onclick = function () { var b = document.querySelector('nav button[data-tab="t-leads"]'); if (b) b.onclick(); };
+
 $("pdf").onclick = function () {
   window.open("/panel/report.pdf?token=" + encodeURIComponent(token), "_blank");
 };
 
-function renderStats() {
-  var since = sinceDate();
-  var convs = CONVS.filter(function (c) { return (c.last_message_at || c.created_at) >= since; });
-  var leads = LEADS.filter(function (l) { return l.created_at >= since; });
+function pctTrend(current, previous, id, suffix) {
+  var el = $(id);
+  if (!el) return;
+  el.className = "trend";
+  if (!previous && !current) { el.textContent = "sin cambios"; return; }
+  var diff = previous ? Math.round(((current - previous) / previous) * 1000) / 10 : 100;
+  el.textContent = (diff > 0 ? "↑ " : diff < 0 ? "↓ " : "") + Math.abs(diff).toLocaleString("es-ES") + (suffix || "%");
+  el.classList.add(diff > 0 ? "up" : diff < 0 ? "down" : "flat");
+}
+
+function periodSnapshot(fromMs, toMs) {
+  var convs = CONVS.filter(function (c) {
+    var at = new Date(c.last_message_at || c.created_at).getTime();
+    return at >= fromMs && at < toMs;
+  });
+  var leads = LEADS.filter(function (l) {
+    var at = new Date(l.created_at).getTime();
+    return at >= fromMs && at < toMs;
+  });
   var userMsgs = 0, answered = 0, assistantMsgs = 0;
   convs.forEach(function (c) {
     (c.messages || []).forEach(function (m) {
-      if (m.created_at && m.created_at < since) return;
+      var at = m.created_at ? new Date(m.created_at).getTime() : toMs - 1;
+      if (at < fromMs || at >= toMs) return;
       if (m.role === "user") userMsgs++;
       if (m.role === "assistant") {
         assistantMsgs++;
@@ -5719,31 +5729,97 @@ function renderStats() {
       }
     });
   });
-  $("s-convs").textContent = convs.length;
-  $("s-msgs").textContent = userMsgs;
-  $("s-leads").textContent = leads.length;
-  $("s-rate").textContent = assistantMsgs ? Math.round((100 * answered) / assistantMsgs) + "%" : "–";
+  return { convs: convs.length, leads: leads.length, userMsgs: userMsgs,
+    rate: assistantMsgs ? Math.round((100 * answered) / assistantMsgs) : 0, assistantMsgs: assistantMsgs };
+}
+
+function renderStats() {
+  var now = Date.now();
+  var span = PERIOD * 24 * 3600 * 1000;
+  var current = periodSnapshot(now - span, now + 1000);
+  var previous = periodSnapshot(now - span * 2, now - span);
+  $("s-convs").textContent = current.convs;
+  $("s-msgs").textContent = current.userMsgs;
+  $("s-leads").textContent = current.leads;
+  $("s-rate").textContent = current.assistantMsgs ? current.rate + "%" : "–";
+  pctTrend(current.convs, previous.convs, "tr-convs");
+  pctTrend(current.leads, previous.leads, "tr-leads");
+  var rateDiff = current.rate - previous.rate;
+  var rateEl = $("tr-rate");
+  rateEl.className = "trend " + (rateDiff > 0 ? "up" : rateDiff < 0 ? "down" : "flat");
+  rateEl.textContent = previous.assistantMsgs ? (rateDiff > 0 ? "↑ " : rateDiff < 0 ? "↓ " : "") + Math.abs(rateDiff) + " pt" : "periodo inicial";
+  renderTopics();
+  renderRecentLeads();
 }
 
 function renderChart() {
   var act = ACT.slice(-PERIOD);
-  var mx = 1;
-  act.forEach(function (a) { if (a.n > mx) mx = a.n; });
+  var mx = 1, hot = -1;
+  act.forEach(function (a, i) { if (a.n >= mx) { mx = a.n; hot = i; } });
   var ch = $("chart");
   ch.innerHTML = "";
-  act.forEach(function (a) {
+  act.forEach(function (a, i) {
     var bar = document.createElement("div");
     bar.style.height = Math.max(4, Math.round((a.n / mx) * 100)) + "%";
-    if (a.n) bar.style.background = PRIMARY;
+    if (i === hot && a.n) bar.className = "hot";
     bar.title = a.day + ": " + a.n + (a.n === 1 ? " pregunta" : " preguntas");
     ch.appendChild(bar);
   });
   if (act.length) {
-    $("ax-from").textContent = act[0].day;
-    $("ax-to").textContent = act[act.length - 1].day;
+    $("ax-from").textContent = new Date(act[0].day + "T12:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+    $("ax-to").textContent = new Date(act[act.length - 1].day + "T12:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
   }
 }
 
+function normalizedText(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function renderTopics() {
+  var since = Date.now() - PERIOD * 24 * 3600 * 1000;
+  var groups = [
+    { name: "Entradas y acceso", words: ["entrada", "acceso", "acredit", "registro", "ticket"] },
+    { name: "Programa y horarios", words: ["programa", "horario", "agenda", "ponencia", "actividad", "evento"] },
+    { name: "Expositores y espacios", words: ["expositor", "stand", "pabellon", "espacio", "exponer", "marca"] },
+    { name: "Cómo llegar", words: ["llegar", "aparc", "parking", "metro", "tren", "ubicacion", "direccion"] },
+    { name: "Precios y contratación", words: ["precio", "coste", "tarifa", "contrat", "presupuesto"] },
+    { name: "Otros", words: [] }
+  ];
+  var total = 0;
+  CONVS.forEach(function (c) {
+    (c.messages || []).forEach(function (m) {
+      if (m.role !== "user" || (m.created_at && new Date(m.created_at).getTime() < since)) return;
+      total++;
+      var text = normalizedText(m.content), picked = groups.length - 1;
+      for (var i = 0; i < groups.length - 1; i++) {
+        if (groups[i].words.some(function (w) { return text.indexOf(w) >= 0; })) { picked = i; break; }
+      }
+      groups[picked].count = (groups[picked].count || 0) + 1;
+    });
+  });
+  $("topics-total").textContent = total ? total + " consultas" : "";
+  var box = $("topics"); box.innerHTML = "";
+  var shown = groups.filter(function (g) { return g.count; }).sort(function (a, b) { return b.count - a.count; }).slice(0, 5);
+  if (!shown.length) { box.innerHTML = '<p class="mut">Aún no hay suficientes consultas para detectar temas.</p>'; return; }
+  shown.forEach(function (g) {
+    var row = document.createElement("div"); row.className = "topic";
+    row.innerHTML = "<span>" + esc(g.name) + "</span><strong>" + Math.round((g.count / total) * 100) + "%</strong>";
+    box.appendChild(row);
+  });
+}
+
+function renderRecentLeads() {
+  var box = $("recent-leads"); if (!box) return;
+  box.innerHTML = "";
+  if (!LEADS.length) { box.innerHTML = '<p class="mut" style="padding:12px 0">Aún no hay leads captados.</p>'; return; }
+  LEADS.slice(0, 5).forEach(function (l) {
+    var initials = (l.name || l.company || "L").split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0); }).join("").toUpperCase();
+    var row = document.createElement("div"); row.className = "recent-lead" + ((l.status || "nuevo") === "nuevo" ? " is-new" : "");
+    row.innerHTML = '<div class="lead-person"><span class="lead-avatar">' + esc(initials) + '</span><span><b>' + esc(l.name || "Contacto sin nombre") + '</b><span>' + esc(l.company || l.email || l.phone || "") + '</span></span></div>' +
+      '<div class="lead-intent">' + esc((l.kind || l.message || "Interés comercial").toUpperCase()) + '</div><div class="lead-time">' + esc(fmt(l.created_at)) + '</div>';
+    box.appendChild(row);
+  });
+}
 function leadMatches(l) {
   var q = $("lf-q").value.trim().toLowerCase();
   var st = $("lf-status").value;
