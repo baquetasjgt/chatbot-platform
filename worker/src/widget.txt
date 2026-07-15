@@ -4,6 +4,8 @@
   var API = s.getAttribute("data-api");
   var AUTO = parseInt(s.getAttribute("data-open") || "0", 10);
   var BORDER = s.getAttribute("data-border") || "";
+  var ICON = s.getAttribute("data-icon") || "";
+  var RADAR = s.getAttribute("data-radar") === "1";
   if (!KEY || !API) return console.error("[chatbot] faltan data-key o data-api");
 
   // en la demo (data-fresh) cada visita arranca de cero: nueva sesión,
@@ -56,6 +58,11 @@
     display:flex;align-items:center;justify-content:center;
     box-shadow:var(--cbshb,0 4px 16px rgba(0,0,0,.18));transition:transform .18s}
   .cb-btn:hover{transform:scale(1.06)}
+  .cb-btn.cb-radar:before,.cb-btn.cb-radar:after{content:"";position:absolute;inset:-1px;
+    border:1px solid var(--cbradar,#f5be10);border-radius:inherit;pointer-events:none;
+    animation:cbradar 2.4s cubic-bezier(.2,.65,.3,1) infinite}
+  .cb-btn.cb-radar:after{animation-delay:1.2s}
+  @keyframes cbradar{0%{opacity:.72;transform:scale(1)}75%,100%{opacity:0;transform:scale(1.75)}}
   .cb-btn.cb-left{left:24px;right:auto}
   .cb-btn.cb-square{border-radius:calc(var(--cbr,14px) + 4px)}
   .cb-btn.cb-pill{width:auto;padding:0 18px;border-radius:calc(var(--cbbtn,56px)/2);gap:8px}
@@ -166,7 +173,8 @@
     .cb-tease.cb-left{left:16px;right:auto}
   }
   .cb-btn,.cb-close,.cb-foot button,.cb-sug button,.cb-tease,.cb-foot input{touch-action:manipulation}
-  @media(prefers-reduced-motion:reduce){.cb-btn,.cb-dots span,.cb-tease{transition:none;animation:none}}`;
+  @media(prefers-reduced-motion:reduce){.cb-btn,.cb-dots span,.cb-tease{transition:none;animation:none}
+    .cb-btn.cb-radar:before,.cb-btn.cb-radar:after{display:none}}`;
 
   var st = document.createElement("style");
   st.textContent = css;
@@ -181,14 +189,19 @@
     var pill = TH.btn_shape === "pastilla";
     btn.classList.toggle("cb-pill", pill);
     btn.classList.toggle("cb-square", TH.btn_shape === "redondeado");
+    btn.classList.toggle("cb-radar", RADAR);
     // icono propio (p. ej. el isotipo de la marca) en lugar del dibujo genérico
-    var glyph = TH.btn_icon_url
-      ? '<img class="cb-btn-img" src="' + esc(TH.btn_icon_url) + '" alt="">'
+    var customIcon = ICON || TH.btn_icon_url;
+    var glyph = customIcon
+      ? '<img class="cb-btn-img" src="' + esc(customIcon) + '" alt="">'
       : '<svg viewBox="0 0 24 24">' + icon + "</svg>";
     btn.innerHTML = glyph +
       (pill ? '<span class="cb-pill-t">' + esc(TH.btn_label || "Chat") + "</span>" : "");
     if (TH.btn_bg) btn.style.background = TH.btn_bg;
-    if (BORDER) btn.style.border = ".75px solid " + BORDER;
+    if (BORDER) {
+      btn.style.border = ".75px solid " + BORDER;
+      btn.style.setProperty("--cbradar", BORDER);
+    }
     else if (TH.btn_border) btn.style.border = TH.btn_border;
   }
 

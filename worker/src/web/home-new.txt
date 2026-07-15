@@ -339,6 +339,6 @@
   </div>
   <script src="%%BASE%%/cookie-consent.js?v=2"></script>
   <script src="%%BASE%%/script.js?v=11"></script>
-  <script src="/widget.js?v=2" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" data-open="0" data-border="#f5be10"></script>
+  <script src="/widget.js?v=3" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" data-open="0" data-border="#f5be10" data-icon="%%BASE%%/assets/expobot-isotipo.svg" data-radar="1"></script>
 </body>
 </html>
