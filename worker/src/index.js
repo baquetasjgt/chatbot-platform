@@ -2112,6 +2112,10 @@ const ADMIN_HTML = `<!doctype html>
   #cv-btn.radar:before,#cv-btn.radar:after{content:"";position:absolute;inset:-1px;border:1px solid var(--preview-radar,#f5be10);
     border-radius:inherit;animation:preview-radar 2.4s ease-out infinite;pointer-events:none}
   #cv-btn.radar:after{animation-delay:1.2s}@keyframes preview-radar{to{opacity:0;transform:scale(1.65)}}
+  #cv-btn.beat{animation:cv-beat 1.5s ease-in-out infinite}@keyframes cv-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  #cv-btn.bounce{animation:cv-bounce 1.7s ease infinite}@keyframes cv-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  #cv-btn.glow{animation:cv-glow 1.9s ease-in-out infinite}@keyframes cv-glow{0%,100%{box-shadow:0 4px 14px rgba(0,0,0,.2)}50%{box-shadow:0 4px 14px rgba(0,0,0,.2),0 0 0 5px rgba(245,190,16,.16),0 0 20px 4px var(--preview-radar,#f5be10)}}
+  #cv-btn.shake{animation:cv-shake 3.2s ease infinite}@keyframes cv-shake{0%,90%,100%{transform:rotate(0)}92%{transform:rotate(-9deg)}94%{transform:rotate(9deg)}96%{transform:rotate(-6deg)}98%{transform:rotate(4deg)}}
   @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px}}
   #bot-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   #bot-tabs button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 16px;
@@ -2616,6 +2620,13 @@ const ADMIN_HTML = `<!doctype html>
               </select></div>
           </div>
           <div class="row">
+            <div class="check" style="margin-top:18px"><input id="f-winborderon" type="checkbox"><label for="f-winborderon" style="margin:0">Borde en la ventana de chat</label></div>
+            <div><label>Grosor del borde: <span id="f-winborderw-v">1</span> px</label>
+              <input id="f-winborderw" type="range" min="1" max="6" value="1"></div>
+          </div>
+          <div><label>Color del borde de la ventana</label>
+            <input id="f-winborder" type="color" value="#d9d9d4" style="width:100%;height:42px;padding:4px"></div>
+          <div class="row">
             <div><label>Posición en la web</label>
               <select id="f-side">
                 <option value="derecha">Abajo a la derecha</option>
@@ -2636,6 +2647,8 @@ const ADMIN_HTML = `<!doctype html>
           </div>
           <label>Icono del botón del chat</label>
           <div class="icopick" id="pick-btn"></div>
+          <div><label>Tamaño del icono dentro del botón: <span id="f-iconsize-v">46</span> %</label>
+            <input id="f-iconsize" type="range" min="28" max="72" step="2" value="46"></div>
           <label>Isotipo personalizado del botón (URL; sustituye el icono elegido)</label>
           <input id="f-btnicon" type="url" placeholder="https://cliente.com/isotipo.svg">
           <div class="row">
@@ -2643,10 +2656,22 @@ const ADMIN_HTML = `<!doctype html>
             <div><label>Color del borde</label><input id="f-btnborder" type="color" value="#f5be10" style="width:100%;height:42px;padding:4px"></div>
           </div>
           <div class="row">
-            <div class="check"><input id="f-btnborderon" type="checkbox"><label for="f-btnborderon" style="margin:0">Mostrar borde fino</label></div>
-            <div class="check"><input id="f-radar" type="checkbox"><label for="f-radar" style="margin:0">Efecto radar</label></div>
+            <div class="check"><input id="f-btnborderon" type="checkbox"><label for="f-btnborderon" style="margin:0">Mostrar borde en el botón</label></div>
+            <div><label>Grosor del borde: <span id="f-btnborderw-v">2</span> px</label>
+              <input id="f-btnborderw" type="range" min="1" max="8" value="2"></div>
           </div>
-          <div><label>Color del radar</label><input id="f-radarcolor" type="color" value="#f5be10" style="width:100%;height:42px;padding:4px"></div>
+          <div class="row">
+            <div><label>Efecto de llamada de atención</label>
+              <select id="f-effect">
+                <option value="ninguno">Ninguno</option>
+                <option value="radar">Radar (ondas)</option>
+                <option value="latido">Latido</option>
+                <option value="rebote">Rebote</option>
+                <option value="brillo">Brillo</option>
+                <option value="sacudida">Sacudida</option>
+              </select></div>
+            <div><label>Color del efecto</label><input id="f-radarcolor" type="color" value="#f5be10" style="width:100%;height:42px;padding:4px"></div>
+          </div>
           <div class="row">
             <div><label>Forma del botón</label>
               <select id="f-btnshape">
@@ -2709,6 +2734,8 @@ const ADMIN_HTML = `<!doctype html>
           </div>
           <label>Logotipo del pie (opcional; sustituye el nombre escrito)</label>
           <input id="f-brandlogo" type="url" placeholder="https://tuagencia.com/logotipo.svg">
+          <div class="check" style="margin-top:6px"><input id="f-expobot" type="checkbox" checked>
+            <label for="f-expobot" style="margin:0">Mostrar «Con tecnología de ExpoBot» + enlace a expobot.es (solo si no defines una marca propia arriba)</label></div>
           <div class="check"><input id="f-sound" type="checkbox">
             <label for="f-sound" style="margin:0">Sonido sutil al aparecer la invitación (si el navegador lo permite)</label></div>
           <label>CSS personalizado (avanzado; se inyecta tal cual en la web del cliente)</label>
@@ -4271,8 +4298,17 @@ function selTenant(id, projectId) {
   $("f-btnbg").value = th.btn_bg || (t && t.primary_color) || "#111111";
   $("f-btnborder").value = th.btn_border_color || "#f5be10";
   $("f-btnborderon").checked = !!(th.btn_border_color || th.btn_border);
-  $("f-radar").checked = !!th.radar;
+  $("f-btnborderw").value = th.btn_border_width || 2;
+  $("f-btnborderw-v").textContent = $("f-btnborderw").value;
+  $("f-iconsize").value = th.icon_size || 46;
+  $("f-iconsize-v").textContent = $("f-iconsize").value;
+  $("f-effect").value = th.effect || (th.radar ? "radar" : "ninguno");
   $("f-radarcolor").value = th.radar_color || th.btn_border_color || "#f5be10";
+  $("f-winborderon").checked = !!th.panel_border_color;
+  $("f-winborder").value = th.panel_border_color || "#d9d9d4";
+  $("f-winborderw").value = th.panel_border_width || 1;
+  $("f-winborderw-v").textContent = $("f-winborderw").value;
+  $("f-expobot").checked = th.expobot_branding !== false;
   $("f-sound").checked = !!th.sound;
   $("f-css").value = th.custom_css || "";
   iconBtnSel = th.icon_btn || "burbuja";
@@ -4795,7 +4831,10 @@ function updPrev() {
   w.style.borderRadius = Math.min(rad + 4, 28) + "px";
   w.style.boxShadow = sh === "ninguna" ? "none" :
     sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.4)" : "0 12px 40px rgba(20,20,60,.18)";
-  w.style.border = "1px solid " + controlBorder;
+  $("f-winborderw-v").textContent = $("f-winborderw").value;
+  w.style.border = $("f-winborderon").checked
+    ? (($("f-winborderw").value || 1) + "px solid " + $("f-winborder").value)
+    : "1px solid " + controlBorder;
 
   $("cv-h").style.background = head;
   $("cv-h").style.color = headText;
@@ -4868,10 +4907,12 @@ function updPrev() {
 
   var brand = $("f-brand").value.trim();
   var brandLogo = $("f-brandlogo").value.trim();
-  $("cv-brand").classList.toggle("hide", !brand && !brandLogo);
+  var expobotOn = $("f-expobot").checked;
+  $("cv-brand").classList.toggle("hide", !brand && !brandLogo && !expobotOn);
   $("cv-brand").innerHTML = brandLogo
     ? 'Impulsado por <img src="' + brandLogo.replace(/"/g, "") + '" alt="' + (brand || "Marca") + '" style="max-width:62px;max-height:14px;vertical-align:middle;margin-left:4px">'
-    : (brand ? "Impulsado por " + brand : "");
+    : brand ? "Impulsado por " + brand
+    : (expobotOn ? "Con tecnología de ExpoBot" : "");
   $("cv-brand").style.background = cbg;
   $("cv-brand").style.color = cvDark ? "#777" : "#999";
 
@@ -4880,14 +4921,21 @@ function updPrev() {
   var btnBg = $("f-btnbg").value || c;
   var btnText = contrastFor(btnBg);
   pb.style.background = btnBg;
-  pb.style.border = $("f-btnborderon").checked ? "1px solid " + $("f-btnborder").value : "0";
-  pb.classList.toggle("radar", $("f-radar").checked);
+  $("f-btnborderw-v").textContent = $("f-btnborderw").value;
+  pb.style.border = $("f-btnborderon").checked ? (($("f-btnborderw").value || 2) + "px solid " + $("f-btnborder").value) : "0";
+  var fx = $("f-effect").value;
+  ["radar", "beat", "bounce", "glow", "shake"].forEach(function (k) { pb.classList.remove(k); });
+  var fxMap = { radar: "radar", latido: "beat", rebote: "bounce", brillo: "glow", sacudida: "shake" };
+  if (fxMap[fx]) pb.classList.add(fxMap[fx]);
   pb.style.setProperty("--preview-radar", $("f-radarcolor").value);
   pb.style.borderRadius = shape === "redondeado" ? Math.min(rad + 4, 18) + "px" : "26px";
+  var isz = parseInt($("f-iconsize").value, 10) || 46;
+  $("f-iconsize-v").textContent = isz;
+  var svgPx = Math.round(52 * isz / 100), imgPx = Math.round(52 * Math.min(isz + 24, 95) / 100);
   var btnIconUrl = $("f-btnicon").value.trim();
   pb.innerHTML = btnIconUrl
-    ? '<img src="' + btnIconUrl.replace(/"/g, "") + '" alt="" style="width:30px;height:30px;object-fit:contain">'
-    : '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:' + btnText +
+    ? '<img src="' + btnIconUrl.replace(/"/g, "") + '" alt="" style="width:' + imgPx + 'px;height:' + imgPx + 'px;object-fit:contain">'
+    : '<svg viewBox="0 0 24 24" style="width:' + svgPx + 'px;height:' + svgPx + 'px;fill:none;stroke:' + btnText +
       ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' +
       (BTN_ICONS[iconBtnSel] || BTN_ICONS.burbuja) + "</svg>";
   if (shape === "pastilla") {
@@ -4899,10 +4947,11 @@ function updPrev() {
   syncSwatches();
 }
 ["f-color", "f-colorhead", "f-color2", "f-colorbg", "f-controlborder", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
- "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg"].forEach(function (id) {
+ "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg",
+ "f-iconsize", "f-btnborderw", "f-winborder", "f-winborderw"].forEach(function (id) {
   $(id).oninput = updPrev;
 });
-["f-font", "f-shadow", "f-btnshape", "f-btnborderon", "f-radar"].forEach(function (id) {
+["f-font", "f-shadow", "f-btnshape", "f-btnborderon", "f-effect", "f-winborderon", "f-expobot"].forEach(function (id) {
   $(id).onchange = updPrev;
 });
 ["g-c1", "g-c2"].forEach(function (id) {
@@ -5098,7 +5147,8 @@ function collect() {
       header_color: $("f-colorhead").value,
       secondary_color: $("f-color2").value,
       control_border_color: $("f-controlborder").value,
-      panel_border_color: $("f-controlborder").value,
+      panel_border_color: $("f-winborderon").checked ? $("f-winborder").value : "",
+      panel_border_width: parseInt($("f-winborderw").value, 10) || 1,
       bg_color: $("f-colorbg").value,
       font: $("f-font").value,
       radius: parseInt($("f-radius").value, 10),
@@ -5122,8 +5172,12 @@ function collect() {
       btn_icon_url: $("f-btnicon").value.trim(),
       btn_bg: $("f-btnbg").value,
       btn_border_color: $("f-btnborderon").checked ? $("f-btnborder").value : "",
-      radar: $("f-radar").checked,
+      btn_border_width: parseInt($("f-btnborderw").value, 10) || 2,
+      icon_size: parseInt($("f-iconsize").value, 10) || 46,
+      effect: $("f-effect").value === "ninguno" ? "" : $("f-effect").value,
+      radar: $("f-effect").value === "radar",
       radar_color: $("f-radarcolor").value,
+      expobot_branding: $("f-expobot").checked,
       sound: $("f-sound").checked,
       custom_css: $("f-css").value.slice(0, 5000),
       icon_btn: iconBtnSel,

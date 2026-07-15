@@ -63,13 +63,22 @@
     animation:cbradar 2.4s cubic-bezier(.2,.65,.3,1) infinite}
   .cb-btn.cb-radar:after{animation-delay:1.2s}
   @keyframes cbradar{0%{opacity:.72;transform:scale(1)}75%,100%{opacity:0;transform:scale(1.75)}}
+  @keyframes cbbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .cb-btn.cb-beat{animation:cbbeat 1.5s ease-in-out infinite}
+  @keyframes cbbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  .cb-btn.cb-bounce{animation:cbbounce 1.7s ease infinite}
+  @keyframes cbglow{0%,100%{box-shadow:var(--cbshb,0 4px 16px rgba(0,0,0,.18))}50%{box-shadow:var(--cbshb,0 4px 16px rgba(0,0,0,.18)),0 0 0 5px rgba(245,190,16,.16),0 0 22px 4px var(--cbradar,#f5be10)}}
+  .cb-btn.cb-glow{animation:cbglow 1.9s ease-in-out infinite}
+  @keyframes cbshake{0%,90%,100%{transform:rotate(0)}92%{transform:rotate(-9deg)}94%{transform:rotate(9deg)}96%{transform:rotate(-6deg)}98%{transform:rotate(4deg)}}
+  .cb-btn.cb-shake{animation:cbshake 3.2s ease infinite}
+  @media(prefers-reduced-motion:reduce){.cb-btn.cb-beat,.cb-btn.cb-bounce,.cb-btn.cb-glow,.cb-btn.cb-shake{animation:none}.cb-btn:before,.cb-btn:after{animation:none}}
   .cb-btn.cb-left{left:24px;right:auto}
   .cb-btn.cb-square{border-radius:calc(var(--cbr,14px) + 4px)}
   .cb-btn.cb-pill{width:auto;padding:0 18px;border-radius:calc(var(--cbbtn,56px)/2);gap:8px}
-  .cb-btn svg{width:46%;height:46%;fill:none;stroke:var(--cbbtntext,var(--cbt,#fff));stroke-width:1.8;
+  .cb-btn svg{width:var(--cbicon,46%);height:var(--cbicon,46%);fill:none;stroke:var(--cbbtntext,var(--cbt,#fff));stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round}
   .cb-btn.cb-pill svg{width:24px;height:24px;flex:0 0 auto}
-  .cb-btn img.cb-btn-img{width:70%;height:70%;object-fit:contain;display:block;pointer-events:none}
+  .cb-btn img.cb-btn-img{width:var(--cbiconimg,70%);height:var(--cbiconimg,70%);object-fit:contain;display:block;pointer-events:none}
   .cb-btn.cb-pill img.cb-btn-img{width:26px;height:26px;flex:0 0 auto}
   .cb-pill-t{color:var(--cbbtntext,var(--cbt,#fff));font:600 15px/1 var(--cbf,system-ui,sans-serif);white-space:nowrap}
   .cb-panel{position:fixed;bottom:calc(var(--cbbtn,56px) + 36px);right:24px;width:var(--cbw,380px);
@@ -191,7 +200,12 @@
     var pill = TH.btn_shape === "pastilla";
     btn.classList.toggle("cb-pill", pill);
     btn.classList.toggle("cb-square", TH.btn_shape === "redondeado");
-    btn.classList.toggle("cb-radar", RADAR || TH.radar === true);
+    var fx = TH.effect || ((RADAR || TH.radar === true) ? "radar" : "");
+    btn.classList.toggle("cb-radar", fx === "radar");
+    btn.classList.toggle("cb-beat", fx === "latido");
+    btn.classList.toggle("cb-bounce", fx === "rebote");
+    btn.classList.toggle("cb-glow", fx === "brillo");
+    btn.classList.toggle("cb-shake", fx === "sacudida");
     // icono propio (p. ej. el isotipo de la marca) en lugar del dibujo genérico
     var customIcon = ICON || TH.btn_icon_url;
     var glyph = customIcon
@@ -277,9 +291,11 @@
     var btnBg = TH.btn_bg || cfg.primary_color;
     r.setProperty("--cbbtnbg", btnBg);
     r.setProperty("--cbbtntext", textColorFor(btnBg));
-    r.setProperty("--cbbtnborder", TH.btn_border_color ? "1px solid " + TH.btn_border_color : (TH.btn_border || "0"));
+    r.setProperty("--cbbtnborder", TH.btn_border_color ? (TH.btn_border_width || 1) + "px solid " + TH.btn_border_color : (TH.btn_border || "0"));
     r.setProperty("--cbradar", TH.radar_color || TH.btn_border_color || cfg.primary_color);
-    r.setProperty("--cbpanelborder", TH.panel_border_color ? "1px solid " + TH.panel_border_color : "0");
+    r.setProperty("--cbpanelborder", TH.panel_border_color ? (TH.panel_border_width || 1) + "px solid " + TH.panel_border_color : "0");
+    r.setProperty("--cbicon", (TH.icon_size || 46) + "%");
+    r.setProperty("--cbiconimg", Math.min((TH.icon_size || 46) + 24, 95) + "%");
     r.setProperty("--cbcontrolborder", TH.control_border_color || "#d9d9d4");
     r.setProperty("--cbline", TH.line_color || "#e5e5e2");
     var rad = TH.radius == null ? 14 : TH.radius;
@@ -358,6 +374,8 @@
           ? '<a href="' + esc(TH.brand_url) + '" target="_blank" rel="noopener">' + brandBody + "</a>"
           : brandBody) +
         "</div>";
+    } else if (TH.expobot_branding !== false) {
+      brand = '<div class="cb-brand"><a href="https://expobot.es" target="_blank" rel="noopener">Con tecnología de ExpoBot</a></div>';
     }
     panel.innerHTML =
       '<div class="cb-head"><div class="cb-av">' + avatar + '</div>' +
