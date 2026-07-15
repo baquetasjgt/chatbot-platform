@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="ExpoBOT crea asistentes con inteligencia artificial para recintos y organizadores feriales. Atención 24/7, captación de leads e integraciones con web, Telegram y WhatsApp.">
   <title>ExpoBOT | La IA que convierte preguntas en oportunidades</title>
-  <link rel="stylesheet" href="%%BASE%%/styles.css?v=16">
+  <link rel="stylesheet" href="%%BASE%%/styles.css?v=17">
 </head>
 <body data-web-key="%%WEBKEY%%">
   <header class="site-header" id="inicio">
@@ -339,6 +339,6 @@
   </div>
   <script src="%%BASE%%/cookie-consent.js?v=2"></script>
   <script src="%%BASE%%/script.js?v=11"></script>
-  <script src="/widget.js" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" data-open="0"></script>
+  <script src="/widget.js?v=2" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" data-open="0" data-border="#f5be10"></script>
 </body>
 </html>

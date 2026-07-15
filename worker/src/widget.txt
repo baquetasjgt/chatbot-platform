@@ -3,6 +3,7 @@
   var KEY = s.getAttribute("data-key");
   var API = s.getAttribute("data-api");
   var AUTO = parseInt(s.getAttribute("data-open") || "0", 10);
+  var BORDER = s.getAttribute("data-border") || "";
   if (!KEY || !API) return console.error("[chatbot] faltan data-key o data-api");
 
   // en la demo (data-fresh) cada visita arranca de cero: nueva sesión,
@@ -187,7 +188,8 @@
     btn.innerHTML = glyph +
       (pill ? '<span class="cb-pill-t">' + esc(TH.btn_label || "Chat") + "</span>" : "");
     if (TH.btn_bg) btn.style.background = TH.btn_bg;
-    if (TH.btn_border) btn.style.border = TH.btn_border;
+    if (BORDER) btn.style.border = ".75px solid " + BORDER;
+    else if (TH.btn_border) btn.style.border = TH.btn_border;
   }
 
   var panel = document.createElement("div");
