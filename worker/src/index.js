@@ -2837,16 +2837,16 @@ $("paste-tok").onclick = function () {
 };
 [].forEach.call(document.querySelectorAll('input[type="password"]'), function (inp) {
   var w = document.createElement("span");
-  w.style.cssText = "position:relative;display:block";
+  w.className = "password-wrap";
   inp.parentNode.insertBefore(w, inp);
   w.appendChild(inp);
   inp.style.paddingRight = "42px";
   var b = document.createElement("button");
   b.type = "button";
+  b.className = "password-toggle";
   b.textContent = "👁";
   b.title = "Mostrar u ocultar";
-  b.style.cssText = "position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;" +
-    "background:none;cursor:pointer;font-size:16px;padding:4px 6px;opacity:.55;line-height:1";
+  b.setAttribute("aria-label", "Mostrar u ocultar la clave");
   b.onclick = function () {
     var show = inp.type === "password";
     inp.type = show ? "text" : "password";
