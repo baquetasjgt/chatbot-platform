@@ -942,6 +942,22 @@ const TENANT_FIELDS = [
 ];
 const CLIENT_FIELDS = ["name", "contact_name", "email", "phone", "notes", "portal_enabled"];
 const PROJECT_FIELDS = ["client_id", "name", "description"];
+const INTEGRATION_FIELDS = [
+  "project_id", "provider", "category", "name", "status", "settings",
+  "assigned_tenant_ids", "last_checked_at", "last_synced_at", "error_message",
+];
+
+const INTEGRATION_CATEGORIES = {
+  web: "channel",
+  whatsapp: "channel",
+  telegram: "channel",
+  google_drive: "knowledge",
+  email: "communication",
+  webhook: "sales",
+  crm: "sales",
+  calendar: "calendar",
+  zapier_make: "sales",
+};
 
 function pick(obj, keys) {
   const out = {};
@@ -1693,6 +1709,89 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
     return json({ ok: true });
   }
 
+  // --- integraciones del proyecto ---
+  const mProjectIntegrations = url.pathname.match(/^\/admin\/api\/projects\/([0-9a-f-]{36})\/integrations$/);
+  if (mProjectIntegrations && request.method === "GET") {
+    return json(await sb(
+      env,
+      `project_integrations?project_id=eq.${mProjectIntegrations[1]}&order=category.asc,created_at.asc`
+    ));
+  }
+  if (mProjectIntegrations && request.method === "POST") {
+    const input = pick(await request.json(), INTEGRATION_FIELDS);
+    if (!INTEGRATION_CATEGORIES[input.provider]) return json({ error: "proveedor no válido" }, 400);
+    if (!input.name?.trim()) return json({ error: "el nombre es obligatorio" }, 400);
+    const projectId = mProjectIntegrations[1];
+    const [project] = await sb(env, `projects?id=eq.${projectId}&select=id`);
+    if (!project) return json({ error: "proyecto no encontrado" }, 404);
+    const tenants = await sb(env, `tenants?project_id=eq.${projectId}&select=id`);
+    const allowed = new Set((tenants || []).map((t) => t.id));
+    const assigned = (input.assigned_tenant_ids || []).filter((id) => allowed.has(id));
+    const [row] = await sb(env, "project_integrations", {
+      method: "POST",
+      body: {
+        project_id: projectId,
+        provider: input.provider,
+        category: INTEGRATION_CATEGORIES[input.provider],
+        name: input.name.trim().slice(0, 100),
+        status: ["pending", "connected", "paused", "error"].includes(input.status) ? input.status : "pending",
+        settings: input.settings && typeof input.settings === "object" ? input.settings : {},
+        assigned_tenant_ids: assigned,
+      },
+    });
+    return json(row);
+  }
+
+  const mIntegration = url.pathname.match(/^\/admin\/api\/integrations\/([0-9a-f-]{36})$/);
+  if (mIntegration && request.method === "PATCH") {
+    const input = pick(await request.json(), INTEGRATION_FIELDS);
+    delete input.project_id;
+    delete input.provider;
+    delete input.category;
+    if (input.name !== undefined) input.name = String(input.name).trim().slice(0, 100);
+    if (input.status !== undefined && !["pending", "connected", "paused", "error"].includes(input.status)) {
+      return json({ error: "estado no valido" }, 400);
+    }
+    if (input.settings !== undefined && (!input.settings || typeof input.settings !== "object" || Array.isArray(input.settings))) {
+      return json({ error: "configuracion no valida" }, 400);
+    }
+    if (input.assigned_tenant_ids !== undefined) {
+      const [current] = await sb(env, "project_integrations?id=eq." + mIntegration[1] + "&select=project_id");
+      if (!current) return json({ error: "integracion no encontrada" }, 404);
+      const tenants = await sb(env, "tenants?project_id=eq." + current.project_id + "&select=id");
+      const allowed = new Set((tenants || []).map((t) => t.id));
+      input.assigned_tenant_ids = (Array.isArray(input.assigned_tenant_ids) ? input.assigned_tenant_ids : [])
+        .filter((id) => allowed.has(id));
+    }
+    input.updated_at = new Date().toISOString();
+    const rows = await sb(env, `project_integrations?id=eq.${mIntegration[1]}`, { method: "PATCH", body: input });
+    if (!rows?.length) return json({ error: "integración no encontrada" }, 404);
+    return json(rows[0]);
+  }
+  if (mIntegration && request.method === "DELETE") {
+    await sb(env, `project_integrations?id=eq.${mIntegration[1]}`, { method: "DELETE" });
+    return json({ ok: true });
+  }
+
+  const mIntegrationCheck = url.pathname.match(/^\/admin\/api\/integrations\/([0-9a-f-]{36})\/check$/);
+  if (mIntegrationCheck && request.method === "POST") {
+    const [integration] = await sb(env, `project_integrations?id=eq.${mIntegrationCheck[1]}`);
+    if (!integration) return json({ error: "integración no encontrada" }, 404);
+    const required = {
+      web: ["domain"], whatsapp: ["phone_number"], telegram: ["bot_username"],
+      google_drive: ["folder_name"], email: ["sender"], webhook: ["endpoint"],
+      crm: ["workspace"], calendar: ["calendar_name"], zapier_make: ["endpoint"],
+    }[integration.provider] || [];
+    const missing = required.filter((key) => !integration.settings?.[key]);
+    const status = missing.length ? "error" : "connected";
+    const errorMessage = missing.length ? `Falta configurar: ${missing.join(", ")}` : null;
+    const now = new Date().toISOString();
+    const [row] = await sb(env, `project_integrations?id=eq.${integration.id}`, {
+      method: "PATCH",
+      body: { status, error_message: errorMessage, last_checked_at: now, updated_at: now },
+    });
+    return json(row);
+  }
   // --- asistente de configuración con IA ---
   if (url.pathname === "/admin/api/assist" && request.method === "POST") {
     if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
@@ -1998,11 +2097,20 @@ const ADMIN_HTML = `<!doctype html>
     </div>
   </header>
   <div class="wrap">
-    <aside>
-      <button id="home-btn" class="ghost" style="width:100%;margin-bottom:8px">📊 Inicio</button>
-      <button id="leads-btn" class="ghost" style="width:100%;margin-bottom:8px">📥 Leads</button>
-      <button id="new-client" class="primary">+ Nuevo cliente</button>
-      <div id="tree"></div>
+    <aside class="admin-sidebar">
+      <div class="side-caption">PLATAFORMA</div>
+      <nav class="admin-nav" aria-label="Navegación principal">
+        <button id="home-btn" data-global="home"><span>⌂</span>Inicio</button>
+        <button id="clients-btn" data-global="clients"><span>◎</span>Clientes</button>
+        <button id="projects-btn" data-global="projects"><span>□</span>Proyectos</button>
+        <button id="leads-btn" data-global="leads"><span>↗</span>Leads</button>
+        <button id="ops-btn" data-global="ops"><span>!</span>Operaciones</button>
+        <button id="templates-btn" data-global="templates"><span>◇</span>Plantillas</button>
+      </nav>
+      <button id="new-client" class="primary side-create">+ Nuevo cliente</button>
+      <div class="side-caption side-recent">CLIENTES RECIENTES</div>
+      <div id="tree" aria-label="Clientes recientes"></div>
+      <button id="settings-btn" class="side-settings"><span>⚙</span>Administración</button>
     </aside>
     <main id="main" class="hide">
 
@@ -2010,12 +2118,15 @@ const ADMIN_HTML = `<!doctype html>
 
       <div id="edit-col">
 
-      <div id="bot-tabs" class="hide">
-        <button data-bt="cerebro" class="on">🧠 Cerebro</button>
-        <button data-bt="contenido">📚 Contenido</button>
-        <button data-bt="diseno">🎨 Diseño</button>
-        <button data-bt="calidad">🎓 Calidad</button>
-        <button data-bt="publicar">🚀 Publicar</button>
+      <div id="bot-tabs" class="hide context-tabs" aria-label="Secciones del asistente">
+        <button data-bt="resumen" class="on">Resumen</button>
+        <button data-bt="cerebro">Objetivo y comportamiento</button>
+        <button data-bt="contenido">Conocimiento</button>
+        <button data-bt="diseno">Diseño</button>
+        <button data-bt="captacion">Captación</button>
+        <button data-bt="canales">Canales</button>
+        <button data-bt="calidad">Pruebas</button>
+        <button data-bt="publicar">Publicar</button>
       </div>
 
       <div class="card hide" id="v-wizard">
@@ -2079,6 +2190,47 @@ const ADMIN_HTML = `<!doctype html>
         </table></div>
       </div>
 
+      <section class="workspace-view hide" id="v-clients">
+        <div class="page-heading"><div><p class="section-kicker">CARTERA</p><h1>Clientes</h1><p>Organizaciones, responsables, proyectos y accesos.</p></div><button id="clients-new-inline" class="primary">+ Nuevo cliente</button></div>
+        <div class="list-toolbar"><input id="clients-search" type="search" placeholder="Buscar cliente, contacto o email"><span id="clients-count" class="mut"></span></div>
+        <div class="data-surface"><table class="home"><thead><tr><th>Cliente</th><th>Contacto</th><th>Proyectos</th><th>Asistentes</th><th>Portal</th><th></th></tr></thead><tbody id="clients-body"></tbody></table></div>
+      </section>
+
+      <section class="workspace-view hide" id="v-projects">
+        <div class="page-heading"><div><p class="section-kicker">ENTREGA</p><h1>Proyectos</h1><p>Todos los espacios de trabajo y su estado operativo.</p></div></div>
+        <div class="list-toolbar"><input id="projects-search" type="search" placeholder="Buscar proyecto o cliente"><select id="projects-status"><option value="">Todos</option><option value="active">Con asistentes activos</option><option value="empty">Sin asistentes</option></select><span id="projects-count" class="mut"></span></div>
+        <div class="data-surface"><table class="home"><thead><tr><th>Proyecto</th><th>Cliente</th><th>Asistentes</th><th>Integraciones</th><th>Estado</th><th></th></tr></thead><tbody id="projects-body"></tbody></table></div>
+      </section>
+
+      <section class="workspace-view hide" id="v-ops">
+        <div class="page-heading"><div><p class="section-kicker">CONTROL</p><h1>Operaciones</h1><p>Lo que necesita atención en toda la plataforma.</p></div><button id="ops-refresh" class="ghost">Actualizar</button></div>
+        <div class="ops-grid">
+          <div class="ops-stat"><span>Asistentes apagados</span><strong id="ops-off">0</strong></div>
+          <div class="ops-stat"><span>Proyectos sin asistente</span><strong id="ops-empty">0</strong></div>
+          <div class="ops-stat"><span>Integraciones con error</span><strong id="ops-integration-errors">0</strong></div>
+          <div class="ops-stat"><span>Errores recientes</span><strong id="ops-error-count">0</strong></div>
+        </div>
+        <div class="data-surface ops-list"><div class="surface-head"><h2>Incidencias recientes</h2><span>Últimos registros del motor</span></div><div id="ops-errors" class="mut">Cargando…</div></div>
+      </section>
+
+      <section class="workspace-view hide" id="v-templates">
+        <div class="page-heading"><div><p class="section-kicker">REUTILIZAR</p><h1>Plantillas</h1><p>Puntos de partida consistentes para nuevos asistentes.</p></div></div>
+        <div class="template-grid">
+          <article class="template-card"><span>RECINTO FERIAL</span><h2>Información del recinto</h2><p>Accesos, pabellones, aparcamiento, servicios y derivación humana.</p><button class="ghost" data-template="venue">Usar plantilla</button></article>
+          <article class="template-card"><span>ORGANIZADOR</span><h2>Atención y captación</h2><p>Programa, entradas, expositores y solicitudes comerciales.</p><button class="ghost" data-template="organizer">Usar plantilla</button></article>
+          <article class="template-card"><span>CORPORATIVO</span><h2>Asistente de empresa</h2><p>Atención general, preguntas frecuentes y captación de contactos.</p><button class="ghost" data-template="business">Usar plantilla</button></article>
+        </div>
+      </section>
+
+      <section class="workspace-view hide" id="v-settings">
+        <div class="page-heading"><div><p class="section-kicker">SISTEMA</p><h1>Administración</h1><p>Accesos, seguridad y estado de la plataforma.</p></div></div>
+        <div class="settings-grid"><div><h2>Sesión administrativa</h2><p>La sesión está protegida y utiliza credenciales privadas del Worker.</p><button id="settings-logout" class="ghost">Cerrar sesión</button></div><div><h2>Despliegue</h2><p>Cloudflare Worker, Supabase y repositorio conectados.</p><a class="ghost link-button" href="https://github.com/baquetasjgt/chatbot-platform" target="_blank" rel="noopener">Abrir repositorio</a></div></div>
+      </section>
+
+      <div class="context-shell hide" id="v-client-nav">
+        <div class="context-heading"><div><p class="section-kicker">CLIENTE</p><h1 id="client-context-title">Cliente</h1><p id="client-context-meta"></p></div><button id="client-add-project" class="primary">+ Proyecto</button></div>
+        <div class="context-tabs"><button data-client-section="profile" class="on">Ficha</button><button data-client-section="projects">Proyectos</button><button data-client-section="access">Accesos</button><button data-client-section="billing">Facturación</button></div>
+      </div>
       <div class="card hide" id="v-client">
         <h2 id="c-title">Cliente</h2>
         <p class="sub">Datos del cliente. Dentro tiene proyectos, y cada proyecto sus herramientas.</p>
@@ -2154,6 +2306,42 @@ const ADMIN_HTML = `<!doctype html>
         </div>
       </div>
 
+      <div class="context-shell hide" id="v-project-nav">
+        <div class="context-heading"><div><p class="section-kicker">PROYECTO</p><h1 id="project-context-title">Proyecto</h1><p id="project-context-meta"></p></div><button id="project-add-bot" class="primary">+ Asistente</button></div>
+        <div class="context-tabs"><button data-project-section="overview" class="on">Resumen</button><button data-project-section="assistants">Asistentes</button><button data-project-section="integrations">Integraciones</button><button data-project-section="knowledge">Conocimiento</button><button data-project-section="settings">Configuración</button></div>
+      </div>
+
+      <section class="workspace-view hide" id="v-project-overview">
+        <div class="project-summary-grid"><div><span>Asistentes</span><strong id="project-bot-count">0</strong><small id="project-bot-status">Sin asistentes</small></div><div><span>Integraciones</span><strong id="project-integration-count">0</strong><small id="project-integration-status">Sin conexiones</small></div><div><span>Conocimiento</span><strong id="project-doc-count">—</strong><small>Fuentes del proyecto</small></div></div>
+        <div class="data-surface"><div class="surface-head"><div><h2>Actividad del proyecto</h2><span>Estado de asistentes y conexiones</span></div></div><div id="project-activity" class="empty-state">Selecciona una sección para configurar el proyecto.</div></div>
+      </section>
+
+      <section class="workspace-view hide" id="v-project-integrations">
+        <div class="section-heading-row"><div><h2>Integraciones</h2><p>Conecta una vez en el proyecto y asigna la conexión a los asistentes que la necesiten.</p></div><button id="integration-add" class="primary">+ Añadir integración</button></div>
+        <div class="integration-catalog" id="integration-catalog">
+          <button data-provider="web"><b>WWW</b><span>Web</span><small>Canal</small></button>
+          <button data-provider="whatsapp"><b>WA</b><span>WhatsApp</span><small>Canal</small></button>
+          <button data-provider="telegram"><b>TG</b><span>Telegram</span><small>Canal</small></button>
+          <button data-provider="google_drive"><b>GD</b><span>Google Drive</span><small>Conocimiento</small></button>
+          <button data-provider="webhook"><b>WH</b><span>Webhook</span><small>Ventas</small></button>
+          <button data-provider="crm"><b>CRM</b><span>CRM</span><small>Ventas</small></button>
+          <button data-provider="email"><b>@</b><span>Email</span><small>Comunicación</small></button>
+          <button data-provider="calendar"><b>CAL</b><span>Calendar</span><small>Agenda</small></button>
+        </div>
+        <div id="project-integrations-list" class="integration-list"></div>
+        <div id="integration-editor" class="integration-editor hide">
+          <div class="surface-head"><div><p class="section-kicker">CONFIGURAR</p><h2 id="pi-title">Integración</h2></div><button id="pi-close" class="icon-close" aria-label="Cerrar">×</button></div>
+          <input id="pi-id" type="hidden"><input id="pi-provider" type="hidden">
+          <div class="row"><div><label>Nombre de la conexión</label><input id="pi-name"></div><div><label>Estado</label><select id="pi-status"><option value="pending">Pendiente</option><option value="connected">Conectada</option><option value="paused">Pausada</option><option value="error">Error</option></select></div></div>
+          <div id="pi-settings"></div>
+          <label>Asistentes que utilizan esta conexión</label><div id="pi-bots" class="assignment-list"></div>
+          <div class="actions"><button id="pi-save" class="primary">Guardar conexión</button><button id="pi-check" class="ghost">Comprobar</button><button id="pi-delete" class="ghost danger">Eliminar</button><span id="pi-msg" class="mut"></span></div>
+        </div>
+      </section>
+
+      <section class="workspace-view hide" id="v-project-knowledge">
+        <div class="section-heading-row"><div><h2>Conocimiento compartido</h2><p>Fuentes que pueden reutilizar varios asistentes del proyecto.</p></div></div><div class="empty-state">Conecta Google Drive o crea un asistente para incorporar documentos y URLs.</div>
+      </section>
       <div class="card hide" id="v-project">
         <h2 id="p-title">Proyecto</h2>
         <div class="row">
@@ -2174,7 +2362,19 @@ const ADMIN_HTML = `<!doctype html>
         <div class="actions"><button id="bot-create" class="primary">+ Añadir chatbot</button></div>
       </div>
 
+      <section class="workspace-view hide" id="v-bot-overview">
+        <div class="bot-overview-head"><div><p class="section-kicker">ASISTENTE</p><h1 id="bot-overview-title">Asistente</h1><p id="bot-overview-meta"></p></div><span id="bot-overview-status" class="status-pill">Borrador</span></div>
+        <div class="project-summary-grid"><div><span>Conocimiento</span><strong id="bot-doc-count">0</strong><small>Fuentes indexadas</small></div><div><span>Canales</span><strong id="bot-channel-count">0</strong><small>Integraciones asignadas</small></div><div><span>Estado</span><strong id="bot-ready-score">0%</strong><small>Preparación para publicar</small></div></div>
+        <div class="data-surface"><div class="surface-head"><div><h2>Siguientes pasos</h2><span>Completa lo esencial antes de publicar</span></div></div><div id="bot-next-steps"></div></div>
+      </section>
+
+      <section class="workspace-view hide" id="v-bot-channels">
+        <div class="section-heading-row"><div><h2>Canales e integraciones</h2><p>Conexiones disponibles en el proyecto y asignadas a este asistente.</p></div><button id="bot-manage-integrations" class="ghost">Gestionar en el proyecto</button></div><div id="bot-integration-list" class="integration-list"></div>
+      </section>
       <div class="card hide" id="v-assist">
+        <div id="bot-creation-progress" class="creation-progress hide" aria-label="Proceso de creacion">
+          <span class="on"><b>1</b> Objetivo</span><span><b>2</b> Configuracion</span><span><b>3</b> Revisar y guardar</span>
+        </div>
         <h2>Configurar con IA</h2>
         <p class="sub">Describe el negocio y qué debe conseguir el bot. La IA redacta unas instrucciones
         profesionales, la bienvenida y las preguntas sugeridas; tú las revisas abajo y guardas.</p>
@@ -2709,6 +2909,7 @@ function toast(msg, isErr) {
 function goHome() {
   if (!guardNav()) return;
   sel = { type: "home" };
+  setGlobalNav("home");
   renderTree();
   crumb(["Inicio"]);
   showCards(["v-home"]);
@@ -2805,6 +3006,7 @@ var GL_ROWS = [];
 function goLeads() {
   if (!guardNav()) return;
   sel = { type: "leads" };
+  setGlobalNav("leads");
   renderTree();
   crumb(["Leads"]);
   showCards(["v-leads"]);
@@ -2890,6 +3092,41 @@ $("gl-csv").onclick = function () {
 };
 
 $("leads-btn").onclick = goLeads;
+$("clients-btn").onclick = goClients;
+$("projects-btn").onclick = goProjects;
+$("ops-btn").onclick = goOps;
+$("templates-btn").onclick = goTemplates;
+[].forEach.call(document.querySelectorAll("[data-template]"), function (b) {
+  b.onclick = function () {
+    var projects = allProjects();
+    if (!projects.length) { toast("Crea primero un cliente y un proyecto.", true); return; }
+    var chosen = projects[0];
+    if (projects.length > 1) {
+      var list = projects.map(function (f, i) { return (i + 1) + ". " + f.client.name + " / " + f.project.name; }).join("\n");
+      var n = parseInt(prompt("Elige el proyecto para el nuevo asistente:\n\n" + list), 10);
+      if (!n || !projects[n - 1]) return;
+      chosen = projects[n - 1];
+    }    var presets = {
+      venue: { name: "Asistente del recinto", brief: "Asistente para un recinto ferial. Responde sobre accesos, aparcamiento, pabellones, horarios, servicios y eventos activos. Debe usar solo informacion validada, detectar consultas que requieren una persona y captar datos cuando exista interes comercial." },
+      organizer: { name: "Asistente de la feria", brief: "Asistente para una feria o congreso. Informa sobre programa, entradas, expositores, ubicaciones y servicios. Detecta empresas interesadas en exponer, clasifica su intencion y registra el lead para el equipo comercial." },
+      business: { name: "Asistente de atencion", brief: "Asistente corporativo de atencion al cliente. Responde preguntas frecuentes con informacion de la empresa, ofrece derivacion humana cuando corresponde y capta contactos con consentimiento cuando detecta una oportunidad." }
+    };
+    var preset = presets[b.dataset.template] || presets.business;
+    selTenant(null, chosen.project.id);
+    $("f-name").value = preset.name;
+    $("a-brief").value = preset.brief;
+    $("f-slug").value = slugify(chosen.client.name + "-" + preset.name);
+    markDirty();
+    toast("Plantilla aplicada. Revisa el objetivo y genera la configuracion.");
+  };
+});
+$("settings-btn").onclick = goSettings;
+$("settings-logout").onclick = function () { $("logout").click(); };
+$("clients-new-inline").onclick = function () { $("new-client").click(); };
+$("clients-search").oninput = renderClientsTable;
+$("projects-search").oninput = renderProjectsTable;
+$("projects-status").onchange = renderProjectsTable;
+$("ops-refresh").onclick = goOps;
 $("home-leads-all").onclick = function (e) { e.stopPropagation(); goLeads(); };
 
 // ----- buscador Ctrl+K -----
@@ -2989,19 +3226,18 @@ function treeBtn(label, cls, on, click) {
 function renderTree() {
   var box = $("tree");
   box.innerHTML = "";
-  data.forEach(function (c) {
+  data.slice(0, 8).forEach(function (c) {
     box.appendChild(treeBtn(c.name, "", sel.type === "client" && sel.id === c.id, function () { selClient(c.id); }));
-    (c.projects || []).forEach(function (p) {
-      box.appendChild(treeBtn("▸ " + p.name, "lvl1", sel.type === "project" && sel.id === p.id, function () { selProject(p.id); }));
-      (p.tenants || []).forEach(function (t) {
-        var cls = "lvl2" + (t.active ? "" : " off");
-        box.appendChild(treeBtn("💬 " + t.name + (t.active ? "" : " (apagado)"), cls, sel.type === "tenant" && sel.id === t.id, function () { selTenant(t.id); }));
-      });
-    });
   });
 }
 
-var ALL_VIEWS = ["v-home", "v-leads", "v-wizard", "v-check", "v-client", "v-client-projects", "v-client-portal", "v-client-inv", "v-project", "v-project-tools", "v-assist", "v-tenant", "v-exam", "integ", "ingest"];
+var ALL_VIEWS = [
+  "v-home", "v-leads", "v-wizard", "v-check", "v-clients", "v-projects", "v-ops",
+  "v-templates", "v-settings", "v-client-nav", "v-client", "v-client-projects",
+  "v-client-portal", "v-client-inv", "v-project-nav", "v-project-overview",
+  "v-project-integrations", "v-project-knowledge", "v-project", "v-project-tools",
+  "v-bot-overview", "v-bot-channels", "v-assist", "v-tenant", "v-exam", "integ", "ingest"
+];
 function showCards(ids, keepTabs) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
   if (!keepTabs) $("bot-tabs").classList.add("hide");
@@ -3011,6 +3247,111 @@ function showCards(ids, keepTabs) {
   $("main").classList.remove("hide");
 }
 
+function setGlobalNav(name) {
+  [].forEach.call(document.querySelectorAll(".admin-nav button"), function (b) {
+    b.classList.toggle("on", b.dataset.global === name);
+  });
+}
+
+function statusPill(label, status) {
+  return "<span class='status-pill " + (status || "") + "'>" + label + "</span>";
+}
+
+function allProjects() {
+  var rows = [];
+  data.forEach(function (c) {
+    (c.projects || []).forEach(function (p) { rows.push({ client: c, project: p }); });
+  });
+  return rows;
+}
+
+function goClients() {
+  if (!guardNav()) return;
+  sel = { type: "clients" };
+  setGlobalNav("clients"); renderTree(); crumb(["Clientes"]); showCards(["v-clients"]);
+  renderClientsTable();
+}
+
+function renderClientsTable() {
+  var q = ($("clients-search").value || "").trim().toLowerCase();
+  var rows = data.filter(function (c) {
+    return !q || [c.name, c.contact_name, c.email].join(" ").toLowerCase().indexOf(q) >= 0;
+  });
+  $("clients-count").textContent = rows.length + (rows.length === 1 ? " cliente" : " clientes");
+  var tb = $("clients-body"); tb.innerHTML = "";
+  rows.forEach(function (c) {
+    var projects = c.projects || [], bots = 0;
+    projects.forEach(function (p) { bots += (p.tenants || []).length; });
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td><strong></strong><small></small></td><td></td><td>" + projects.length +
+      "</td><td>" + bots + "</td><td>" + statusPill(c.portal_enabled !== false ? "Activo" : "Desactivado", c.portal_enabled !== false ? "connected" : "paused") +
+      "</td><td><button class='ghost small'>Abrir</button></td>";
+    tr.querySelector("strong").textContent = c.name;
+    tr.querySelector("small").textContent = c.email || "Sin email";
+    tr.children[1].textContent = c.contact_name || "Sin responsable";
+    tr.onclick = function () { selClient(c.id); };
+    tb.appendChild(tr);
+  });
+  if (!rows.length) tb.innerHTML = "<tr><td colspan='6' class='mut'>No hay clientes que coincidan.</td></tr>";
+}
+
+function goProjects() {
+  if (!guardNav()) return;
+  sel = { type: "projects" };
+  setGlobalNav("projects"); renderTree(); crumb(["Proyectos"]); showCards(["v-projects"]);
+  renderProjectsTable();
+}
+
+function renderProjectsTable() {
+  var q = ($("projects-search").value || "").trim().toLowerCase();
+  var status = $("projects-status").value;
+  var rows = allProjects().filter(function (f) {
+    var bots = f.project.tenants || [];
+    return (!q || (f.project.name + " " + f.client.name).toLowerCase().indexOf(q) >= 0) &&
+      (!status || (status === "empty" ? !bots.length : bots.some(function (t) { return t.active; })));
+  });
+  $("projects-count").textContent = rows.length + (rows.length === 1 ? " proyecto" : " proyectos");
+  var tb = $("projects-body"); tb.innerHTML = "";
+  rows.forEach(function (f) {
+    var bots = f.project.tenants || [], active = bots.filter(function (t) { return t.active; }).length;
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td><strong></strong><small></small></td><td></td><td>" + bots.length + "</td><td class='mut'>Ver proyecto</td><td>" +
+      statusPill(!bots.length ? "Sin asistente" : active + " activos", !bots.length ? "pending" : "connected") +
+      "</td><td><button class='ghost small'>Abrir</button></td>";
+    tr.querySelector("strong").textContent = f.project.name;
+    tr.querySelector("small").textContent = f.project.description || "Sin descripcion";
+    tr.children[1].textContent = f.client.name;
+    tr.onclick = function () { selProject(f.project.id); };
+    tb.appendChild(tr);
+  });
+  if (!rows.length) tb.innerHTML = "<tr><td colspan='6' class='mut'>No hay proyectos que coincidan.</td></tr>";
+}
+
+function goOps() {
+  if (!guardNav()) return;
+  sel = { type: "ops" }; setGlobalNav("ops"); renderTree(); crumb(["Operaciones"]); showCards(["v-ops"]);
+  var projects = allProjects(), bots = [];
+  projects.forEach(function (f) { bots = bots.concat(f.project.tenants || []); });
+  $("ops-off").textContent = bots.filter(function (t) { return !t.active; }).length;
+  $("ops-empty").textContent = projects.filter(function (f) { return !(f.project.tenants || []).length; }).length;
+  $("ops-integration-errors").textContent = "-";
+  api("/admin/api/errors").then(function (errs) {
+    if (!errs || errs.error) return;
+    $("ops-error-count").textContent = errs.length;
+    var box = $("ops-errors"); box.innerHTML = "";
+    if (!errs.length) { box.textContent = "Sin incidencias recientes."; return; }
+    errs.slice(0, 12).forEach(function (e) {
+      var d = document.createElement("div"); d.className = "doc";
+      d.innerHTML = "<div><strong></strong><div class='meta'></div></div>";
+      d.querySelector("strong").textContent = e.route || "Motor";
+      d.querySelector(".meta").textContent = e.message || "Error registrado";
+      box.appendChild(d);
+    });
+  });
+}
+
+function goTemplates() { if (!guardNav()) return; sel = { type: "templates" }; setGlobalNav("templates"); renderTree(); crumb(["Plantillas"]); showCards(["v-templates"]); }
+function goSettings() { if (!guardNav()) return; sel = { type: "settings" }; setGlobalNav(""); renderTree(); crumb(["Administracion"]); showCards(["v-settings"]); }
 function crumb(parts) {
   var box = $("crumb");
   box.innerHTML = "";
@@ -3051,10 +3392,23 @@ window.addEventListener("beforeunload", function (e) {
 
 // ----- cliente -----
 
+function showClientSection(section) {
+  var map = { profile: "v-client", projects: "v-client-projects", access: "v-client-portal", billing: "v-client-inv" };
+  [].forEach.call(document.querySelectorAll("[data-client-section]"), function (b) {
+    b.classList.toggle("on", b.dataset.clientSection === section);
+  });
+  showCards(["v-client-nav", map[section] || "v-client"]);
+}
+
+[].forEach.call(document.querySelectorAll("[data-client-section]"), function (b) {
+  b.onclick = function () { showClientSection(b.dataset.clientSection); };
+});
+
 function selClient(id) {
   if (sel.type !== "client" || sel.id !== id) { if (!guardNav()) return; }
   populating = true;
   sel = { type: "client", id: id, isNew: !id };
+  setGlobalNav("clients");
   renderTree();
   var c = id ? findClient(id) : null;
   crumb(c ? [c.name] : ["Nuevo cliente"]);
@@ -3079,7 +3433,13 @@ function selClient(id) {
     $("iv-msg").textContent = "";
     loadInvoices();
   }
-  showCards(c ? ["v-client", "v-client-projects", "v-client-portal", "v-client-inv"] : ["v-client"]);
+  if (c) {
+    $("client-context-title").textContent = c.name;
+    $("client-context-meta").textContent = (c.contact_name || "Sin responsable") + (c.email ? " · " + c.email : "");
+    showClientSection("profile");
+  } else {
+    showCards(["v-client"]);
+  }
   populating = false;
 }
 
@@ -3368,6 +3728,11 @@ $("c-del").onclick = function () {
   });
 };
 
+$("client-add-project").onclick = function () {
+  showClientSection("projects");
+  $("proj-new-name").focus();
+};
+
 $("proj-create").onclick = function () {
   var name = $("proj-new-name").value.trim();
   if (!name) { $("proj-msg").textContent = "Ponle nombre al proyecto."; $("proj-msg").className = "err"; return; }
@@ -3382,10 +3747,165 @@ $("proj-create").onclick = function () {
 
 // ----- proyecto -----
 
+var PROJECT_INTEGRATIONS = {};
+var INTEGRATION_META = {
+  web: { label: "Web", category: "Canal", key: "domain", field: "Dominio permitido", placeholder: "feriaejemplo.com" },
+  whatsapp: { label: "WhatsApp", category: "Canal", key: "phone_number", field: "Numero conectado", placeholder: "+34 600 000 000" },
+  telegram: { label: "Telegram", category: "Canal", key: "bot_username", field: "Usuario del bot", placeholder: "@expobot_demo" },
+  google_drive: { label: "Google Drive", category: "Conocimiento", key: "folder_name", field: "Carpeta compartida", placeholder: "Documentacion feria" },
+  webhook: { label: "Webhook", category: "Ventas", key: "endpoint", field: "URL de destino", placeholder: "https://..." },
+  crm: { label: "CRM", category: "Ventas", key: "workspace", field: "Espacio o cuenta", placeholder: "Equipo comercial" },
+  email: { label: "Email", category: "Comunicacion", key: "sender", field: "Remitente", placeholder: "atencion@empresa.es" },
+  calendar: { label: "Calendar", category: "Agenda", key: "calendar_name", field: "Calendario", placeholder: "Citas comerciales" },
+  zapier_make: { label: "Zapier / Make", category: "Ventas", key: "endpoint", field: "Webhook del flujo", placeholder: "https://..." }
+};
+
+function integrationStatusLabel(status) {
+  return { connected: "Conectada", pending: "Pendiente", paused: "Pausada", error: "Revisar" }[status] || status;
+}
+
+function loadProjectIntegrations(projectId, done) {
+  $("project-integrations-list").innerHTML = "<p class='mut'>Cargando conexiones...</p>";
+  api("/admin/api/projects/" + projectId + "/integrations").then(function (rows) {
+    if (!rows || rows.error) {
+      PROJECT_INTEGRATIONS[projectId] = [];
+      $("project-integrations-list").innerHTML = "<p class='err'>No se han podido cargar las integraciones.</p>";
+    } else {
+      PROJECT_INTEGRATIONS[projectId] = rows;
+      renderProjectIntegrations(projectId);
+    }
+    if (done) done(PROJECT_INTEGRATIONS[projectId]);
+  });
+}
+
+function renderProjectIntegrations(projectId) {
+  var rows = PROJECT_INTEGRATIONS[projectId] || [];
+  var box = $("project-integrations-list"); box.innerHTML = "";
+  $("project-integration-count").textContent = rows.length;
+  $("project-integration-status").textContent = rows.length ?
+    rows.filter(function (x) { return x.status === "connected"; }).length + " conectadas" : "Sin conexiones";
+  if (!rows.length) {
+    box.innerHTML = "<div class='empty-state'>Todavia no hay conexiones. Elige un servicio para configurarlo.</div>";
+    return;
+  }
+  rows.forEach(function (row) {
+    var meta = INTEGRATION_META[row.provider] || { label: row.provider, category: row.category };
+    var item = document.createElement("button"); item.className = "integration-row";
+    var assigned = (row.assigned_tenant_ids || []).length;
+    item.innerHTML = "<span class='integration-mark'></span><span class='integration-copy'><strong></strong><small></small></span>" +
+      statusPill(integrationStatusLabel(row.status), row.status) + "<span class='integration-arrow'>›</span>";
+    item.querySelector(".integration-mark").textContent = meta.label.slice(0, 2).toUpperCase();
+    item.querySelector("strong").textContent = row.name;
+    item.querySelector("small").textContent = meta.label + " · " + assigned + (assigned === 1 ? " asistente" : " asistentes");
+    item.onclick = function () { openIntegrationEditor(row.provider, row); };
+    box.appendChild(item);
+  });
+}
+
+function openIntegrationEditor(provider, row) {
+  var f = findProject(sel.id); if (!f) return;
+  var meta = INTEGRATION_META[provider]; if (!meta) return;
+  $("integration-editor").classList.remove("hide");
+  $("pi-id").value = row ? row.id : "";
+  $("pi-provider").value = provider;
+  $("pi-title").textContent = row ? row.name : "Nueva conexion de " + meta.label;
+  $("pi-name").value = row ? row.name : meta.label;
+  $("pi-status").value = row ? row.status : "pending";
+  $("pi-msg").textContent = "";
+  $("pi-delete").classList.toggle("hide", !row);
+  $("pi-check").classList.toggle("hide", !row);
+  var settings = row && row.settings || {};
+  $("pi-settings").innerHTML = "<label>" + meta.field + "</label><input id='pi-setting-value' placeholder='" +
+    meta.placeholder + "'><p class='mut'>Las claves privadas y credenciales OAuth se autorizan en el proveedor; no se guardan en este campo.</p>";
+  $("pi-setting-value").value = settings[meta.key] || "";
+  var bots = $("pi-bots"); bots.innerHTML = "";
+  (f.project.tenants || []).forEach(function (t) {
+    var label = document.createElement("label"); label.className = "assignment-item";
+    var checked = row && (row.assigned_tenant_ids || []).indexOf(t.id) >= 0;
+    label.innerHTML = "<input type='checkbox' value='" + t.id + "'" + (checked ? " checked" : "") + "><span></span>";
+    label.querySelector("span").textContent = t.name + (t.active ? "" : " · apagado");
+    bots.appendChild(label);
+  });
+  if (!(f.project.tenants || []).length) bots.innerHTML = "<p class='mut'>Crea un asistente para poder asignarle esta conexion.</p>";
+  $("integration-editor").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function integrationPayload() {
+  var provider = $("pi-provider").value, meta = INTEGRATION_META[provider], settings = {};
+  settings[meta.key] = $("pi-setting-value").value.trim();
+  return {
+    provider: provider,
+    name: $("pi-name").value.trim(),
+    status: $("pi-status").value,
+    settings: settings,
+    assigned_tenant_ids: [].map.call(document.querySelectorAll("#pi-bots input:checked"), function (x) { return x.value; })
+  };
+}
+
+function closeIntegrationEditor() {
+  $("integration-editor").classList.add("hide");
+  $("pi-msg").textContent = "";
+}
+
+$("pi-close").onclick = closeIntegrationEditor;
+$("integration-add").onclick = function () { openIntegrationEditor("web"); };
+[].forEach.call(document.querySelectorAll("#integration-catalog [data-provider]"), function (b) {
+  b.onclick = function () { openIntegrationEditor(b.dataset.provider); };
+});
+
+$("pi-save").onclick = function () {
+  var id = $("pi-id").value, payload = integrationPayload();
+  if (!payload.name) { $("pi-msg").textContent = "Pon un nombre a la conexion."; $("pi-msg").className = "err"; return; }
+  var path = id ? "/admin/api/integrations/" + id : "/admin/api/projects/" + sel.id + "/integrations";
+  api(path, { method: id ? "PATCH" : "POST", body: JSON.stringify(payload) }).then(function (r) {
+    if (r.error) { $("pi-msg").textContent = r.error; $("pi-msg").className = "err"; return; }
+    toast("Integracion guardada");
+    closeIntegrationEditor();
+    loadProjectIntegrations(sel.id);
+  });
+};
+
+$("pi-check").onclick = function () {
+  var id = $("pi-id").value; if (!id) return;
+  $("pi-msg").textContent = "Comprobando configuracion...";
+  api("/admin/api/integrations/" + id + "/check", { method: "POST" }).then(function (r) {
+    if (r.error) { $("pi-msg").textContent = r.error; $("pi-msg").className = "err"; return; }
+    $("pi-msg").textContent = r.status === "connected" ? "Configuracion completa." : (r.error_message || "Revisa la configuracion.");
+    $("pi-msg").className = r.status === "connected" ? "ok" : "err";
+    loadProjectIntegrations(sel.id);
+  });
+};
+
+$("pi-delete").onclick = function () {
+  var id = $("pi-id").value; if (!id || !confirm("Eliminar esta integracion del proyecto?")) return;
+  api("/admin/api/integrations/" + id, { method: "DELETE" }).then(function (r) {
+    if (r.error) { toast(r.error, true); return; }
+    closeIntegrationEditor(); toast("Integracion eliminada"); loadProjectIntegrations(sel.id);
+  });
+};
+
+function showProjectSection(section) {
+  var map = {
+    overview: "v-project-overview", assistants: "v-project-tools", integrations: "v-project-integrations",
+    knowledge: "v-project-knowledge", settings: "v-project"
+  };
+  [].forEach.call(document.querySelectorAll("[data-project-section]"), function (b) {
+    b.classList.toggle("on", b.dataset.projectSection === section);
+  });
+  showCards(["v-project-nav", map[section] || "v-project-overview"]);
+  if (section === "integrations" && sel.type === "project") loadProjectIntegrations(sel.id);
+}
+
+[].forEach.call(document.querySelectorAll("[data-project-section]"), function (b) {
+  b.onclick = function () { showProjectSection(b.dataset.projectSection); };
+});
+
+
 function selProject(id) {
   if (sel.type !== "project" || sel.id !== id) { if (!guardNav()) return; }
   populating = true;
   sel = { type: "project", id: id };
+  setGlobalNav("projects");
   renderTree();
   var f = findProject(id);
   if (!f) { populating = false; return; }
@@ -3395,7 +3915,16 @@ function selProject(id) {
   $("p-desc").value = f.project.description || "";
   $("p-msg").textContent = "";
   renderBots(f.project);
-  showCards(["v-project", "v-project-tools"]);
+  $("project-context-title").textContent = f.project.name;
+  $("project-context-meta").textContent = f.client.name + (f.project.description ? " · " + f.project.description : "");
+  var bots = f.project.tenants || [], active = bots.filter(function (t) { return t.active; }).length;
+  $("project-bot-count").textContent = bots.length;
+  $("project-bot-status").textContent = bots.length ? active + " activos" : "Sin asistentes";
+  $("project-activity").textContent = bots.length ?
+    "El proyecto tiene " + bots.length + (bots.length === 1 ? " asistente" : " asistentes") + " y " + active + " en produccion." :
+    "Crea el primer asistente para empezar a configurar el proyecto.";
+  showProjectSection("overview");
+  loadProjectIntegrations(id);
   populating = false;
 }
 
@@ -3441,6 +3970,7 @@ $("p-del").onclick = function () {
 };
 
 $("bot-create").onclick = function () { selTenant(null, sel.id); };
+$("project-add-bot").onclick = function () { selTenant(null, sel.id); };
 
 // ----- chatbot -----
 
@@ -3482,6 +4012,7 @@ function selTenant(id, projectId) {
     ] : ["Nuevo chatbot"]);
   }
   var isNew = !t;
+  $("bot-creation-progress").classList.toggle("hide", !isNew);
   $("f-title").textContent = isNew ? "Nuevo chatbot" : t.name;
   $("f-name").value = isNew ? "" : t.name;
   $("f-slug").value = isNew ? "" : t.slug;
@@ -3579,7 +4110,7 @@ function selTenant(id, projectId) {
     renderInteg(t);
     loadDocs();
     loadFaq();
-    setBotTab(sameTenant ? curBT : "cerebro");
+    setBotTab(sameTenant ? curBT : "resumen");
   } else {
     document.querySelector(".ftabs").classList.remove("hide");
     document.querySelector('.ftabs button[data-ft="ft-ap"]').classList.remove("hide");
@@ -3590,15 +4121,75 @@ function selTenant(id, projectId) {
 
 // ----- pestañas principales del chatbot -----
 
-var curBT = "cerebro";
+var curBT = "resumen";
 var BT_CARDS = {
+  resumen: ["v-bot-overview"],
   cerebro: ["v-assist", "v-tenant"],
   contenido: ["ingest"],
   diseno: ["v-tenant"],
+  captacion: ["v-tenant"],
+  canales: ["v-bot-channels"],
   calidad: ["v-exam"],
   publicar: ["v-check", "integ"],
 };
 
+function renderBotOverview() {
+  var f = findTenant(sel.id); if (!f) return;
+  var t = f.tenant, integrations = PROJECT_INTEGRATIONS[f.project.id] || [];
+  var assigned = integrations.filter(function (x) { return (x.assigned_tenant_ids || []).indexOf(t.id) >= 0; });
+  var essentials = [!!(t.system_prompt || "").trim(), !!(t.welcome_message || "").trim(), (t.allowed_domains || []).length > 0, t.active];
+  var score = Math.round(100 * essentials.filter(Boolean).length / essentials.length);
+  $("bot-overview-title").textContent = t.name;
+  $("bot-overview-meta").textContent = f.client.name + " · " + f.project.name;
+  $("bot-overview-status").textContent = t.active ? "Activo" : "Borrador";
+  $("bot-overview-status").className = "status-pill " + (t.active ? "connected" : "pending");
+  $("bot-doc-count").textContent = typeof DOCS_COUNT === "number" ? DOCS_COUNT : 0;
+  $("bot-channel-count").textContent = assigned.length;
+  $("bot-ready-score").textContent = score + "%";
+  var box = $("bot-next-steps"); box.innerHTML = "";
+  [
+    { ok: essentials[0], text: "Definir objetivo y limites", tab: "cerebro" },
+    { ok: essentials[2], text: "Configurar dominio y seguridad", tab: "cerebro" },
+    { ok: assigned.length > 0, text: "Asignar al menos un canal", tab: "canales" },
+    { ok: essentials[3], text: "Activar el asistente", tab: "publicar" }
+  ].forEach(function (step) {
+    var b = document.createElement("button"); b.className = "next-step" + (step.ok ? " done" : "");
+    b.innerHTML = "<span>" + (step.ok ? "✓" : "○") + "</span><strong></strong><small></small>";
+    b.querySelector("strong").textContent = step.text;
+    b.querySelector("small").textContent = step.ok ? "Completado" : "Pendiente";
+    b.onclick = function () { setBotTab(step.tab); };
+    box.appendChild(b);
+  });
+  if (!PROJECT_INTEGRATIONS[f.project.id]) loadProjectIntegrations(f.project.id, renderBotOverview);
+}
+
+function renderBotChannels() {
+  var f = findTenant(sel.id); if (!f) return;
+  var integrations = PROJECT_INTEGRATIONS[f.project.id] || [], box = $("bot-integration-list");
+  box.innerHTML = "";
+  var assigned = integrations.filter(function (x) { return (x.assigned_tenant_ids || []).indexOf(f.tenant.id) >= 0; });
+  if (!assigned.length) {
+    box.innerHTML = "<div class='empty-state'>Este asistente no tiene canales asignados. Gestiona las conexiones desde el proyecto.</div>";
+  } else {
+    assigned.forEach(function (x) {
+      var meta = INTEGRATION_META[x.provider] || { label: x.provider };
+      var row = document.createElement("div"); row.className = "integration-row";
+      row.innerHTML = "<span class='integration-mark'></span><span class='integration-copy'><strong></strong><small></small></span>" +
+        statusPill(integrationStatusLabel(x.status), x.status);
+      row.querySelector(".integration-mark").textContent = meta.label.slice(0, 2).toUpperCase();
+      row.querySelector("strong").textContent = x.name;
+      row.querySelector("small").textContent = meta.label;
+      box.appendChild(row);
+    });
+  }
+  if (!PROJECT_INTEGRATIONS[f.project.id]) loadProjectIntegrations(f.project.id, renderBotChannels);
+}
+
+$("bot-manage-integrations").onclick = function () {
+  var f = findTenant(sel.id); if (!f) return;
+  selProject(f.project.id);
+  showProjectSection("integrations");
+};
 function ftShow(id) {
   [].forEach.call(document.querySelectorAll(".ftabs button"), function (x) {
     x.classList.toggle("on", x.dataset.ft === id);
@@ -3620,14 +4211,18 @@ function setBotTab(bt) {
   if (bt === "diseno") {
     ftbar.classList.add("hide");
     ftShow("ft-ap");
+  } else if (bt === "captacion") {
+    ftbar.classList.add("hide");
+    ftShow("ft-leads");
   } else if (bt === "cerebro") {
     ftbar.classList.remove("hide");
     apBtn.classList.add("hide");
     ftShow("ft-comp");
   }
+  if (bt === "resumen") renderBotOverview();
+  if (bt === "canales") renderBotChannels();
   if (bt === "publicar") loadChecklist();
 }
-
 [].forEach.call(document.querySelectorAll("#bot-tabs button"), function (b) {
   b.onclick = function () { setBotTab(b.dataset.bt); };
 });
