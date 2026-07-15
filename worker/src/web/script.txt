@@ -236,6 +236,61 @@ tabs.forEach((tab) => {
   });
 });
 
+const calculatorInputs = [...document.querySelectorAll('.calculator-control input[type="range"]')];
+const calculatorNumber = new Intl.NumberFormat('es-ES');
+
+function animateCalculatorNumber(element, nextValue) {
+  if (!element) return;
+  const previousValue = Number(element.dataset.value || nextValue);
+  element.dataset.value = String(nextValue);
+  if (reduceMotion || previousValue === nextValue) {
+    element.textContent = calculatorNumber.format(nextValue);
+    return;
+  }
+  cancelAnimationFrame(element.calculatorFrame);
+  const startedAt = performance.now();
+  const duration = 420;
+  const tick = (now) => {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    element.textContent = calculatorNumber.format(Math.round(previousValue + (nextValue - previousValue) * eased));
+    if (progress < 1) element.calculatorFrame = requestAnimationFrame(tick);
+  };
+  element.calculatorFrame = requestAnimationFrame(tick);
+}
+
+function updateCalculator() {
+  if (!calculatorInputs.length) return;
+  const visitors = Number(document.getElementById('calc-visitors').value);
+  const days = Number(document.getElementById('calc-days').value);
+  const team = Number(document.getElementById('calc-team').value);
+  const minutes = Number(document.getElementById('calc-minutes').value);
+  const percent = Number(document.getElementById('calc-percent').value);
+  const conversations = Math.round(visitors * percent / 100);
+  const teamCapacity = Math.min(conversations, Math.round(team * days * 8 * 60 / minutes));
+  const unanswered = Math.max(0, conversations - teamCapacity);
+  const leads = Math.round(unanswered * 0.45 + teamCapacity * 0.1);
+
+  document.getElementById('calc-visitors-value').textContent = calculatorNumber.format(visitors);
+  document.getElementById('calc-days-value').textContent = days;
+  document.getElementById('calc-team-value').textContent = team;
+  document.getElementById('calc-minutes-value').textContent = minutes + ' min';
+  document.getElementById('calc-percent-value').textContent = percent + '%';
+
+  animateCalculatorNumber(document.getElementById('calc-conversations'), conversations);
+  animateCalculatorNumber(document.getElementById('calc-capacity'), teamCapacity);
+  animateCalculatorNumber(document.getElementById('calc-unanswered'), unanswered);
+  animateCalculatorNumber(document.getElementById('calc-leads'), leads);
+
+  calculatorInputs.forEach((input) => {
+    const progress = ((Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min))) * 100;
+    input.style.setProperty('--range-progress', progress + '%');
+    input.setAttribute('aria-valuetext', input.closest('label').querySelector('output').textContent);
+  });
+}
+
+calculatorInputs.forEach((input) => input.addEventListener('input', updateCalculator));
+updateCalculator();
 document.querySelectorAll('.faq-list details').forEach((detail) => {
   detail.addEventListener('toggle', () => {
     if (!detail.open) return;

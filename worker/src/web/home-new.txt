@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="ExpoBOT crea asistentes con inteligencia artificial para recintos y organizadores feriales. Atención 24/7, captación de leads e integraciones con web, Telegram y WhatsApp.">
   <title>ExpoBOT | La IA que convierte preguntas en oportunidades</title>
-  <link rel="stylesheet" href="%%BASE%%/styles.css?v=15">
+  <link rel="stylesheet" href="%%BASE%%/styles.css?v=16">
 </head>
 <body data-web-key="%%WEBKEY%%">
   <header class="site-header" id="inicio">
@@ -16,6 +16,7 @@
       <a href="#soluciones">Soluciones</a>
       <a href="#plataforma">Plataforma</a>
       <a href="#como-funciona">Cómo funciona</a>
+      <a href="#calculadora">Calculadora</a>
       <a href="#preguntas">Preguntas</a>
       <a class="client-access" href="/acceso">Acceso clientes</a>
     </nav>
@@ -29,6 +30,7 @@
     <a href="#soluciones">Soluciones</a>
     <a href="#plataforma">Plataforma</a>
     <a href="#como-funciona">Cómo funciona</a>
+    <a href="#calculadora">Calculadora</a>
     <a href="#preguntas">Preguntas</a>
     <a href="/acceso">Acceso clientes</a>
     <a class="button button-yellow" href="#demo">Solicitar demo</a>
@@ -252,6 +254,30 @@
       </div>
     </section>
 
+    <section class="calculator section-pad" id="calculadora" aria-labelledby="calculator-title">
+      <div class="calculator-heading reveal">
+        <p class="section-label">CALCULADORA DE OPORTUNIDADES</p>
+        <h2 id="calculator-title">¿Cuántas conversaciones puede estar <em>perdiendo</em> tu feria?</h2>
+        <p>Ajusta los datos de tu próxima edición y obtén una estimación inmediata.</p>
+      </div>
+      <div class="calculator-grid">
+        <form class="calculator-controls reveal" aria-label="Datos para calcular conversaciones no atendidas">
+          <label class="calculator-control" for="calc-visitors"><span>Visitantes estimados</span><output id="calc-visitors-value" for="calc-visitors">8.000</output><input type="range" id="calc-visitors" min="500" max="50000" step="500" value="8000"></label>
+          <label class="calculator-control" for="calc-days"><span>Días de feria</span><output id="calc-days-value" for="calc-days">3</output><input type="range" id="calc-days" min="1" max="7" step="1" value="3"></label>
+          <label class="calculator-control" for="calc-team"><span>Personas atendiendo consultas</span><output id="calc-team-value" for="calc-team">3</output><input type="range" id="calc-team" min="1" max="12" step="1" value="3"></label>
+          <label class="calculator-control" for="calc-minutes"><span>Minutos por conversación</span><output id="calc-minutes-value" for="calc-minutes">8 min</output><input type="range" id="calc-minutes" min="2" max="30" step="1" value="8"></label>
+          <label class="calculator-control" for="calc-percent"><span>Visitantes que preguntan</span><output id="calc-percent-value" for="calc-percent">30%</output><input type="range" id="calc-percent" min="5" max="80" step="5" value="30"></label>
+        </form>
+        <div class="calculator-results reveal" aria-live="polite">
+          <div class="calculator-metric"><span>Conversaciones potenciales</span><strong id="calc-conversations">2.400</strong></div>
+          <div class="calculator-metric"><span>Capacidad aproximada de tu equipo</span><strong id="calc-capacity">540</strong></div>
+          <div class="calculator-highlight"><span>Consultas que podrían quedarse sin atender</span><strong id="calc-unanswered">1.860</strong><p>Oportunidades que <img class="brand-wordmark calculator-wordmark" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"> podría recuperar en cada edición.</p></div>
+          <div class="calculator-metric"><span>Leads potencialmente registrables</span><strong id="calc-leads">891</strong></div>
+          <a class="button calculator-cta" href="#demo">Quiero recuperar esas conversaciones <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+      <p class="calculator-note">Estimación orientativa basada en los datos introducidos. Los resultados reales dependen de cada evento y de la organización de su equipo.</p>
+    </section>
     <section class="faq section-pad" id="preguntas">
       <div class="faq-intro reveal"><p class="section-label">PREGUNTAS FRECUENTES</p><h2>Todo claro antes de empezar.</h2><p>Si tu pregunta no está aquí, nuestro equipo te la responde.</p></div>
       <div class="faq-list reveal">
@@ -312,7 +338,7 @@
     <div class="cookie-modal-panel"><button type="button" class="cookie-close" data-cookie-close aria-label="Cerrar">×</button><p class="section-label">PRIVACIDAD</p><h2 id="cookie-settings-title">Configurar cookies</h2><p>Elige qué categorías opcionales permites. Puedes cambiar tu decisión cuando quieras desde el pie de página.</p><div class="cookie-option"><div><strong>Necesarias</strong><span>Guardan tus preferencias y permiten el funcionamiento básico.</span></div><label class="switch"><input type="checkbox" checked disabled><span></span></label></div><div class="cookie-option"><div><strong>Analíticas</strong><span>Ayudarían a medir el uso de la web. Actualmente no instalamos ninguna.</span></div><label class="switch"><input type="checkbox" name="analytics"><span></span></label></div><div class="cookie-option"><div><strong>Marketing</strong><span>Permitirían personalizar campañas. Actualmente no instalamos ninguna.</span></div><label class="switch"><input type="checkbox" name="marketing"><span></span></label></div><div class="cookie-modal-actions"><button type="button" class="cookie-button secondary" data-cookie-reject>Rechazar opcionales</button><button type="button" class="cookie-button primary" data-cookie-save>Guardar preferencias</button></div></div>
   </div>
   <script src="%%BASE%%/cookie-consent.js?v=2"></script>
-  <script src="%%BASE%%/script.js?v=10"></script>
+  <script src="%%BASE%%/script.js?v=11"></script>
   <script src="/widget.js" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" data-open="0"></script>
 </body>
 </html>
