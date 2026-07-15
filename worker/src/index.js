@@ -625,7 +625,9 @@ async function answerOnce(env, tenant, question) {
 
 // ---------- marca: logo para emails (PNG) y favicon (SVG) ----------
 
-const BRAND_ISO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 58"><g fill="none" stroke="#3c62f0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#3c62f0"/><circle cx="25" cy="30" r="4.2" fill="#3c62f0"/><circle cx="39" cy="30" r="4.2" fill="#3c62f0"/></svg>';
+const BRAND_ISO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 58"><g fill="none" stroke="#f5be10" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14V8"/><path d="M22 14h20c9.4 0 17 7.2 17 16s-7.6 16-17 16H26l-11 8V43.5C9.3 41 6 35.9 6 30c0-8.8 7.6-16 16-16z"/></g><circle cx="32" cy="6" r="4.2" fill="#f5be10"/><circle cx="25" cy="30" r="4.2" fill="#f5be10"/><circle cx="39" cy="30" r="4.2" fill="#f5be10"/></svg>';
+const BRAND_EMAIL_LOGO_DARK_B64 = "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";
+const BRAND_EMAIL_LOGO_LIGHT_B64 = "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";
 
 const BRAND_BASE = "https://expobot.es";
 
@@ -636,21 +638,23 @@ const BRAND_ISO_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAARIAAAEjCAYAAAD+EY4rAAAQAElEQ
 // ---------- plantilla de email con la marca ----------
 // Sin SVG ni CSS externo: Gmail y Outlook los eliminan. Todo inline y en tablas.
 
+const EMAIL_FONT = "'Segoe UI',Arial,Helvetica,sans-serif";
+
 function emailShell(inner) {
   return `<!doctype html>
-<html><body style="margin:0;padding:0;background-color:#f5f7fc">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fc">
-<tr><td align="center" style="padding:28px 12px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:16px;border:1px solid #e4e7f0">
-  <tr><td style="background-color:#3c62f0;background-image:linear-gradient(135deg,#3c62f0,#6b8cff);height:6px;font-size:0;line-height:0;border-radius:16px 16px 0 0">&nbsp;</td></tr>
-  <tr><td style="padding:18px 28px 4px">
-    <img src="${BRAND_BASE}/brand/logo.png" alt="ExpoBot" height="34" style="display:block;height:34px;width:auto;border:0">
+<html><body style="margin:0;padding:0;background-color:#f3f3f0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f3f0">
+<tr><td align="center" style="padding:32px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border:1px solid #d9d9d4;border-radius:6px;overflow:hidden">
+  <tr><td style="background-color:#050505;padding:20px 28px">
+    <img src="${BRAND_BASE}/brand/email-logo.png" alt="ExpoBot" height="30" style="display:block;height:30px;width:auto;border:0">
   </td></tr>
-  <tr><td style="padding:26px 28px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#10182b;font-size:15px;line-height:1.55">
+  <tr><td style="background-color:#f5be10;height:3px;font-size:0;line-height:0">&nbsp;</td></tr>
+  <tr><td style="padding:28px 28px;font-family:${EMAIL_FONT};color:#101010;font-size:15px;line-height:1.55">
 ${inner}
   </td></tr>
-  <tr><td style="padding:14px 28px;border-top:1px solid #e4e7f0;font-family:system-ui,sans-serif;font-size:12.5px;color:#6b7590;border-radius:0 0 16px 16px">
-    Impulsado por <b style="color:#3c62f0">ExpoBot</b> &middot; <a href="https://expobot.es" style="color:#6b7590">expobot.es</a>
+  <tr><td style="padding:16px 28px;border-top:1px solid #d9d9d4;font-family:${EMAIL_FONT};font-size:12.5px;color:#686868">
+    Impulsado por <b style="color:#101010">Expo<span style="color:#f5be10">Bot</span></b> &middot; <a href="https://expobot.es" style="color:#686868">expobot.es</a>
   </td></tr>
 </table>
 </td></tr></table>
@@ -658,9 +662,9 @@ ${inner}
 }
 
 function emailStat(n, label) {
-  return `<td width="50%" style="padding:5px"><div style="background-color:#f0f4ff;border-radius:12px;padding:13px 16px">
-    <div style="font-family:system-ui,sans-serif;font-size:26px;font-weight:800;color:#3c62f0">${n}</div>
-    <div style="font-family:system-ui,sans-serif;font-size:12.5px;color:#6b7590">${label}</div>
+  return `<td width="50%" style="padding:5px"><div style="background-color:#f7f1dd;border-radius:6px;padding:14px 16px">
+    <div style="font-family:${EMAIL_FONT};font-size:26px;font-weight:800;color:#101010">${n}</div>
+    <div style="font-family:${EMAIL_FONT};font-size:12.5px;color:#686868">${label}</div>
   </div></td>`;
 }
 
@@ -716,7 +720,7 @@ async function sendMonthlyReport(env, tenantId, toOverride) {
   ${
     gaps?.length
       ? `<p style="margin:14px 0 8px"><b>Lo que más preguntan y aún no está en el contenido:</b></p>
-         <div style="border-left:3px solid #3c62f0;background-color:#f7f9ff;border-radius:0 10px 10px 0;padding:10px 16px;margin-bottom:12px">${gaps
+         <div style="border-left:3px solid #f5be10;background-color:#f7f1dd;border-radius:0 4px 4px 0;padding:11px 16px;margin-bottom:12px">${gaps
            .slice(0, 5)
            .map((g) => `<p style="margin:6px 0">&bull; ${h(g.q)}</p>`)
            .join("")}</div>
@@ -742,9 +746,9 @@ function leadRowsHtml(list) {
   return list
     .map(
       (l) =>
-        `<div style="border-left:3px solid #3c62f0;background-color:#f7f9ff;border-radius:0 10px 10px 0;padding:10px 16px;margin-bottom:10px">` +
+        `<div style="border-left:3px solid #f5be10;background-color:#f7f1dd;border-radius:0 4px 4px 0;padding:11px 16px;margin-bottom:10px">` +
         `<p style="margin:0;font-weight:600">${h(l.name || "(sin nombre)")}${l.company ? " · " + h(l.company) : ""} <span style="color:#6b7590;font-weight:400">— ${h(l.kind || "")}</span></p>` +
-        `<p style="margin:4px 0 0;color:#3c62f0">${h([l.email, l.phone].filter(Boolean).join(" · "))}</p>` +
+        `<p style="margin:4px 0 0;color:#101010;font-weight:600">${h([l.email, l.phone].filter(Boolean).join(" · "))}</p>` +
         (l.message ? `<p style="margin:4px 0 0;color:#6b7590">${h(l.message)}</p>` : "") +
         `</div>`
     )
@@ -1156,20 +1160,37 @@ function wrapLine(t, max) {
   return out.length ? out : [""];
 }
 
-// lines: [{t, size, font: 1|2|3 (normal|negrita|mono), gap}]
+// paleta de marca en espacio de color PDF (0..1)
+const PDF_INK = [0.06, 0.06, 0.06];
+const PDF_MUSTARD = [0.961, 0.745, 0.063];
+const PDF_MUT = [0.41, 0.41, 0.41];
+
+// cabecera de marca ExpoBot para los PDF (wordmark bicolor + filete mostaza)
+function pdfBrandHeader() {
+  return [
+    { t: "Expo", size: 24, font: 2, color: PDF_INK, keepY: true },
+    { t: "Bot", size: 24, font: 2, color: PDF_MUSTARD, dx: 58, sameLine: true },
+    { rule: true, h: 3, color: PDF_MUSTARD, gap: 18 },
+  ];
+}
+
+// lines: [{t, size, font: 1|2|3 (normal|negrita|mono), gap, x, dx, color:[r,g,b], sameLine, rule, h, w}]
 function buildPdf(lines) {
-  const H = 842, M = 56;
+  const H = 842, M = 56, RIGHT = 595 - M;
   const pages = [];
   let cur = [];
   let y = H - M;
+  let lastY = y;
   for (const ln of lines) {
-    const lh = Math.round((ln.size || 11) * 1.5);
+    if (ln.sameLine) { cur.push({ ...ln, y: lastY }); continue; }
+    const lh = ln.rule ? (ln.h || 2) + 6 : Math.round((ln.size || 11) * 1.5);
     if (y - lh < M) {
       pages.push(cur);
       cur = [];
       y = H - M;
     }
     y -= lh;
+    lastY = y;
     cur.push({ ...ln, y });
     if (ln.gap) y -= ln.gap;
   }
@@ -1185,10 +1206,19 @@ function buildPdf(lines) {
   objs[6] = "<< /F1 3 0 R /F2 4 0 R /F3 5 0 R >>";
 
   pages.forEach((pg, i) => {
-    const content = pg
-      .map((ln) => `/F${ln.font || 1} ${ln.size || 11} Tf 1 0 0 1 ${ln.x || M} ${ln.y} Tm (${pdfEscape(ln.t)}) Tj`)
+    const stream = pg
+      .map((ln) => {
+        if (ln.rule) {
+          const c = ln.color || PDF_MUSTARD;
+          const x = ln.x || M;
+          const w = ln.w || RIGHT - x;
+          return `${c[0]} ${c[1]} ${c[2]} rg ${x} ${ln.y} ${w} ${ln.h || 2} re f 0 0 0 rg`;
+        }
+        const c = ln.color || PDF_INK;
+        const x = (ln.x || M) + (ln.dx || 0);
+        return `BT ${c[0]} ${c[1]} ${c[2]} rg /F${ln.font || 1} ${ln.size || 11} Tf 1 0 0 1 ${x} ${ln.y} Tm (${pdfEscape(ln.t)}) Tj ET`;
+      })
       .join("\n");
-    const stream = `BT\n${content}\nET`;
     objs[7 + i * 2] =
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font 6 0 R >> ` +
       `/Contents ${8 + i * 2} 0 R >>`;
@@ -7209,6 +7239,14 @@ export default {
         });
       }
 
+      if (url.pathname === "/brand/email-logo.png" || url.pathname === "/brand/email-logo-light.png") {
+        const b64 = url.pathname.endsWith("light.png") ? BRAND_EMAIL_LOGO_LIGHT_B64 : BRAND_EMAIL_LOGO_DARK_B64;
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        return new Response(bytes, {
+          headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" },
+        });
+      }
+
       if (url.pathname === "/brand/logo.svg" || url.pathname === "/brand/wordmark-light.svg") {
         return new Response(BRAND_WORDMARK_LIGHT, {
           headers: { "Content-Type": "image/svg+xml;charset=utf-8", "Cache-Control": "public, max-age=86400" },
@@ -7674,7 +7712,7 @@ ${inject}</body></html>`;
             emailShell(
               `<h2 style="margin:0 0 10px;font-size:18px">Restablecer tu contraseña</h2>` +
                 `<p style="margin:0 0 16px">Hola${c.name ? " " + h(c.name) : ""}, hemos recibido una solicitud para restablecer la contraseña de tu portal de cliente. Si no has sido tú, ignora este email.</p>` +
-                `<p style="margin:0 0 18px"><a href="${link}" style="background-color:#3c62f0;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;display:inline-block">Crear contraseña nueva</a></p>` +
+                `<p style="margin:0 0 18px"><a href="${link}" style="background-color:#f5be10;color:#090909;text-decoration:none;padding:13px 24px;border-radius:4px;font-weight:700;display:inline-block">Crear contraseña nueva</a></p>` +
                 `<p style="margin:0;color:#6b7590;font-size:13px">El enlace caduca en 1 hora y solo puede usarse una vez.</p>`
             )
           );
@@ -7707,9 +7745,9 @@ ${inject}</body></html>`;
         const page = (title, body) =>
           new Response(
             `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png"><title>${title} — ExpoBot</title></head>` +
-              `<body style="margin:0;font:16px/1.6 system-ui,sans-serif;background:#f5f7fc;color:#10182b;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px">` +
-              `<div style="background:#fff;border:1px solid #e4e7f0;border-radius:16px;padding:34px;max-width:420px;text-align:center">` +
-              `<img src="/brand/logo.png" alt="ExpoBot" style="height:36px;margin-bottom:18px"><h1 style="font-size:19px;margin:0 0 10px">${title}</h1><p style="margin:0;color:#6b7590">${body}</p></div></body></html>`,
+              `<body style="margin:0;font:16px/1.6 'Segoe UI',Arial,sans-serif;background:#f3f3f0;color:#101010;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px">` +
+              `<div style="background:#fff;border:1px solid #d9d9d4;border-radius:6px;padding:34px;max-width:420px;text-align:center;border-top:3px solid #f5be10">` +
+              `<img src="/brand/email-logo-light.png" alt="ExpoBot" style="height:30px;margin-bottom:16px"><h1 style="font-size:19px;margin:0 0 10px">${title}</h1><p style="margin:0;color:#6b7590">${body}</p></div></body></html>`,
             { headers: { "Content-Type": "text/html;charset=utf-8" } }
           );
         if (!t || !t.extra) {
@@ -7726,7 +7764,7 @@ ${inject}</body></html>`;
         if (!rows?.length) return page("Enlace no válido", "No hemos encontrado la cuenta. Contacta con nosotros.");
         return page(
           "Email confirmado ✓",
-          `A partir de ahora entras al portal con <b>${h(newEmail)}</b>, y ahí recibirás también los informes. <a href="/acceso" style="color:#3c62f0">Ir al portal</a>`
+          `A partir de ahora entras al portal con <b>${h(newEmail)}</b>, y ahí recibirás también los informes. <a href="/acceso" style="color:#101010;font-weight:600">Ir al portal</a>`
         );
       }
 
@@ -7783,7 +7821,7 @@ ${inject}</body></html>`;
             emailShell(
               `<h2 style="margin:0 0 10px;font-size:18px">Confirma tu nuevo email</h2>` +
                 `<p style="margin:0 0 16px">Has pedido usar esta dirección para entrar a tu portal de cliente y recibir los informes. Confírmalo con el botón; si no has sido tú, ignora este email y no cambiará nada.</p>` +
-                `<p style="margin:0 0 18px"><a href="${link}" style="background-color:#3c62f0;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;display:inline-block">Confirmar este email</a></p>` +
+                `<p style="margin:0 0 18px"><a href="${link}" style="background-color:#f5be10;color:#090909;text-decoration:none;padding:13px 24px;border-radius:4px;font-weight:700;display:inline-block">Confirmar este email</a></p>` +
                 `<p style="margin:0;color:#6b7590;font-size:13px">El enlace caduca en 24 horas. Hasta entonces sigues entrando con tu email actual.</p>`
             )
           );
@@ -7883,6 +7921,7 @@ ${inject}</body></html>`;
             wrapLine(t, font === 3 ? 78 : Math.round(950 / (size || 11))).forEach((w, i, arr) =>
               L.push({ t: w, size, font, x, gap: i === arr.length - 1 ? gap : 0 })
             );
+          pdfBrandHeader().forEach((x) => L.push(x));
           add("Integración del asistente virtual", 17, 2, 6);
           add(`${info.tenant.name}${info.domain ? " - " + info.domain : ""}`, 11, 1, 12);
           add(`Plataforma detectada: ${info.guide.name}`, 13, 2, 8);
@@ -8076,6 +8115,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           wrapLine(t, font === 3 ? 78 : Math.round(950 / (size || 11))).forEach((w, i, arr) =>
             L.push({ t: w, size, font, x, gap: i === arr.length - 1 ? gap : 0 })
           );
+        pdfBrandHeader().forEach((x) => L.push(x));
         add("Informe mensual del asistente", 17, 2, 4);
         add(`${tenant.name} - ${rep.monthName}`, 12, 1, 14);
         add("Resumen de actividad", 13, 2, 6);
