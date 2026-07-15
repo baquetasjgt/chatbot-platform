@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="ExpoBOT crea asistentes con inteligencia artificial para recintos y organizadores feriales. Atención 24/7, captación de leads e integraciones con web, Telegram y WhatsApp.">
   <title>ExpoBOT | La IA que convierte preguntas en oportunidades</title>
-  <link rel="stylesheet" href="%%BASE%%/styles.css?v=17">
+  <link rel="stylesheet" href="%%BASE%%/styles.css?v=18">
 </head>
 <body data-web-key="%%WEBKEY%%">
   <header class="site-header" id="inicio">
