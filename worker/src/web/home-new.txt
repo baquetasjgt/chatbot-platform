@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpoBOT crea asistentes con inteligencia artificial para recintos y organizadores feriales. Atención 24/7, captación de leads e integraciones con web, Telegram y WhatsApp.">
+  <title>ExpoBOT | La IA que convierte preguntas en oportunidades</title>
+  <link rel="stylesheet" href="%%BASE%%/styles.css?v=15">
+</head>
+<body data-web-key="%%WEBKEY%%">
+  <header class="site-header" id="inicio">
+    <a class="brand" href="#inicio" aria-label="ExpoBOT, inicio">
+      <img src="%%BASE%%/assets/expobot-logo-header.svg" alt="ExpoBOT">
+    </a>
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a href="#soluciones">Soluciones</a>
+      <a href="#plataforma">Plataforma</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#preguntas">Preguntas</a>
+      <a class="client-access" href="/acceso">Acceso clientes</a>
+    </nav>
+    <a class="button button-small button-light" href="#demo">Solicitar demo</a>
+    <button class="menu-button" type="button" aria-label="Abrir menú" aria-expanded="false">
+      <span></span><span></span>
+    </button>
+  </header>
+
+  <div class="mobile-menu" aria-hidden="true">
+    <a href="#soluciones">Soluciones</a>
+    <a href="#plataforma">Plataforma</a>
+    <a href="#como-funciona">Cómo funciona</a>
+    <a href="#preguntas">Preguntas</a>
+    <a href="/acceso">Acceso clientes</a>
+    <a class="button button-yellow" href="#demo">Solicitar demo</a>
+  </div>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy reveal">
+        <p class="eyebrow"><span></span> Asistentes para recintos y organizadores feriales</p>
+        <h1 id="hero-title">Convierte preguntas en <em>oportunidades comerciales.</em></h1>
+        <p class="hero-intro">Atiende consultas 24/7, detecta intención comercial y entrega cada lead organizado en tu panel.</p>
+        <div class="hero-actions">
+          <a class="button button-yellow" href="#recorrido">Ver cómo capta un lead <span aria-hidden="true">→</span></a>
+          <a class="text-link" href="#demo">Solicitar demo de 20 min <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="channel-line" aria-label="Canales disponibles">
+          <span>Disponible en</span>
+          <strong>WEB</strong><i></i><strong>WHATSAPP</strong><i></i><strong>TELEGRAM</strong>
+        </div>
+        <div class="hero-trust" aria-label="Garantías principales"><span>Información validada</span><span>Datos del cliente</span><span>Derivación humana</span></div>
+      </div>
+
+      <div class="hero-visual reveal" aria-label="Demostración de una conversación con ExpoBOT">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-buttons phone-buttons-left"></div>
+            <div class="phone-buttons phone-buttons-right"></div>
+            <div class="phone-screen">
+              <div class="dynamic-island"></div>
+              <div class="chat-header">
+                <button class="chat-back" type="button" aria-label="Volver">‹</button>
+                <div class="bot-avatar"><img src="%%BASE%%/assets/expobot-isotipo.svg" alt=""></div>
+                <div><img class="brand-wordmark chat-wordmark" src="%%BASE%%/assets/expobot-wordmark-light.svg" alt="ExpoBOT"><span><i></i> En línea</span></div>
+                <button class="chat-menu" type="button" aria-label="Opciones">•••</button>
+              </div>
+              <div class="chat-date">HOY, 10:42</div>
+              <div class="chat-body" id="hero-chat" aria-live="polite">
+                <div class="message bot visible">¡Hola! Soy el asistente de FisioExpo. ¿En qué puedo ayudarte?</div>
+                <div class="message user visible">Busco proveedores de tecnología para rehabilitación.</div>
+                <div class="message bot visible">He encontrado 14 expositores relacionados. ¿Quieres recibir la lista y el plano?</div>
+                <div class="message user timed">Sí, y me gustaría hablar con uno de ellos.</div>
+                <div class="message bot timed">Perfecto. Déjame tu nombre y empresa y te pondremos en contacto.</div>
+                <div class="typing"><span></span><span></span><span></span></div>
+              </div>
+              <div class="chat-input"><span>Escribe un mensaje</span><button type="button" aria-label="Enviar mensaje">↑</button></div>
+              <div class="home-indicator"></div>
+            </div>
+          </div>
+        </div>
+        <div class="scenario-picker" aria-label="Elige una conversación de demostración">
+          <span>PRUEBA UNA CONSULTA</span>
+          <button type="button" class="scenario-button active" data-scenario="info">Información</button>
+          <button type="button" class="scenario-button" data-scenario="search">Expositores</button>
+          <button type="button" class="scenario-button" data-scenario="stand">Contratar stand</button>
+        </div>
+        <div class="float-card lead-card">
+          <div class="float-icon">✓</div>
+          <div><span>NUEVO CONTACTO</span><strong>Lead cualificado</strong><small>Hace 2 segundos</small></div>
+        </div>
+        <div class="float-card answer-card">
+          <span>TIEMPO DE RESPUESTA</span><strong>&lt; 3 seg</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof-strip evidence-strip" aria-label="Beneficios principales">
+      <div><strong>24/7</strong><span>Atención sin interrupciones</span></div>
+      <div><strong>3</strong><span>Canales conectados</span></div>
+      <div><strong>100%</strong><span>Control sobre tus datos</span></div>
+      <p>Especialistas en el sector ferial</p>
+    </section>
+
+    <section class="trust-band" aria-labelledby="trust-title">
+      <div class="trust-intro reveal"><p class="section-label">CONFIANZA DESDE EL PRIMER MENSAJE</p><h2 id="trust-title">Respuestas útiles. Límites claros.</h2><p>El asistente trabaja con la información que tu organización valida y sabe cuándo debe pedir ayuda.</p></div>
+      <div class="trust-points">
+        <div class="reveal"><span>01</span><strong>Fuentes aprobadas</strong><p>Web, programa, tarifas, normativa y documentación oficial.</p></div>
+        <div class="reveal"><span>02</span><strong>Sin respuestas improvisadas</strong><p>Si falta información fiable, lo reconoce y deriva la consulta.</p></div>
+        <div class="reveal"><span>03</span><strong>Datos bajo control</strong><p>Los contactos y conversaciones permanecen accesibles para tu equipo.</p></div>
+        <div class="reveal"><span>04</span><strong>Siempre hay una salida humana</strong><p>Las consultas sensibles llegan a la persona adecuada.</p></div>
+      </div>
+    </section>
+
+    <section class="persona-gateway" aria-labelledby="persona-title">
+      <div><p class="section-label">UNA EXPERIENCIA PARA TU CASO</p><h2 id="persona-title">¿Qué quieres mejorar?</h2></div>
+      <div class="persona-options" role="group" aria-label="Tipo de organización">
+        <button type="button" data-persona="venue"><span>Gestiono un recinto ferial</span><small>Accesos, pabellones, servicios y eventos</small><b>→</b></button>
+        <button type="button" data-persona="organizer"><span>Organizo ferias y eventos</span><small>Visitantes, expositores y solicitudes de stand</small><b>→</b></button>
+      </div>
+    </section>
+    <section class="lead-journey" id="recorrido">
+      <div class="journey-intro">
+        <div><p class="section-label">DE LA PREGUNTA AL LEAD</p><h2>Mira cómo una pregunta termina en una oportunidad.</h2></div>
+        <div><p>Cuatro pasos, desde la primera consulta hasta un contacto preparado para tu equipo comercial.</p><button class="journey-skip" type="button">Omitir recorrido <span>↓</span></button></div>
+      </div>
+      <div class="journey-grid">
+        <div class="journey-steps">
+          <article class="journey-step active" data-stage="question"><span>01</span><h3>Pregunta</h3><p>El visitante escribe desde la web, WhatsApp o Telegram.</p></article>
+          <article class="journey-step" data-stage="answer"><span>02</span><h3>Respuesta verificada</h3><p><img class="brand-wordmark inline-wordmark light-surface" src="%%BASE%%/assets/expobot-wordmark-light.svg" alt="ExpoBOT"> consulta la información validada y responde al instante.</p></article>
+          <article class="journey-step" data-stage="capture"><span>03</span><h3>Intención detectada</h3><p>Detecta intención comercial y solicita los datos adecuados.</p></article>
+          <article class="journey-step" data-stage="panel"><span>04</span><h3>Lead en el panel</h3><p>El contacto llega ordenado y preparado para que ventas actúe.</p></article>
+        </div>
+        <div class="journey-sticky">
+          <div class="journey-device" data-stage="question">
+            <div class="journey-device-head"><span class="journey-status"></span><img class="brand-wordmark device-wordmark" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"><small>Conectado</small></div>
+            <div class="journey-scene">
+              <div class="journey-kicker">NUEVA CONVERSACIÓN</div>
+              <p class="journey-user">¿Cuánto cuesta exponer en la próxima edición?</p>
+              <p class="journey-bot">Te explico las modalidades disponibles.</p>
+              <div class="journey-data"><span>Nombre</span><strong>Laura Martín</strong><span>Empresa</span><strong>Rehab Tech</strong></div>
+              <div class="journey-complete"><i>✓</i><span>Lead enviado al panel</span></div>
+            </div>
+          </div>
+          <div class="journey-progress"><i></i><span>01 / 04</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="audiences section-pad" id="soluciones">
+      <div class="section-heading reveal">
+        <div><p class="section-label">DOS SOLUCIONES, UNA MISMA IA</p><h2>Creado para el mundo ferial.</h2></div>
+        <p>Entrenamos cada asistente con la información real de tu organización, tus eventos y tus procesos comerciales.</p>
+      </div>
+      <div class="audience-tabs reveal" role="tablist" aria-label="Tipo de cliente">
+        <button class="audience-tab active" type="button" role="tab" aria-selected="true" data-panel="venue">Recintos feriales</button>
+        <button class="audience-tab" type="button" role="tab" aria-selected="false" data-panel="organizer">Organizadores de ferias</button>
+      </div>
+      <div class="audience-panel active" id="venue" role="tabpanel">
+        <div class="audience-copy reveal">
+          <span class="big-index">01</span>
+          <h3>Un punto de información para todo el recinto.</h3>
+          <p>Responde sobre accesos, aparcamiento, pabellones, servicios y eventos simultáneos. Siempre actualizado y en varios canales.</p>
+          <ul>
+            <li><span>✓</span> Orientación y servicios del recinto</li>
+            <li><span>✓</span> Información de todos los eventos activos</li>
+            <li><span>✓</span> Derivación al equipo adecuado</li>
+          </ul>
+        </div>
+        <div class="venue-visual reveal">
+          <div class="venue-grid">
+            <div class="venue-map"><span>PABELLÓN 1</span><i></i><b>Tú estás aquí</b></div>
+            <div class="venue-map map-two"><span>PABELLÓN 2</span><i></i></div>
+            <div class="venue-map map-three"><span>ACCESO NORTE</span></div>
+          </div>
+          <div class="map-question">¿Cómo llego al pabellón 2?<strong>Te guío paso a paso →</strong></div>
+        </div>
+      </div>
+      <div class="audience-panel" id="organizer" role="tabpanel" hidden>
+        <div class="audience-copy">
+          <span class="big-index">02</span>
+          <h3>Más servicio al visitante. Más oportunidades para ventas.</h3>
+          <p>Informa sobre entradas, horarios, programa y expositores. Detecta además a las empresas interesadas en participar y recoge sus datos.</p>
+          <ul>
+            <li><span>✓</span> Programa, entradas y agenda</li>
+            <li><span>✓</span> Búsqueda inteligente de expositores</li>
+            <li><span>✓</span> Captación de empresas interesadas</li>
+          </ul>
+        </div>
+        <div class="organizer-visual">
+          <div class="event-ticket"><small>PRÓXIMA EDICIÓN</small><strong>FUTURE<br>EXPO 2026</strong><span>12—14 NOV · MADRID</span></div>
+          <div class="contact-bubble"><span>OPORTUNIDAD DETECTADA</span><strong>Solicitud de stand</strong><small>Empresa · 12 empleados</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="platform" id="plataforma">
+      <div class="platform-copy reveal">
+        <p class="section-label">TODO BAJO CONTROL</p>
+        <h2>Los contactos no se pierden en una conversación.</h2>
+        <p><img class="brand-wordmark inline-wordmark dark-surface" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"> transforma el interés en información organizada. Consulta los leads, revisa las preguntas más frecuentes y descubre qué necesita tu público.</p>
+        <a class="text-link light" href="#demo">Quiero verlo en acción <span>→</span></a>
+      </div>
+      <div class="dashboard-shell reveal">
+        <div class="dash-sidebar">
+          <div class="dash-logo"><img class="brand-wordmark dash-wordmark" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"></div>
+          <i class="active"></i><i></i><i></i><i></i>
+          <b>JG</b>
+        </div>
+        <div class="dash-main">
+          <div class="dashboard-demo-badge">DEMOSTRACIÓN · DATOS DE EJEMPLO</div><div class="dash-head"><div><small>BUENOS DÍAS</small><strong>Panel de actividad</strong></div><span>Últimos 30 días⌄</span></div>
+          <div class="metric-row">
+            <div><span>Conversaciones</span><strong class="counter" data-target="1284" data-format="number">0</strong><small>↑ 18,4%</small></div>
+            <div class="yellow-metric"><span>Leads captados</span><strong class="counter" data-target="147">0</strong><small>↑ 24,1%</small></div>
+            <div><span>Tasa de resolución</span><strong class="counter" data-target="89" data-suffix="%">0%</strong><small>↑ 6,2%</small></div>
+          </div>
+          <div class="dash-grid">
+            <div class="chart-card"><div><strong>Actividad</strong><span>Conversaciones</span></div><div class="chart-bars" aria-hidden="true"><i style="height:32%"></i><i style="height:48%"></i><i style="height:43%"></i><i style="height:68%"></i><i style="height:60%"></i><i style="height:83%"></i><i class="hot" style="height:94%"></i><i style="height:72%"></i><i style="height:88%"></i><i style="height:67%"></i></div><div class="chart-labels"><span>01 JUL</span><span>15 JUL</span><span>30 JUL</span></div></div>
+            <div class="topics-card"><strong>Temas más consultados</strong><div><span>Entradas y acceso</span><b>38%</b></div><div><span>Programa</span><b>26%</b></div><div><span>Expositores</span><b>21%</b></div><div><span>Cómo llegar</span><b>15%</b></div></div>
+          </div>
+          <div class="lead-table"><div class="table-head"><strong>Últimos leads</strong><span>Ver todos →</span></div><div><b>LM</b><span>Laura Martín<small>Clínica Avanza</small></span><em>INTERESADO EN EXPONER</em><time>10:42</time></div><div><b>DR</b><span>Diego Ruiz<small>Rehab Tech</small></span><em>INFORMACIÓN COMERCIAL</em><time>09:18</time></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="process section-pad" id="como-funciona">
+      <div class="section-heading reveal">
+        <div><p class="section-label">PUESTA EN MARCHA</p><h2>De tus contenidos a tu asistente.</h2></div>
+        <p>Nos ocupamos de todo para que responda bien desde el primer día.</p>
+      </div>
+      <div class="process-grid">
+        <article class="reveal"><span>01</span><div class="process-icon">＋</div><h3>Recopilamos</h3><p>Web, documentos, tarifas, programa, normativa y preguntas habituales.</p></article>
+        <article class="reveal"><span>02</span><div class="process-icon">◎</div><h3>Entrenamos</h3><p>Estructuramos la información y ajustamos tono, respuestas y objetivos.</p></article>
+        <article class="reveal"><span>03</span><div class="process-icon">⌁</div><h3>Integramos</h3><p>Instalamos <img class="brand-wordmark inline-wordmark light-surface" src="%%BASE%%/assets/expobot-wordmark-light.svg" alt="ExpoBOT"> en tu web y conectamos Telegram o WhatsApp.</p></article>
+        <article class="reveal"><span>04</span><div class="process-icon">↗</div><h3>Mejoramos</h3><p>Analizamos consultas y actualizamos el conocimiento de forma continua.</p></article>
+      </div>
+    </section>
+
+    <section class="channels section-pad" id="canales">
+      <div class="channel-copy reveal">
+        <p class="section-label">UNA IA, TODOS TUS CANALES</p>
+        <h2>La misma respuesta, allí donde te pregunten.</h2>
+        <p>Centraliza el conocimiento de tu organización y ofrece una experiencia coherente en web, Telegram y WhatsApp.</p>
+      </div>
+      <div class="channel-stage reveal">
+        <svg class="channel-lines" viewBox="0 0 600 500" aria-hidden="true"><path d="M300 235 C300 140 300 100 300 55"/><path d="M270 280 C205 325 150 365 105 410"/><path d="M335 280 C405 330 465 370 520 410"/></svg>
+        <div class="center-bot"><img class="bot-isotype-large" src="%%BASE%%/assets/expobot-isotipo.svg" alt="Isotipo BOT"></div>
+        <div class="channel-node node-web"><b>WWW</b><span>Web</span></div>
+        <div class="channel-node node-wa"><span class="channel-logo whatsapp-logo" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="15" r="12"/><path d="M9.5 26.5l1.2-4.4a11 11 0 1 1 4 3.1z"/><path d="M12 9.5c.4-.4.9-.3 1.2.2l1.1 2.6c.2.5.1.8-.3 1.2l-.8.8c1.1 2.1 2.6 3.6 4.8 4.7l.8-1c.3-.4.7-.5 1.1-.3l2.5 1.2c.5.2.7.7.5 1.2-.5 1.5-1.8 2.3-3.3 2.1-5-.8-9.6-5.3-10.3-10.2-.2-1 .1-1.9.7-2.5z"/></svg></span><span>WhatsApp</span></div>
+        <div class="channel-node node-tg"><span class="channel-logo telegram-logo" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13"/><path d="M7.8 15.5l15.8-6.1c.8-.3 1.4.2 1.1 1.3l-2.7 12.7c-.2.9-.7 1.1-1.5.7l-4.1-3-2 1.9c-.2.2-.4.4-.8.4l.3-4.2 7.7-7c.3-.3-.1-.5-.5-.2l-9.5 6-4.1-1.3c-.9-.3-.9-.9.3-1.2z"/></svg></span><span>Telegram</span></div>
+      </div>
+    </section>
+
+    <section class="faq section-pad" id="preguntas">
+      <div class="faq-intro reveal"><p class="section-label">PREGUNTAS FRECUENTES</p><h2>Todo claro antes de empezar.</h2><p>Si tu pregunta no está aquí, nuestro equipo te la responde.</p></div>
+      <div class="faq-list reveal">
+        <details open><summary><span class="faq-question">¿<img class="brand-wordmark inline-wordmark light-surface" src="%%BASE%%/assets/expobot-wordmark-light.svg" alt="ExpoBOT"> inventa respuestas?</span><span>＋</span></summary><p>El asistente responde a partir de la información validada de tu organización. Cuando no dispone de una respuesta fiable, deriva la consulta o solicita los datos de contacto.</p></details>
+        <details><summary>¿Cómo recibimos los leads?<span>＋</span></summary><p>Los contactos aparecen en tu panel de cliente y pueden enviarse por email o integrarse con tu CRM según el proyecto.</p></details>
+        <details><summary>¿Podemos actualizar la información?<span>＋</span></summary><p>Sí. El contenido puede actualizarse cuando cambien fechas, programas, tarifas, expositores o cualquier información del evento.</p></details>
+        <details><summary>¿Funciona en varios idiomas?<span>＋</span></summary><p>Sí. Configuramos los idiomas necesarios para atender tanto al público nacional como al internacional.</p></details>
+        <details><summary>¿Cuánto tarda en estar listo?<span>＋</span></summary><p>La puesta en marcha habitual requiere entre dos y tres semanas desde que recibimos los contenidos.</p></details>
+      </div>
+    </section>
+
+    <section class="demo" id="demo">
+      <div class="demo-copy reveal">
+        <p class="section-label dark-label">SOLICITA UNA DEMO</p>
+        <h2>Preparamos una demo con tu caso real.</h2>
+        <p>En 20 minutos verás cómo respondería <img class="brand-wordmark inline-wordmark dark-surface" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"> con la información de tu proyecto.</p>
+        <div class="demo-note"><span>20</span><p><strong>Minutos</strong>Una conversación breve y enfocada en tu caso.</p></div>
+      </div>
+      <form class="demo-form reveal" id="demo-form">
+        <div class="form-progress"><i></i><span>Paso 1 de 2</span></div>
+        <div class="form-step active" data-form-step="1">
+          <h3>Empecemos por lo esencial.</h3>
+          <label>Nombre<input type="text" name="nombre" placeholder="Tu nombre" required></label>
+          <label>Email profesional<input type="email" name="email" placeholder="nombre@empresa.com" required></label>
+          <label>¿Qué tipo de organización eres?<select name="tipo" required><option value="" selected disabled>Selecciona una opción</option><option>Recinto ferial</option><option>Organizador de ferias</option><option>Otro tipo de empresa</option></select></label>
+          <button class="button button-black" type="button" data-form-next>Continuar <span>→</span></button>
+          <p class="form-reassurance">20 minutos · Sin compromiso · Adaptada a tu caso</p>
+        </div>
+        <div class="form-step" data-form-step="2" hidden>
+          <h3>Personalizamos la demostración.</h3>
+          <label>Empresa <span class="optional">Opcional</span><input type="text" name="empresa" placeholder="Nombre de la empresa"></label>
+          <label>¿Qué te gustaría conseguir? <span class="optional">Opcional</span><textarea name="mensaje" rows="3" placeholder="Atender visitantes, captar expositores, reducir consultas..."></textarea></label>
+          <div class="privacy-layer"><strong>Información básica sobre protección de datos</strong><p><b>Responsable:</b> titular identificado en la política de privacidad. <b>Finalidad:</b> atender tu solicitud y contactar contigo. <b>Legitimación:</b> medidas precontractuales solicitadas. <b>Derechos:</b> acceso, rectificación, supresión y demás derechos indicados en la información adicional.</p><a href="%%BASE%%/legal.html#privacidad">Consultar la política de privacidad</a></div>
+          <label class="legal-check"><input type="checkbox" name="privacidad" required><span>He leído la <a href="%%BASE%%/legal.html#privacidad">política de privacidad</a> y la información sobre el tratamiento de mis datos.</span></label>
+          <label class="legal-check"><input type="checkbox" name="comercial"><span>Quiero recibir novedades y comunicaciones comerciales. Este consentimiento es opcional.</span></label>
+          <div class="form-actions"><button class="form-back" type="button" data-form-back>← Volver</button><button class="button button-black" type="submit">Preparar mi demo <span>→</span></button></div>
+        </div>
+        <div class="form-success" role="status"><strong>Solicitud recibida</strong><span>Gracias. Te contactaremos para adaptar la demostración a tu feria.</span></div>
+        <p class="form-error" role="alert" hidden>No hemos podido enviar la solicitud. Inténtalo de nuevo en unos minutos.</p>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand"><img src="%%BASE%%/assets/expobot-logo.svg" alt="ExpoBOT"><p>Inteligencia artificial para el sector ferial.</p></div>
+    <div class="footer-links"><strong>EXPOBOT</strong><a href="#soluciones">Soluciones</a><a href="#plataforma">Plataforma</a><a href="#como-funciona">Cómo funciona</a></div>
+    <div class="footer-links"><strong>CONTACTO</strong><a href="#demo">Solicitar demo</a><a href="#demo">Atención comercial</a><a href="/acceso">Acceso clientes</a></div>
+    <div class="footer-links footer-legal"><strong>LEGAL</strong><a href="%%BASE%%/legal.html#aviso-legal">Aviso legal</a><a href="%%BASE%%/legal.html#privacidad">Política de privacidad</a><a href="%%BASE%%/legal.html#cookies">Política de cookies</a><button type="button" data-cookie-settings>Configurar cookies</button><a href="%%BASE%%/legal.html#condiciones-accesibilidad">Condiciones y accesibilidad</a></div>
+    <div class="footer-bottom"><span class="footer-legal-line"><span>© 2026</span><img class="brand-wordmark footer-wordmark" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"><span>. Todos los derechos reservados. · <a href="%%BASE%%/legal.html">Información legal</a></span></span><a class="admin-access" href="/admin" aria-label="Acceso de administración" title="Administración"><span aria-hidden="true">···</span></a></div>
+  </footer>
+  <div class="cursor-dot" aria-hidden="true"></div>
+  <div class="cursor-ring" aria-hidden="true"></div>
+  <div class="cookie-banner" role="dialog" aria-modal="true" aria-labelledby="cookie-title" hidden>
+    <div><img src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"><h2 id="cookie-title">Tu privacidad, bajo control</h2><p>Utilizamos almacenamiento técnico necesario para recordar tus preferencias. Las categorías opcionales permanecen desactivadas hasta que las aceptes.</p><a href="%%BASE%%/legal.html#cookies">Ver política de cookies</a></div>
+    <div class="cookie-actions"><button type="button" class="cookie-button secondary" data-cookie-reject>Rechazar opcionales</button><button type="button" class="cookie-button secondary" data-cookie-configure>Configurar</button><button type="button" class="cookie-button primary" data-cookie-accept>Aceptar opcionales</button></div>
+  </div>
+  <div class="cookie-modal" role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" hidden>
+    <div class="cookie-modal-panel"><button type="button" class="cookie-close" data-cookie-close aria-label="Cerrar">×</button><p class="section-label">PRIVACIDAD</p><h2 id="cookie-settings-title">Configurar cookies</h2><p>Elige qué categorías opcionales permites. Puedes cambiar tu decisión cuando quieras desde el pie de página.</p><div class="cookie-option"><div><strong>Necesarias</strong><span>Guardan tus preferencias y permiten el funcionamiento básico.</span></div><label class="switch"><input type="checkbox" checked disabled><span></span></label></div><div class="cookie-option"><div><strong>Analíticas</strong><span>Ayudarían a medir el uso de la web. Actualmente no instalamos ninguna.</span></div><label class="switch"><input type="checkbox" name="analytics"><span></span></label></div><div class="cookie-option"><div><strong>Marketing</strong><span>Permitirían personalizar campañas. Actualmente no instalamos ninguna.</span></div><label class="switch"><input type="checkbox" name="marketing"><span></span></label></div><div class="cookie-modal-actions"><button type="button" class="cookie-button secondary" data-cookie-reject>Rechazar opcionales</button><button type="button" class="cookie-button primary" data-cookie-save>Guardar preferencias</button></div></div>
+  </div>
+  <script src="%%BASE%%/cookie-consent.js?v=2"></script>
+  <script src="%%BASE%%/script.js?v=10"></script>
+  <script src="/widget.js" data-key="%%WEBKEY%%" data-api="%%ORIGIN%%" data-open="0"></script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const menuButton = document.querySelector('.menu-button');
+const mobileMenu = document.querySelector('.mobile-menu');
+const header = document.querySelector('.site-header');
+
+requestAnimationFrame(() => document.body.classList.add('page-ready'));
+
+menuButton.addEventListener('click', () => {
+  const open = mobileMenu.classList.toggle('open');
+  menuButton.setAttribute('aria-expanded', String(open));
+  mobileMenu.setAttribute('aria-hidden', String(!open));
+  document.body.classList.toggle('menu-open', open);
+});
+
+mobileMenu.querySelectorAll('a').forEach((link) => {
+  link.addEventListener('click', () => {
+    mobileMenu.classList.remove('open');
+    menuButton.setAttribute('aria-expanded', 'false');
+    mobileMenu.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('menu-open');
+  });
+});
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in-view');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
+
+const scenarios = {
+  info: [
+    ['bot', 'Hola. Puedo ayudarte con accesos, horarios y ubicaciones.'],
+    ['user', '¿Dónde está el pabellón 2?'],
+    ['bot', 'Está junto al acceso norte. Te envío el plano con la ruta marcada.'],
+    ['user', 'Perfecto, gracias.'],
+    ['bot', 'Consulta resuelta al instante.']
+  ],
+  search: [
+    ['bot', 'Puedo ayudarte a encontrar empresas y productos de la feria.'],
+    ['user', 'Busco proveedores de tecnología para rehabilitación.'],
+    ['bot', 'He encontrado 14 expositores relacionados. ¿Quieres recibir la selección?'],
+    ['user', 'Sí, y quiero hablar con uno de ellos.'],
+    ['bot', 'Indícame tu nombre y empresa para poneros en contacto.'],
+    ['user', 'Laura Martín, de Clínica Avanza.'],
+    ['bot', 'Gracias, Laura. El contacto ya está organizado en el panel comercial.']
+  ],
+  stand: [
+    ['bot', 'También ayudo a empresas interesadas en participar.'],
+    ['user', 'Quiero contratar un stand para la próxima edición.'],
+    ['bot', 'Hay tres modalidades disponibles. ¿Cuántos metros necesitas?'],
+    ['user', 'Unos 40 m² para una empresa de equipamiento médico.'],
+    ['bot', 'Encaja con el espacio Profesional. ¿A nombre de qué empresa?'],
+    ['user', 'Laura Martín, de Rehab Tech.'],
+    ['bot', 'Solicitud cualificada y enviada al equipo comercial.']
+  ]
+};
+const heroChat = document.getElementById('hero-chat');
+const typingMarkup = '<div class="typing"><span></span><span></span><span></span></div>';
+let conversationTimers = [];
+let activeScenario = 'stand';
+let autoScenario;
+
+function clearConversationTimers() {
+  conversationTimers.forEach(window.clearTimeout);
+  conversationTimers = [];
+}
+
+function renderScenario(key, userInitiated = false) {
+  activeScenario = key;
+  clearConversationTimers();
+  document.querySelector('.lead-card')?.classList.toggle('no-lead', key === 'info');
+  document.querySelectorAll('.scenario-button').forEach((button) => {
+    button.classList.toggle('active', button.dataset.scenario === key);
+  });
+  heroChat.innerHTML = typingMarkup;
+  const messages = scenarios[key];
+  messages.forEach(([type, text], index) => {
+    const timer = window.setTimeout(() => {
+      const typing = heroChat.querySelector('.typing');
+      const message = document.createElement('div');
+      message.className = 'message ' + type + ' visible scenario-enter';
+      message.textContent = text;
+      heroChat.insertBefore(message, typing);
+      typing.style.display = index === messages.length - 1 ? 'none' : 'flex';
+      heroChat.scrollTop = heroChat.scrollHeight;
+      if (index === messages.length - 1 && (key === 'stand' || key === 'search')) {
+        const leadCard = document.querySelector('.lead-card');
+        leadCard.classList.remove('captured');
+        requestAnimationFrame(() => leadCard.classList.add('captured'));
+      }
+    }, reduceMotion ? index * 40 : 300 + index * 590);
+    conversationTimers.push(timer);
+  });
+  if (userInitiated) {
+    window.clearInterval(autoScenario);
+    autoScenario = window.setInterval(cycleScenario, 12000);
+  }
+}
+
+function cycleScenario() {
+  const order = ['stand', 'info', 'search'];
+  renderScenario(order[(order.indexOf(activeScenario) + 1) % order.length]);
+}
+
+document.querySelectorAll('.scenario-button').forEach((button) => {
+  button.addEventListener('click', () => renderScenario(button.dataset.scenario, true));
+});
+
+renderScenario('stand');
+autoScenario = window.setInterval(cycleScenario, 12000);
+
+let scrollQueued = false;
+function updateScrollEffects() {
+  const y = window.scrollY;
+  header.classList.toggle('scrolled', y > 90);
+  if (!reduceMotion && window.innerWidth > 900) {
+    const hero = document.querySelector('.hero');
+    const phone = document.querySelector('.phone-wrap');
+    const progress = Math.min(1, Math.max(0, y / hero.offsetHeight));
+    phone.style.setProperty('--phone-y', (progress * 75) + 'px');
+    phone.style.setProperty('--phone-rotate', (2 - progress * 5) + 'deg');
+    phone.style.setProperty('--phone-scale', String(1 + progress * 0.035));
+  }
+  scrollQueued = false;
+}
+
+window.addEventListener('scroll', () => {
+  if (!scrollQueued) {
+    requestAnimationFrame(updateScrollEffects);
+    scrollQueued = true;
+  }
+}, { passive: true });
+updateScrollEffects();
+
+const journeySteps = [...document.querySelectorAll('.journey-step')];
+const journeyDevice = document.querySelector('.journey-device');
+const journeyProgress = document.querySelector('.journey-progress');
+const stageLabels = {
+  question: ['NUEVA CONVERSACIÓN', '01 / 04'],
+  answer: ['RESPUESTA INMEDIATA', '02 / 04'],
+  capture: ['INTENCIÓN COMERCIAL DETECTADA', '03 / 04'],
+  panel: ['OPORTUNIDAD CUALIFICADA', '04 / 04']
+};
+
+function activateJourney(step) {
+  journeySteps.forEach((item) => item.classList.toggle('active', item === step));
+  const stage = step.dataset.stage;
+  const index = journeySteps.indexOf(step) + 1;
+  journeyDevice.dataset.stage = stage;
+  journeyDevice.querySelector('.journey-kicker').textContent = stageLabels[stage][0];
+  journeyProgress.querySelector('span').textContent = stageLabels[stage][1];
+  journeyProgress.style.setProperty('--stage', index);
+}
+
+const journeyObserver = new IntersectionObserver((entries) => {
+  const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+  if (visible) activateJourney(visible.target);
+}, { threshold: [0.35, 0.55, 0.75], rootMargin: '-12% 0px -24% 0px' });
+
+
+const journeySkip = document.querySelector('.journey-skip');
+journeySkip?.addEventListener('click', () => {
+  document.getElementById('soluciones').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+});
+journeySteps.forEach((step) => {
+  step.setAttribute('role', 'button');
+  step.setAttribute('tabindex', '0');
+  step.addEventListener('click', () => activateJourney(step));
+  step.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') activateJourney(step);
+  });
+  journeyObserver.observe(step);
+});
+
+const counters = [...document.querySelectorAll('.counter')];
+function animateCounter(counter) {
+  const target = Number(counter.dataset.target);
+  const suffix = counter.dataset.suffix || '';
+  const duration = reduceMotion ? 1 : 1300;
+  const start = performance.now();
+  function frame(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(target * eased);
+    counter.textContent = (counter.dataset.format === 'number' ? value.toLocaleString('es-ES') : value) + suffix;
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      counters.forEach(animateCounter);
+      counterObserver.disconnect();
+    }
+  });
+}, { threshold: 0.5 });
+const metricRow = document.querySelector('.metric-row');
+if (metricRow) counterObserver.observe(metricRow);
+
+document.querySelectorAll('.chart-bars i').forEach((bar, index) => bar.style.setProperty('--bar-index', index));
+
+const tabs = document.querySelectorAll('.audience-tab');
+const panels = document.querySelectorAll('.audience-panel');
+
+document.querySelectorAll('[data-persona]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const targetTab = [...tabs].find((tab) => tab.dataset.panel === button.dataset.persona);
+    targetTab?.click();
+    const typeSelect = document.querySelector('select[name="tipo"]');
+    if (typeSelect) typeSelect.value = button.dataset.persona === 'venue' ? 'Recinto ferial' : 'Organizador de ferias';
+    document.getElementById('soluciones').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  });
+});
+tabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    tabs.forEach((item) => {
+      item.classList.remove('active');
+      item.setAttribute('aria-selected', 'false');
+    });
+    panels.forEach((panel) => {
+      panel.classList.remove('active');
+      panel.hidden = true;
+    });
+    tab.classList.add('active');
+    tab.setAttribute('aria-selected', 'true');
+    const activePanel = document.getElementById(tab.dataset.panel);
+    activePanel.hidden = false;
+    requestAnimationFrame(() => activePanel.classList.add('active'));
+  });
+});
+
+document.querySelectorAll('.faq-list details').forEach((detail) => {
+  detail.addEventListener('toggle', () => {
+    if (!detail.open) return;
+    document.querySelectorAll('.faq-list details').forEach((other) => {
+      if (other !== detail) other.open = false;
+    });
+  });
+});
+
+const demoForm = document.getElementById('demo-form');
+const formSteps = [...demoForm.querySelectorAll('.form-step')];
+const formProgress = demoForm.querySelector('.form-progress');
+
+function setFormStep(stepNumber) {
+  formSteps.forEach((step) => {
+    const active = Number(step.dataset.formStep) === stepNumber;
+    step.hidden = !active;
+    step.classList.toggle('active', active);
+  });
+  formProgress.style.setProperty('--form-progress', stepNumber === 1 ? '50%' : '100%');
+  formProgress.querySelector('span').textContent = 'Paso ' + stepNumber + ' de 2';
+}
+
+demoForm.querySelector('[data-form-next]').addEventListener('click', () => {
+  const firstStep = demoForm.querySelector('[data-form-step="1"]');
+  const invalid = [...firstStep.querySelectorAll('[required]')].find((field) => !field.checkValidity());
+  if (invalid) {
+    invalid.reportValidity();
+    return;
+  }
+  setFormStep(2);
+  demoForm.querySelector('[data-form-step="2"] h3').focus?.();
+});
+
+demoForm.querySelector('[data-form-back]').addEventListener('click', () => setFormStep(1));
+
+demoForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!demoForm.checkValidity()) {
+    demoForm.reportValidity();
+    return;
+  }
+  const submit = demoForm.querySelector('[type="submit"]');
+  const error = demoForm.querySelector('.form-error');
+  const data = new FormData(demoForm);
+  const key = document.body.dataset.webKey || '';
+  submit.disabled = true;
+  error.hidden = true;
+  try {
+    const response = await fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        key,
+        session_id: 'web-demo-' + Date.now(),
+        name: data.get('nombre'),
+        email: data.get('email'),
+        company: data.get('empresa'),
+        kind: 'general',
+        message: [data.get('tipo'), data.get('mensaje'), data.get('comercial') ? 'Acepta comunicaciones comerciales' : 'Sin consentimiento comercial'].filter(Boolean).join(' | ')
+      })
+    });
+    if (!response.ok) throw new Error('No se pudo enviar');
+    demoForm.classList.add('sent');
+    formSteps.forEach((step) => { step.hidden = true; });
+    formProgress.hidden = true;
+    demoForm.reset();
+  } catch (requestError) {
+    error.hidden = false;
+    submit.disabled = false;
+  }
+});
+if (window.matchMedia('(pointer:fine)').matches && !reduceMotion) {
+  const dot = document.querySelector('.cursor-dot');
+  const ring = document.querySelector('.cursor-ring');
+  window.addEventListener('mousemove', (event) => {
+    document.body.classList.add('cursor-active');
+    dot.style.transform = 'translate(' + (event.clientX - 3) + 'px,' + (event.clientY - 3) + 'px)';
+    ring.style.transform = 'translate(' + (event.clientX - 15) + 'px,' + (event.clientY - 15) + 'px)';
+  }, { passive: true });
+  document.querySelectorAll('a,button,input,select,textarea,summary').forEach((element) => {
+    element.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+    element.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+  });
+}

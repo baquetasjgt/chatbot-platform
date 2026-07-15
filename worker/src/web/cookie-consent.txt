@@ -1,0 +1,62 @@
+(() => {
+  const key = 'expobot_cookie_consent_v1';
+  const version = 1;
+  const maxAge = 365 * 24 * 60 * 60 * 1000;
+  const banner = document.querySelector('.cookie-banner');
+  const modal = document.querySelector('.cookie-modal');
+  const analytics = modal?.querySelector('input[name="analytics"]');
+  const marketing = modal?.querySelector('input[name="marketing"]');
+  let lastFocus = null;
+
+  function readConsent() {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+      const updatedAt = Date.parse(value?.updatedAt);
+      const isCurrent = value?.version === version && Number.isFinite(updatedAt) && Date.now() - updatedAt < maxAge;
+      return isCurrent ? value : null;
+    } catch (_) { return null; }
+  }
+
+  function expose(value) {
+    window.expobotConsent = value || { necessary: true, analytics: false, marketing: false };
+    document.dispatchEvent(new CustomEvent('expobot:consent', { detail: window.expobotConsent }));
+  }
+
+  function save(optional) {
+    const value = { version, necessary: true, analytics: !!optional.analytics, marketing: !!optional.marketing, updatedAt: new Date().toISOString() };
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+    expose(value);
+    closeModal();
+    if (banner) banner.hidden = true;
+  }
+
+  function openModal() {
+    if (!modal) return;
+    const saved = readConsent();
+    lastFocus = document.activeElement;
+    if (analytics) analytics.checked = !!saved?.analytics;
+    if (marketing) marketing.checked = !!saved?.marketing;
+    modal.hidden = false;
+    document.body.classList.add('cookie-open');
+    modal.querySelector('[data-cookie-close]')?.focus();
+  }
+
+  function closeModal() {
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    document.body.classList.remove('cookie-open');
+    lastFocus?.focus?.();
+  }
+
+  const saved = readConsent();
+  expose(saved);
+  if (banner) banner.hidden = !!saved;
+
+  document.querySelectorAll('[data-cookie-accept]').forEach((button) => button.addEventListener('click', () => save({ analytics: true, marketing: true })));
+  document.querySelectorAll('[data-cookie-reject]').forEach((button) => button.addEventListener('click', () => save({ analytics: false, marketing: false })));
+  document.querySelectorAll('[data-cookie-configure], [data-cookie-settings]').forEach((button) => button.addEventListener('click', openModal));
+  document.querySelectorAll('[data-cookie-close]').forEach((button) => button.addEventListener('click', closeModal));
+  document.querySelectorAll('[data-cookie-save]').forEach((button) => button.addEventListener('click', () => save({ analytics: analytics?.checked, marketing: marketing?.checked })));
+  modal?.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal(); });
+})();

@@ -4,9 +4,18 @@
  */
 
 import WIDGET_JS from "./widget.txt";
-import WEB_HOME from "./web/home.txt";
-import WEB_PAGES from "./web/paginas.txt";
-import WEB_LEGAL from "./web/legal.txt";
+import WEB_HOME_NEW from "./web/home-new.txt";
+import WEB_LEGAL_PAGE from "./web/legal-page.txt";
+import WEB_STYLES from "./web/styles.txt";
+import WEB_SCRIPT from "./web/script.txt";
+import WEB_COOKIE_CONSENT from "./web/cookie-consent.txt";
+import APP_BRAND_CSS from "./web/app-brand.txt";
+import BRAND_LOGO from "./web/assets/expobot-logo.txt";
+import BRAND_ISOTYPE from "./web/assets/expobot-isotipo.txt";
+import BRAND_LOGO_HEADER from "./web/assets/expobot-logo-header.txt";
+import BRAND_WORDMARK_MUSTARD from "./web/assets/expobot-wordmark-mustard.txt";
+import BRAND_WORDMARK_DARK from "./web/assets/expobot-wordmark-dark.txt";
+import BRAND_WORDMARK_LIGHT from "./web/assets/expobot-wordmark-light.txt";
 
 const EMBED_MODEL = "@cf/baai/bge-m3";
 
@@ -1732,6 +1741,11 @@ ${brief}`;
   return json({ error: "no encontrado" }, 404);
 }
 
+function brandAppHtml(html) {
+  return html
+    .replace("</style>", APP_BRAND_CSS + "</style>")
+    .replaceAll("/brand/logo.png", "/brand/wordmark-light.svg");
+}
 const ADMIN_HTML = `<!doctype html>
 <html lang="es">
 <head>
@@ -6143,12 +6157,6 @@ $("up-run").onclick = function () {
 const WEB_BOT_KEY = "pk_expobotweb_f8939cf0846f1142efcf3d4e";
 const WEB_HOSTS = ["expobot.es", "www.expobot.es"];
 
-function webData(txt) {
-  const open = txt.indexOf("<!--DATA");
-  const close = txt.indexOf("DATA-->");
-  return { data: JSON.parse(txt.slice(open + 8, close)), tpl: txt.slice(close + 7) };
-}
-
 function webHtml(body) {
   return new Response(body, {
     headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "public, max-age=300" },
@@ -6177,7 +6185,22 @@ function serveWeb(url) {
       .replaceAll("%%WEBKEY%%", WEB_BOT_KEY)
       .replaceAll("%%ORIGIN%%", url.origin);
 
-  if (path === "/") return webHtml(fill(WEB_HOME));
+  const textAsset = (body, type, cache = "public, max-age=3600") =>
+    new Response(body, { headers: { "Content-Type": type, "Cache-Control": cache } });
+  const assets = {
+    "/assets/expobot-logo.svg": BRAND_LOGO,
+    "/assets/expobot-isotipo.svg": BRAND_ISOTYPE,
+    "/assets/expobot-logo-header.svg": BRAND_LOGO_HEADER,
+    "/assets/expobot-wordmark-mustard.svg": BRAND_WORDMARK_MUSTARD,
+    "/assets/expobot-wordmark-dark.svg": BRAND_WORDMARK_DARK,
+    "/assets/expobot-wordmark-light.svg": BRAND_WORDMARK_LIGHT,
+  };
+  if (path === "/styles.css") return textAsset(WEB_STYLES, "text/css;charset=utf-8");
+  if (path === "/script.js") return textAsset(fill(WEB_SCRIPT), "application/javascript;charset=utf-8");
+  if (path === "/cookie-consent.js") return textAsset(WEB_COOKIE_CONSENT, "application/javascript;charset=utf-8");
+  if (assets[path]) return textAsset(assets[path], "image/svg+xml;charset=utf-8", "public, max-age=86400");
+  if (path === "/legal.html") return webHtml(fill(WEB_LEGAL_PAGE));
+  if (path === "/") return webHtml(fill(WEB_HOME_NEW));
 
   if (path === "/robots.txt") {
     const body =
@@ -6188,8 +6211,7 @@ function serveWeb(url) {
   }
 
   if (path === "/sitemap.xml") {
-    const pages = webData(WEB_PAGES).data;
-    const urls = ["", ...Object.values(pages).map((p) => p.path)]
+    const urls = ["", "legal.html"]
       .map((p) => `<url><loc>https://expobot.es/${p}</loc></url>`)
       .join("");
     return new Response(
@@ -6198,57 +6220,23 @@ function serveWeb(url) {
     );
   }
 
-  const slug = path.slice(1);
-
-  {
-    const { data, tpl } = webData(WEB_PAGES);
-    const key = Object.keys(data).find((k) => data[k].path === slug);
-    if (key) {
-      const p = data[key];
-      const tabs = Object.keys(data)
-        .map((k) => `<a class="ptab${k === key ? " on" : ""}" href="${base}/${data[k].path}">${data[k].label}</a>`)
-        .join("");
-      const blocks = p.blocks
-        .map((b) => `<div class="blk"><div class="blk-t">${b.t}</div><div class="blk-d">${b.d}</div></div>`)
-        .join("");
-      return webHtml(
-        fill(tpl)
-          .replaceAll("%%PATH%%", p.path)
-          .replaceAll("%%TITLE%%", p.title)
-          .replaceAll("%%DESC%%", p.intro.slice(0, 155))
-          .replaceAll("%%KICKER%%", p.kicker)
-          .replaceAll("%%H1%%", p.title)
-          .replaceAll("%%INTRO%%", p.intro)
-          .replaceAll("%%BLOCKS%%", blocks)
-          .replaceAll("%%NOTE%%", p.note ? `<p class="note">${p.note}</p>` : "")
-          .replaceAll("%%CTA%%", p.cta)
-          .replaceAll("%%TABS%%", tabs)
-      );
-    }
-  }
-
-  {
-    const { data, tpl } = webData(WEB_LEGAL);
-    const key = Object.keys(data).find((k) => data[k].path === slug);
-    if (key) {
-      const p = data[key];
-      const tabs = Object.keys(data)
-        .map((k) => `<a class="ptab${k === key ? " on" : ""}" href="${base}/${data[k].path}">${data[k].label}</a>`)
-        .join("");
-      const sections = p.sections
-        .map((s) => `<section><h2>${s.t}</h2><div class="txt">${s.d}</div></section>`)
-        .join("");
-      let out = fill(tpl)
-        .replaceAll("%%TITLE%%", p.title)
-        .replaceAll("%%SECTIONS%%", sections)
-        .replaceAll("%%TABS%%", tabs);
-      if (key !== "cookies") {
-        const a = out.indexOf("<!--COOKIES-->");
-        const b = out.indexOf("<!--/COOKIES-->");
-        if (a >= 0 && b > a) out = out.slice(0, a) + out.slice(b + "<!--/COOKIES-->".length);
-      }
-      return webHtml(out);
-    }
+  const legacyRoutes = {
+    "/producto": "/#soluciones",
+    "/ferias": "/#sectores",
+    "/whatsapp": "/#integraciones",
+    "/telegram": "/#integraciones",
+    "/chatbot-web": "/#integraciones",
+    "/integraciones": "/#integraciones",
+    "/precios": "/#demo",
+    "/contacto": "/#demo",
+    "/aviso-legal": "/legal.html#aviso-legal",
+    "/privacidad": "/legal.html#privacidad",
+    "/cookies": "/legal.html#cookies",
+    "/condiciones": "/legal.html#condiciones-accesibilidad",
+    "/accesibilidad": "/legal.html#condiciones-accesibilidad",
+  };
+  if (legacyRoutes[path]) {
+    return Response.redirect(new URL(`${base}${legacyRoutes[path]}`, url.origin), 301);
   }
 
   return null;
@@ -6293,6 +6281,11 @@ export default {
         });
       }
 
+      if (url.pathname === "/brand/logo.svg" || url.pathname === "/brand/wordmark-light.svg") {
+        return new Response(BRAND_WORDMARK_LIGHT, {
+          headers: { "Content-Type": "image/svg+xml;charset=utf-8", "Cache-Control": "public, max-age=86400" },
+        });
+      }
       if (url.pathname === "/widget.js") {
         return new Response(WIDGET_JS, {
           headers: {
@@ -6618,7 +6611,7 @@ ${inject}</body></html>`;
 
       // --- panel de administración ---
       if (url.pathname === "/admin") {
-        return new Response(ADMIN_HTML, {
+        return new Response(brandAppHtml(ADMIN_HTML), {
           headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
         });
       }
@@ -6694,7 +6687,7 @@ ${inject}</body></html>`;
 
       // --- portal de clientes ---
       if (url.pathname === "/acceso" || url.pathname === "/portal") {
-        return new Response(PORTAL_HTML, {
+        return new Response(brandAppHtml(PORTAL_HTML), {
           headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
         });
       }
@@ -7026,7 +7019,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         const tk = url.searchParams.get("token") || "";
         const rows = await sb(env, `faq_forms?token=eq.${encodeURIComponent(tk)}&select=id`);
         if (!rows?.length) return new Response("Enlace no válido", { status: 401 });
-        return new Response(FAQ_HTML, {
+        return new Response(brandAppHtml(FAQ_HTML), {
           headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
         });
       }
@@ -7093,7 +7086,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
       if (url.pathname === "/panel") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
         if (!tenant) return new Response("Enlace no válido", { status: 401 });
-        return new Response(PANEL_HTML, {
+        return new Response(brandAppHtml(PANEL_HTML), {
           headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "no-store" },
         });
       }

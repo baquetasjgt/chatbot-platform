@@ -1,0 +1,39 @@
+/* ExpoBOT 2026: sistema visual compartido para Estudio, portal y panel */
+:root{--ink:#111111!important;--mut:#686868!important;--line:#d9d9d4!important;--bg:#f3f3f0!important;--card:#ffffff!important;--soft:#f7f1dd!important;--acc:#f9be00!important;--acc2:#ffd75a!important;--grad:linear-gradient(135deg,#f9be00,#ffd75a)!important;--chip:#ecece8!important;--userbub:#f9be00!important;--botbub:#eeeeea!important}
+html{letter-spacing:0!important;background:var(--bg)}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:0!important;background:var(--bg)!important}
+header{background:#fff!important;border-color:#f9be00!important;border-bottom-width:4px!important;color:#111!important;box-shadow:none!important}
+header .brandimg{filter:none!important;width:148px!important;height:auto!important}
+.login .brand img,header .brand img{width:148px!important;height:auto!important;display:block!important}
+.login{background:#f9be00!important;position:relative;overflow:hidden}
+.login:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 0 58%,rgba(17,17,17,.07) 58% 59%,transparent 59%);pointer-events:none}
+.login .card{position:relative;border:1px solid #111!important;border-radius:4px!important;box-shadow:14px 14px 0 #111!important;padding:34px!important}
+.card,.box,.kpi,.tool,.conv,.gapcard,.item,.done,table{border-radius:4px!important;box-shadow:none!important}
+.primary,.btn,.seg button.on,nav button.on,#bot-tabs button.on,.ftabs button.on{background:#111!important;color:#fff!important;border-color:#111!important;border-radius:3px!important;box-shadow:none!important}
+.primary:hover,.btn:hover{background:#f9be00!important;color:#111!important;box-shadow:inset 0 0 0 1px #111!important}
+.ghost,.mini,input,textarea,select{border-radius:3px!important}
+input:focus,textarea:focus,select:focus{border-color:#111!important;box-shadow:0 0 0 2px rgba(249,190,0,.45)!important}
+.wrap{grid-template-columns:270px minmax(0,1fr)!important;max-width:1540px!important;gap:0!important;padding:0!important}
+aside{background:#111!important;color:#fff!important;min-height:calc(100vh - 65px);padding:20px 16px!important}
+aside .mut,aside label{color:#aaa!important}
+#tree button,#proj-list button,#bot-list button{background:transparent!important;color:#ddd!important;border:0!important;border-radius:3px!important}
+#tree button:hover,#proj-list button:hover,#bot-list button:hover{background:#242424!important;color:#fff!important}
+#tree button.on{background:#f9be00!important;color:#111!important;box-shadow:none!important}
+#main{padding:24px!important}
+#crumb a{color:#8b6900!important}
+.kpi .ic,.chk .chk-ic{background:#f7f1dd!important;color:#111!important}
+.kpi b{font-variant-numeric:tabular-nums}
+nav button,#bot-tabs button,.ftabs button{border-radius:3px!important}
+nav button.on .badge{background:#111!important;color:#f9be00!important}
+th{background:#111!important;color:#fff!important;letter-spacing:0!important}
+tbody tr:hover td{background:#fff8df!important}
+#chart div{background:#f9be00!important;border-radius:1px 1px 0 0!important}
+#cv-frame{background:#e8e8e3!important;border-radius:4px!important}
+#cv-widget{border-radius:4px!important;box-shadow:8px 8px 0 rgba(17,17,17,.16)!important}
+#cv-h,#pv-head{background:#111!important}
+#cv-btn,#pv-btn{background:#f9be00!important;border:1px solid #111!important}
+#cv-m,.cv-m{background:#f9be00!important;color:#111!important}
+#toast{border-radius:3px!important}
+footer b{color:#8b6900!important}
+@media(max-width:760px){.wrap{grid-template-columns:1fr!important}.wrap aside{min-height:auto;padding:12px!important}#main{padding:14px 10px!important}.login .card{box-shadow:8px 8px 0 #111!important}header .brandimg{width:120px!important;height:auto!important}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

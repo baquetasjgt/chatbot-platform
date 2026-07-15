@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Información legal, privacidad, cookies, condiciones y accesibilidad de ExpoBOT.">
+  <title>Información legal | ExpoBOT</title>
+  <link rel="stylesheet" href="%%BASE%%/styles.css?v=14">
+</head>
+<body class="legal-page">
+  <header class="site-header legal-header">
+    <a class="brand" href="index.html" aria-label="ExpoBOT, volver al inicio"><img src="%%BASE%%/assets/expobot-logo-header.svg" alt="ExpoBOT"></a>
+    <a class="button button-small button-light" href="index.html">Volver a la web</a>
+  </header>
+  <main>
+    <section class="legal-hero">
+      <p class="section-label">TRANSPARENCIA Y PRIVACIDAD</p>
+      <h1>Información legal</h1>
+      <p>Consulta cómo tratamos los datos, qué tecnologías utiliza la web y las condiciones de uso.</p>
+    </section>
+    <div class="legal-layout">
+      <nav class="legal-nav" aria-label="Índice legal">
+        <strong>LEGAL</strong>
+        <a href="#aviso-legal">Aviso legal</a>
+        <a href="#privacidad">Política de privacidad</a>
+        <a href="#cookies">Política de cookies</a>
+        <button type="button" data-cookie-settings>Configurar cookies</button>
+        <a href="#condiciones-accesibilidad">Condiciones y accesibilidad</a>
+      </nav>
+      <div class="legal-content">
+        <aside class="legal-pending"><strong>Datos pendientes antes de publicar</strong><p>Completa los campos entre corchetes con los datos reales de la empresa, proveedores y plazos. Son obligatorios para que la información sea exacta.</p></aside>
+
+        <article id="aviso-legal">
+          <p class="legal-kicker">01</p><h2>Aviso legal</h2><p class="legal-date">Última actualización: 15 de julio de 2026</p>
+          <h3>Identificación del titular</h3>
+          <p>En cumplimiento del artículo 10 de la Ley 34/2002, de servicios de la sociedad de la información y de comercio electrónico, se informa de que este sitio web es titularidad de:</p>
+          <dl><dt>Titular</dt><dd>[RAZÓN SOCIAL / NOMBRE COMPLETO]</dd><dt>NIF/CIF</dt><dd>[NIF/CIF]</dd><dt>Domicilio</dt><dd>[DOMICILIO COMPLETO]</dd><dt>Correo electrónico</dt><dd>[CORREO DE CONTACTO LEGAL]</dd><dt>Datos registrales</dt><dd>[REGISTRO, TOMO, FOLIO Y HOJA, SI PROCEDE]</dd></dl>
+          <h3>Objeto y uso</h3><p>La web ofrece información sobre asistentes de inteligencia artificial para empresas y permite solicitar una demostración. La persona usuaria se compromete a utilizar el sitio de forma lícita, sin dañar derechos, sistemas o contenidos.</p>
+          <h3>Propiedad intelectual</h3><p>Los diseños, textos, marcas, logotipos, código y demás contenidos pertenecen a su titular o se utilizan con autorización. No se permite su reproducción, distribución o transformación sin autorización, salvo los usos permitidos legalmente.</p>
+          <h3>Responsabilidad y enlaces</h3><p>Se procura mantener la información disponible y actualizada, sin garantizar la ausencia absoluta de errores o interrupciones. Los enlaces de terceros se facilitan como referencia y sus contenidos y políticas son responsabilidad de sus respectivos titulares.</p>
+        </article>
+
+        <article id="privacidad">
+          <p class="legal-kicker">02</p><h2>Política de privacidad</h2><p class="legal-date">Última actualización: 15 de julio de 2026</p>
+          <h3>Responsable del tratamiento</h3><p>[RAZÓN SOCIAL / NOMBRE COMPLETO], con NIF/CIF [NIF/CIF], domicilio en [DOMICILIO] y correo de privacidad [EMAIL DE PRIVACIDAD].</p>
+          <h3>Tratamientos realizados</h3>
+          <div class="legal-table-wrap"><table><thead><tr><th>Datos y finalidad</th><th>Base jurídica</th><th>Conservación</th></tr></thead><tbody><tr><td>Nombre, empresa, email profesional, tipo de organización y mensaje para atender una solicitud de demo y contactar sobre ella.</td><td>Medidas precontractuales solicitadas por la persona interesada.</td><td>[PLAZO REAL DE CONSERVACIÓN Y CRITERIO DE BLOQUEO]</td></tr><tr><td>Email y datos identificativos para enviar novedades comerciales.</td><td>Consentimiento opcional, que puede retirarse en cualquier momento.</td><td>Hasta retirar el consentimiento y, después, durante los plazos legales de bloqueo.</td></tr><tr><td>Datos técnicos de seguridad y registros del servidor.</td><td>Interés legítimo en garantizar la seguridad y disponibilidad del sitio.</td><td>[PLAZO REAL DE CONSERVACIÓN DE LOGS]</td></tr></tbody></table></div>
+          <h3>Destinatarios y encargados</h3><p>Los datos podrán ser tratados por proveedores imprescindibles de alojamiento, correo, formularios y soporte, bajo contratos de encargo de tratamiento. Completar antes de publicar: [ALOJAMIENTO], [PROVEEDOR DEL FORMULARIO/CRM], [CORREO] y su ubicación. Si existieran transferencias internacionales, se indicarán el país, la garantía aplicable y cómo obtener una copia.</p>
+          <h3>Derechos</h3><p>Puedes solicitar acceso, rectificación, supresión, oposición, limitación y portabilidad, así como retirar un consentimiento sin afectar a la licitud del tratamiento previo. Envía tu solicitud a [EMAIL DE PRIVACIDAD], acreditando tu identidad cuando sea necesario. También puedes reclamar ante la Agencia Española de Protección de Datos en <a href="https://www.aepd.es" rel="noopener noreferrer">aepd.es</a>.</p>
+          <h3>Carácter obligatorio</h3><p>Los campos marcados como obligatorios son necesarios para gestionar la solicitud. La autorización para recibir comunicaciones comerciales es independiente, opcional y no condiciona la atención de la demo.</p>
+          <h3>Decisiones automatizadas</h3><p>El formulario de esta web no adopta decisiones automatizadas con efectos jurídicos o similares sobre la persona solicitante. Si esta situación cambiara, se informaría previamente.</p>
+        </article>
+
+        <article id="cookies">
+          <p class="legal-kicker">03</p><h2>Política de cookies</h2><p class="legal-date">Última actualización: 15 de julio de 2026</p>
+          <p>Esta web no instala actualmente cookies analíticas, publicitarias ni de personalización. Utiliza almacenamiento local estrictamente necesario para recordar la elección realizada en el panel de privacidad.</p>
+          <div class="legal-table-wrap"><table><thead><tr><th>Elemento</th><th>Titular</th><th>Finalidad</th><th>Duración</th></tr></thead><tbody><tr><td><code>expobot_cookie_consent_v1</code></td><td>Propio</td><td>Recordar la elección sobre categorías opcionales y evitar solicitarla en cada visita.</td><td>12 meses, salvo que se borre antes desde el navegador.</td></tr></tbody></table></div>
+          <h3>Categorías opcionales</h3><p>El panel muestra categorías de analítica y marketing para que puedan configurarse, pero permanecen desactivadas por defecto y no se carga ninguna tecnología de esas categorías actualmente. Antes de incorporar una herramienta futura, se actualizará esta política con su titular, finalidad y duración, y no se activará sin la elección correspondiente.</p>
+          <h3>Cambiar o retirar la elección</h3><p>Puedes abrir el panel en cualquier momento. Rechazar es tan sencillo como aceptar y no impide utilizar la web.</p><button class="button button-yellow legal-cookie-button" type="button" data-cookie-settings>Configurar cookies</button>
+        </article>
+
+        <article id="condiciones-accesibilidad">
+          <p class="legal-kicker">04</p><h2>Condiciones y accesibilidad</h2><p class="legal-date">Última actualización: 15 de julio de 2026</p>
+          <h3>Condiciones del servicio</h3><p>La información de esta web es orientativa y no constituye una oferta contractual cerrada. La solicitud de una demo no implica contratación ni obligación de compra. El alcance, precio, niveles de servicio, tratamiento de datos por cuenta del cliente y demás condiciones se definirán en cada propuesta y contrato.</p>
+          <p>Quien facilite contenidos o datos para configurar un asistente declara disponer de legitimación suficiente para hacerlo. Cuando el servicio implique tratar datos personales por cuenta de un cliente, se formalizará el correspondiente contrato de encargo de tratamiento antes de iniciar el servicio.</p>
+          <h3>Accesibilidad</h3><p>El sitio se ha diseñado con el objetivo de resultar perceptible, operable, comprensible y robusto, tomando como referencia WCAG 2.2 nivel AA. Se revisan la navegación mediante teclado, el contraste, la estructura semántica, las alternativas textuales y la reducción de movimiento.</p>
+          <p>Si encuentras una barrera de acceso, comunícala a [EMAIL DE ACCESIBILIDAD] indicando la página y el problema. Responderemos en [PLAZO DE RESPUESTA]. Esta declaración debe revisarse mediante una auditoría antes de afirmar una conformidad total.</p>
+        </article>
+      </div>
+    </div>
+  </main>
+  <footer class="legal-footer"><div class="footer-brand"><img src="%%BASE%%/assets/expobot-logo.svg" alt="ExpoBOT"><p>Inteligencia artificial para el sector ferial.</p></div><div class="footer-links"><strong>NAVEGACIÓN</strong><a href="index.html">Inicio</a><a href="index.html#demo">Solicitar demo</a></div><div class="footer-links"><strong>LEGAL</strong><a href="#aviso-legal">Aviso legal</a><a href="#privacidad">Privacidad</a><a href="#cookies">Cookies</a><button type="button" data-cookie-settings>Configurar cookies</button></div><div class="footer-bottom"><span class="footer-legal-line"><span>© 2026</span><img class="brand-wordmark footer-wordmark" src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"><span>. Todos los derechos reservados. · <a href="%%BASE%%/legal.html">Información legal</a></span></span></div></footer>
+  <div class="cookie-banner" role="dialog" aria-modal="true" aria-labelledby="cookie-title" hidden><div><img src="%%BASE%%/assets/expobot-wordmark-dark.svg" alt="ExpoBOT"><h2 id="cookie-title">Tu privacidad, bajo control</h2><p>Utilizamos almacenamiento técnico necesario para recordar tus preferencias. Las categorías opcionales permanecen desactivadas hasta que las aceptes.</p><a href="#cookies">Ver política de cookies</a></div><div class="cookie-actions"><button type="button" class="cookie-button secondary" data-cookie-reject>Rechazar opcionales</button><button type="button" class="cookie-button secondary" data-cookie-configure>Configurar</button><button type="button" class="cookie-button primary" data-cookie-accept>Aceptar opcionales</button></div></div>
+  <div class="cookie-modal" role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" hidden><div class="cookie-modal-panel"><button type="button" class="cookie-close" data-cookie-close aria-label="Cerrar">×</button><p class="section-label">PRIVACIDAD</p><h2 id="cookie-settings-title">Configurar cookies</h2><p>Elige qué categorías opcionales permites. Puedes cambiar tu decisión cuando quieras desde el pie de página.</p><div class="cookie-option"><div><strong>Necesarias</strong><span>Guardan tus preferencias y permiten el funcionamiento básico.</span></div><label class="switch"><input type="checkbox" checked disabled><span></span></label></div><div class="cookie-option"><div><strong>Analíticas</strong><span>Ayudarían a medir el uso de la web. Actualmente no instalamos ninguna.</span></div><label class="switch"><input type="checkbox" name="analytics"><span></span></label></div><div class="cookie-option"><div><strong>Marketing</strong><span>Permitirían personalizar campañas. Actualmente no instalamos ninguna.</span></div><label class="switch"><input type="checkbox" name="marketing"><span></span></label></div><div class="cookie-modal-actions"><button type="button" class="cookie-button secondary" data-cookie-reject>Rechazar opcionales</button><button type="button" class="cookie-button primary" data-cookie-save>Guardar preferencias</button></div></div></div>
+  <script src="%%BASE%%/cookie-consent.js?v=2"></script>
+</body>
+</html>
