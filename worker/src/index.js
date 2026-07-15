@@ -396,7 +396,7 @@ async function runClaude(env, tenant, history, message, contextBlock, saveLead) 
   let text = reply.content
     .filter((b) => b.type === "text")
     .map((b) => b.text)
-    .join("\n")
+    .join("\\n")
     .trim();
   if (!text && leadForm) text = "¡Genial! Déjame tus datos y el equipo te contactará muy pronto 👇";
 
@@ -499,7 +499,7 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
   let text = (cand?.content?.parts || [])
     .filter((p) => p.text && !p.thought)
     .map((p) => p.text)
-    .join("\n")
+    .join("\\n")
     .trim();
   if (!text && leadForm) text = "¡Genial! Déjame tus datos y el equipo te contactará muy pronto 👇";
 
@@ -1187,7 +1187,7 @@ function buildPdf(lines) {
   pages.forEach((pg, i) => {
     const content = pg
       .map((ln) => `/F${ln.font || 1} ${ln.size || 11} Tf 1 0 0 1 ${ln.x || M} ${ln.y} Tm (${pdfEscape(ln.t)}) Tj`)
-      .join("\n");
+      .join("\\n");
     const stream = `BT\n${content}\nET`;
     objs[7 + i * 2] =
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font 6 0 R >> ` +
@@ -3102,8 +3102,8 @@ $("templates-btn").onclick = goTemplates;
     if (!projects.length) { toast("Crea primero un cliente y un proyecto.", true); return; }
     var chosen = projects[0];
     if (projects.length > 1) {
-      var list = projects.map(function (f, i) { return (i + 1) + ". " + f.client.name + " / " + f.project.name; }).join("\n");
-      var n = parseInt(prompt("Elige el proyecto para el nuevo asistente:\n\n" + list), 10);
+      var list = projects.map(function (f, i) { return (i + 1) + ". " + f.client.name + " / " + f.project.name; }).join("\\n");
+      var n = parseInt(prompt("Elige el proyecto para el nuevo asistente:\\n\\n" + list), 10);
       if (!n || !projects[n - 1]) return;
       chosen = projects[n - 1];
     }    var presets = {
