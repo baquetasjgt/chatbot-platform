@@ -1239,6 +1239,76 @@ function buildPdf(lines) {
   return Uint8Array.from(pdfLatin1(out), (c) => c.charCodeAt(0));
 }
 
+// ---------- generador de facturas con la marca ----------
+// DATOS FISCALES: placeholders provisionales. Reemplázalos por los reales
+// (razón social, NIF, domicilio) cuando los tengas; el IVA es configurable.
+const INVOICE_ISSUER = {
+  name: "ExpoBot S.L.",
+  nif: "B00000000",
+  address: "Calle Ejemplo 1, 3.o A - 28001 Madrid, Espana",
+  email: "facturacion@expobot.es",
+  iva_rate: 0.21,
+};
+
+function eurPdf(cents) {
+  const parts = (Math.round(cents) / 100).toFixed(2).split(".");
+  const int = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${int},${parts[1]} EUR`;
+}
+
+function buildInvoicePdf(inv, client) {
+  const M = 56, RIGHT = 595 - M;
+  const total = Math.round(inv.amount_cents || 0);
+  const rate = INVOICE_ISSUER.iva_rate || 0;
+  const base = rate > 0 ? Math.round(total / (1 + rate)) : total;
+  const iva = total - base;
+  const fmtDate = (d) => {
+    try {
+      return new Date(String(d || new Date().toISOString()).slice(0, 10) + "T00:00:00")
+        .toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
+    } catch { return ""; }
+  };
+  const L = [];
+  pdfBrandHeader().forEach((x) => L.push(x));
+  L.push({ t: "FACTURA", size: 22, font: 2, color: PDF_INK, gap: 2 });
+  L.push({ t: `N.o ${inv.number || ""}   ·   ${fmtDate(inv.issued_at)}`, size: 10.5, font: 1, color: PDF_MUT, gap: 14 });
+  L.push({ rule: true, h: 1, color: [0.85, 0.85, 0.83], gap: 14 });
+  // emisor
+  L.push({ t: "EMISOR", size: 9, font: 2, color: PDF_MUSTARD, gap: 3 });
+  L.push({ t: INVOICE_ISSUER.name, size: 12, font: 2, gap: 1 });
+  L.push({ t: `NIF ${INVOICE_ISSUER.nif}`, size: 10.5, font: 1, color: PDF_MUT, gap: 1 });
+  L.push({ t: INVOICE_ISSUER.address, size: 10.5, font: 1, color: PDF_MUT, gap: 1 });
+  L.push({ t: INVOICE_ISSUER.email, size: 10.5, font: 1, color: PDF_MUT, gap: 16 });
+  // cliente
+  L.push({ t: "FACTURAR A", size: 9, font: 2, color: PDF_MUSTARD, gap: 3 });
+  L.push({ t: (client && client.name) || "Cliente", size: 12, font: 2, gap: 1 });
+  if (client && client.email) L.push({ t: client.email, size: 10.5, font: 1, color: PDF_MUT, gap: 1 });
+  if (client && client.phone) L.push({ t: client.phone, size: 10.5, font: 1, color: PDF_MUT, gap: 1 });
+  L.push({ t: " ", size: 6, gap: 12 });
+  L.push({ rule: true, h: 1, color: [0.85, 0.85, 0.83], gap: 10 });
+  // concepto
+  L.push({ t: "CONCEPTO", size: 9, font: 2, color: PDF_MUT, gap: 3 });
+  wrapLine(inv.concept || "Servicio ExpoBot", 62).forEach((w) => L.push({ t: w, size: 12, font: 1, gap: 2 }));
+  L.push({ t: " ", size: 6, gap: 10 });
+  L.push({ rule: true, h: 1, color: [0.85, 0.85, 0.83], gap: 12 });
+  // totales (etiqueta a la izquierda, valor a la derecha, misma linea)
+  const row = (label, value, o) => {
+    o = o || {};
+    L.push({ t: label, size: o.big ? 12.5 : 10.5, font: o.big ? 2 : 1, color: o.lc || PDF_MUT, x: 320, gap: o.gap == null ? 4 : o.gap });
+    L.push({ t: value, size: o.big ? 12.5 : 10.5, font: o.big ? 2 : 1, color: o.vc || PDF_INK, x: 440, sameLine: true });
+  };
+  row("Base imponible", eurPdf(base));
+  if (rate > 0) row(`IVA (${Math.round(rate * 100)}%)`, eurPdf(iva));
+  L.push({ rule: true, h: 2, color: PDF_MUSTARD, x: 320, w: RIGHT - 320, gap: 8 });
+  row("TOTAL", eurPdf(total), { big: true, lc: PDF_INK, gap: 20 });
+  L.push({
+    t: inv.status === "pagada" ? "Estado: PAGADA" : "Estado: PENDIENTE DE PAGO",
+    size: 11, font: 2, color: inv.status === "pagada" ? [0.04, 0.5, 0.28] : PDF_INK, gap: 24,
+  });
+  L.push({ t: "Gracias por confiar en ExpoBot. Datos fiscales del emisor pendientes de completar.", size: 8.5, font: 1, color: PDF_MUT, gap: 0 });
+  return buildPdf(L);
+}
+
 async function handleAdminApi(request, env, url) {
   if (url.pathname === "/admin/api/tenants" && request.method === "GET") {
     const tenants = await sb(
@@ -1686,20 +1756,25 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
         status: status === "pagada" ? "pagada" : "pendiente",
       },
     });
+    // PDF: el que suba el admin, o si no, se genera una factura con la marca
+    let bytes = null;
     if (pdf_base64) {
-      const bytes = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
-      const path = `${mInv[1]}/${inv.id}.pdf`;
-      const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${path}`, {
-        method: "POST",
-        headers: { ...storageHeaders(env), "Content-Type": "application/pdf" },
-        body: bytes,
-      });
-      if (up.ok) {
-        await sb(env, `invoices?id=eq.${inv.id}`, { method: "PATCH", body: { pdf_path: path } });
-        inv.pdf_path = path;
-      } else {
-        inv.pdf_error = `Storage ${up.status}: ${(await up.text()).slice(0, 200)}`;
-      }
+      bytes = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+    } else {
+      const [client] = await sb(env, `clients?id=eq.${mInv[1]}&select=name,email,phone`);
+      bytes = buildInvoicePdf(inv, client);
+    }
+    const path = `${mInv[1]}/${inv.id}.pdf`;
+    const up = await fetch(`${env.SUPABASE_URL}/storage/v1/object/facturas/${path}`, {
+      method: "POST",
+      headers: { ...storageHeaders(env), "Content-Type": "application/pdf" },
+      body: bytes,
+    });
+    if (up.ok) {
+      await sb(env, `invoices?id=eq.${inv.id}`, { method: "PATCH", body: { pdf_path: path } });
+      inv.pdf_path = path;
+    } else {
+      inv.pdf_error = `Storage ${up.status}: ${(await up.text()).slice(0, 200)}`;
     }
     return json(inv);
   }
@@ -2333,8 +2408,9 @@ const ADMIN_HTML = `<!doctype html>
         </div>
         <label>Concepto</label>
         <input id="iv-concept" placeholder="Cuota mensual chatbot — julio 2026">
-        <label>PDF de la factura (opcional, máx. 8 MB)</label>
+        <label>PDF de la factura (opcional)</label>
         <input id="iv-pdf" type="file" accept=".pdf">
+        <p class="mut" style="margin:6px 0 0">Si no adjuntas un PDF, se genera automáticamente una factura con la imagen de marca de ExpoBot.</p>
         <div class="actions">
           <button id="iv-add" class="primary">Añadir factura</button>
           <span id="iv-msg" class="mut"></span>
