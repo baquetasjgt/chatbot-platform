@@ -89,7 +89,7 @@
           <button type="button" class="scenario-button" data-scenario="stand">Contratar stand</button>
         </div>
         <div class="float-card lead-card">
-          <div class="float-icon">✓</div>
+          <div class="float-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></div>
           <div><span>NUEVO CONTACTO</span><strong>Lead cualificado</strong><small>Hace 2 segundos</small></div>
         </div>
         <div class="float-card answer-card">
@@ -142,7 +142,7 @@
               <p class="journey-user">¿Cuánto cuesta exponer en la próxima edición?</p>
               <p class="journey-bot">Te explico las modalidades disponibles.</p>
               <div class="journey-data"><span>Nombre</span><strong>Laura Martín</strong><span>Empresa</span><strong>Rehab Tech</strong></div>
-              <div class="journey-complete"><i>✓</i><span>Lead enviado al panel</span></div>
+              <div class="journey-complete"><i><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></i><span>Lead enviado al panel</span></div>
             </div>
           </div>
           <div class="journey-progress"><i></i><span>01 / 04</span></div>
@@ -165,9 +165,9 @@
           <h3>Un punto de información para todo el recinto.</h3>
           <p>Responde sobre accesos, aparcamiento, pabellones, servicios y eventos simultáneos. Siempre actualizado y en varios canales.</p>
           <ul>
-            <li><span>✓</span> Orientación y servicios del recinto</li>
-            <li><span>✓</span> Información de todos los eventos activos</li>
-            <li><span>✓</span> Derivación al equipo adecuado</li>
+            <li><span><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span> Orientación y servicios del recinto</li>
+            <li><span><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span> Información de todos los eventos activos</li>
+            <li><span><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span> Derivación al equipo adecuado</li>
           </ul>
         </div>
         <div class="venue-visual reveal">
@@ -185,9 +185,9 @@
           <h3>Más servicio al visitante. Más oportunidades para ventas.</h3>
           <p>Informa sobre entradas, horarios, programa y expositores. Detecta además a las empresas interesadas en participar y recoge sus datos.</p>
           <ul>
-            <li><span>✓</span> Programa, entradas y agenda</li>
-            <li><span>✓</span> Búsqueda inteligente de expositores</li>
-            <li><span>✓</span> Captación de empresas interesadas</li>
+            <li><span><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span> Programa, entradas y agenda</li>
+            <li><span><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span> Búsqueda inteligente de expositores</li>
+            <li><span><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.12em" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span> Captación de empresas interesadas</li>
           </ul>
         </div>
         <div class="organizer-visual">

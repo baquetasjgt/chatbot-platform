@@ -2087,7 +2087,7 @@ const ADMIN_HTML = `<!doctype html>
     <input id="tok" type="password" placeholder="Token" autocomplete="current-password"
       autocapitalize="off" autocorrect="off" spellcheck="false">
     <button id="enter" class="primary">Entrar</button>
-    <button id="paste-tok" class="ghost" type="button" style="width:100%;margin-top:10px">📋 Pegar el token y entrar</button>
+    <button id="paste-tok" class="ghost" type="button" style="width:100%;margin-top:10px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2.5" width="8" height="4" rx="1"/></svg> Pegar el token y entrar</button>
     <p id="login-err" class="err"></p>
   </div>
 </div>
@@ -2096,8 +2096,8 @@ const ADMIN_HTML = `<!doctype html>
   <header>
     <div class="brand"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"><em>estudio de asistentes IA</em></div>
     <div>
-      <button id="menu-btn" class="ghost small">☰ Menú</button>
-      <button id="search-btn" class="ghost small" title="Ctrl+K">🔍 Buscar</button>
+      <button id="menu-btn" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Menú</button>
+      <button id="search-btn" class="ghost small" title="Ctrl+K"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Buscar</button>
       <button id="logout" class="ghost small" style="margin-left:8px">Salir</button>
     </div>
   </header>
@@ -2115,7 +2115,7 @@ const ADMIN_HTML = `<!doctype html>
       <button id="new-client" class="primary side-create">+ Nuevo cliente</button>
       <div class="side-caption side-recent">CLIENTES RECIENTES</div>
       <div id="tree" aria-label="Clientes recientes"></div>
-      <button id="settings-btn" class="side-settings"><span>⚙</span>Administración</button>
+      <button id="settings-btn" class="side-settings"><span><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l1.7-1.3-1.7-3-2 .8a7.6 7.6 0 0 0-1.8-1L15 4H9l-.6 2.5a7.6 7.6 0 0 0-1.8 1l-2-.8-1.7 3L4.6 11a7.6 7.6 0 0 0 0 2l-1.7 1.3 1.7 3 2-.8a7.6 7.6 0 0 0 1.8 1L9 20h6l.6-2.5a7.6 7.6 0 0 0 1.8-1l2 .8 1.7-3z"/></svg></span>Administración</button>
     </aside>
     <main id="main" class="hide">
 
@@ -2135,7 +2135,7 @@ const ADMIN_HTML = `<!doctype html>
       </div>
 
       <div class="card hide" id="v-wizard">
-        <h2>✨ Nuevo cliente en un paso</h2>
+        <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg> Nuevo cliente en un paso</h2>
         <p class="sub">Rellena esto y ExpoBot crea el cliente, su proyecto y su chatbot ya configurado
         por la IA, con la demo lista para enseñar.</p>
         <div class="row">
@@ -2156,7 +2156,7 @@ const ADMIN_HTML = `<!doctype html>
       </div>
 
       <div class="card hide" id="v-check">
-        <h2>✅ Listo para publicar</h2>
+        <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Listo para publicar</h2>
         <p class="sub">Los pasos que separan este chatbot de estar funcionando en la web del cliente.</p>
         <div id="check-list" class="mut">Cargando…</div>
       </div>
@@ -2174,15 +2174,15 @@ const ADMIN_HTML = `<!doctype html>
           <thead><tr><th>Chatbot</th><th>Cliente</th><th>Preguntas</th><th>Leads</th><th>Sin respuesta</th><th>Estado</th></tr></thead>
           <tbody id="home-body"></tbody>
         </table></div>
-        <label style="margin-top:20px">📥 Últimos leads
+        <label style="margin-top:20px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg> Últimos leads
           <button id="home-leads-all" class="ghost small" style="margin-left:8px">Ver todos</button></label>
         <div id="home-leads" class="mut">Cargando…</div>
-        <label style="margin-top:20px">🩺 Salud del motor — últimos errores registrados</label>
+        <label style="margin-top:20px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M3 12h4l2.5 7 5-14L17 12h4"/></svg> Salud del motor — últimos errores registrados</label>
         <div id="home-errors" class="mut">Cargando…</div>
       </div>
 
       <div class="card hide" id="v-leads">
-        <h2>📥 Leads de todos los clientes</h2>
+        <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg> Leads de todos los clientes</h2>
         <p class="sub">Los contactos que han captado todos los chatbots, del más reciente al más antiguo.</p>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
           <select id="gl-filter" style="max-width:260px"><option value="">Todos los chatbots</option></select>
@@ -2391,7 +2391,7 @@ const ADMIN_HTML = `<!doctype html>
       </div>
 
       <div class="card hide" id="v-exam">
-        <h2>🎓 Examen del bot</h2>
+        <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.8 3 3 6 3s6-1.2 6-3v-5"/></svg> Examen del bot</h2>
         <p class="sub">La IA le hace 6 preguntas trampa (precios, fechas y datos fáciles de inventar)
         usando el motor real, y evalúa si responde solo con su contenido o se lo inventa. Ideal antes
         de entregar el bot a un cliente.</p>
@@ -2426,7 +2426,7 @@ const ADMIN_HTML = `<!doctype html>
           <label>Pregunta de clasificación al abrir el chat (opcional)</label>
           <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
           <label>Opciones de respuesta (una por línea, máx. 4; vacío = sin pregunta)</label>
-          <textarea id="f-qualopts" rows="2" placeholder="🏢 Soy expositor&#10;🙋 Soy visitante"></textarea>
+          <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
           <p class="mut" style="margin-top:4px">El visitante elige con un botón antes de empezar; su elección
           clasifica el lead (si la opción contiene «expositor», «visitante» o «prensa») y el bot la conoce.</p>
           <div class="row">
@@ -2456,7 +2456,7 @@ const ADMIN_HTML = `<!doctype html>
           se vuelca en los controles de abajo y lo retocas antes de guardar.</p>
           <textarea id="ds-brief" rows="2" placeholder="Ej.: moderno y llamativo respetando el azul corporativo; una de las opciones oscura y elegante; tipografía con personalidad."></textarea>
           <div class="actions" style="margin:8px 0 4px">
-            <button id="ds-run" class="ghost small">✨ Proponer 3 diseños</button>
+            <button id="ds-run" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg> Proponer 3 diseños</button>
             <span id="ds-msg" class="mut"></span>
           </div>
           <div id="ds-options"></div>
@@ -2595,7 +2595,7 @@ const ADMIN_HTML = `<!doctype html>
             <label for="f-sound" style="margin:0">Sonido sutil al aparecer la invitación (si el navegador lo permite)</label></div>
           <label>CSS personalizado (avanzado; se inyecta tal cual en la web del cliente)</label>
           <textarea id="f-css" rows="3" placeholder=".cb-btn{ } .cb-panel{ } .cb-msg.bot{ } …"></textarea>
-          <p class="mut" style="margin-top:16px">👁 Todos los cambios se ven al momento en la
+          <p class="mut" style="margin-top:16px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Todos los cambios se ven al momento en la
           <b>vista en vivo</b> de la derecha.</p>
         </div>
         <div class="ft" id="ft-leads">
@@ -2651,7 +2651,7 @@ const ADMIN_HTML = `<!doctype html>
         <div class="copyrow"><textarea id="i-snippet" rows="3" readonly></textarea>
           <button class="ghost small" data-copy="i-snippet">Copiar</button></div>
         <div class="actions" style="margin-top:6px">
-          <button id="ig-run" class="ghost small">🔍 ¿Cómo se integra en su web?</button>
+          <button id="ig-run" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> ¿Cómo se integra en su web?</button>
           <span id="ig-msg" class="mut"></span>
         </div>
         <div id="ig-box" class="hide" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:8px">
@@ -2663,7 +2663,7 @@ const ADMIN_HTML = `<!doctype html>
             <button class="ghost small" data-copy="ig-url">Copiar</button>
             <button id="ig-url-open" class="ghost small">Abrir</button></div>
           <div class="actions">
-            <button id="ig-pdf" class="ghost small">📄 Descargar PDF</button>
+            <button id="ig-pdf" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Descargar PDF</button>
             <button id="ig-copy" class="ghost small">Copiar instrucciones + código como texto</button>
           </div>
         </div>
@@ -2672,7 +2672,7 @@ const ADMIN_HTML = `<!doctype html>
           <button class="ghost small" data-copy="i-panel">Copiar</button>
           <button id="i-open" class="ghost small">Abrir</button></div>
         <div class="actions">
-          <button id="rep-send" class="ghost small">📊 Enviar informe del mes al cliente</button>
+          <button id="rep-send" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/></svg> Enviar informe del mes al cliente</button>
           <button id="rot-key" class="ghost small">Rotar clave del widget</button>
           <button id="rot-panel" class="ghost small">Rotar enlace del panel</button>
           <span id="integ-msg" class="mut"></span>
@@ -2702,7 +2702,7 @@ const ADMIN_HTML = `<!doctype html>
           <span id="faq-msg" class="mut"></span>
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <label>🧠 Huecos de conocimiento — lo que preguntaron y el bot no supo responder</label>
+        <label><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M9.5 3A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.5V4.5A1.5 1.5 0 0 0 9.5 3zM14.5 3A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.5"/></svg> Huecos de conocimiento — lo que preguntaron y el bot no supo responder</label>
         <p class="mut" style="margin-bottom:8px">La IA revisa las preguntas sin respuesta de los
         últimos 60 días y redacta borradores. Rellena los datos entre [corchetes], marca las que
         quieras y apruébalas: quedan indexadas al momento.</p>
@@ -2740,8 +2740,8 @@ const ADMIN_HTML = `<!doctype html>
 
       <aside id="canvas-panel" class="hide">
         <div id="cv-sticky">
-          <div id="cv-bar"><span>👁 Vista en vivo</span>
-            <button id="cv-dark" class="ghost small" type="button">🌙 Oscuro</button></div>
+          <div id="cv-bar"><span><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Vista en vivo</span>
+            <button id="cv-dark" class="ghost small" type="button"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg> Oscuro</button></div>
           <div id="cv-frame">
             <div id="cv-widget">
               <div id="cv-h"><div id="cv-av">A</div>
@@ -2782,7 +2782,7 @@ const ADMIN_HTML = `<!doctype html>
   <div id="cp-row">
     <div id="cp-swatch"></div>
     <input id="cp-hex" maxlength="7" spellcheck="false">
-    <button id="cp-eye" type="button" title="Capturar un color de la pantalla">💧</button>
+    <button id="cp-eye" type="button" title="Capturar un color de la pantalla"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/></svg></button>
   </div>
 </div>
 
@@ -2825,8 +2825,12 @@ var IC = {
   drop: '<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
   party: '<path d="M4 20l5-14 9 9-14 5zM14 6a3 3 0 0 0-3-3M17 9a3 3 0 0 0 3-3M13 2h.01M21 10h.01M20 14h.01"/>',
+  activity: '<path d="M3 12h4l2.5 7 5-14L17 12h4"/>',
+  cap: '<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.8 3 3 6 3s6-1.2 6-3v-5"/>',
+  circle: '<circle cx="12" cy="12" r="8.5"/>',
+  question: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a3 3 0 0 1 5.6 1c0 2-3 2.5-3 4M12 17.5h.01"/>',
 };
-function ic(n, s) {
+function svgIco(n, s) {
   return '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 16) + '" height="' + (s || 16) +
     '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true">' +
     (IC[n] || "") + "</svg>";
@@ -2888,7 +2892,7 @@ $("paste-tok").onclick = function () {
   var b = document.createElement("button");
   b.type = "button";
   b.className = "password-toggle";
-  b.textContent = "👁";
+  b.innerHTML = svgIco("eye");
   b.title = "Mostrar u ocultar";
   b.setAttribute("aria-label", "Mostrar u ocultar la clave");
   b.onclick = function () {
@@ -3098,7 +3102,7 @@ function renderGlobalLeads() {
     if (r.status === "contactado") {
       var oks = document.createElement("span");
       oks.className = "ok";
-      oks.innerHTML = ic("check", 14) + " contactado";
+      oks.innerHTML = svgIco("check", 14) + " contactado";
       st.appendChild(oks);
     } else {
       var b = document.createElement("button");
@@ -3119,7 +3123,7 @@ function renderGlobalLeads() {
     del.className = "ghost small icon-btn";
     del.style.marginLeft = "6px";
     del.title = "Quitar de tu vista (seguirá en el panel del cliente)";
-    del.innerHTML = ic("trash", 15);
+    del.innerHTML = svgIco("trash", 15);
     del.onclick = function (e) {
       e.stopPropagation();
       if (!confirm("¿Quitar este lead de tu panel de administración?\\nSeguirá visible en el panel del cliente.")) return;
@@ -3226,9 +3230,9 @@ function ckRender() {
   ms.forEach(function (m, i) {
     var b = document.createElement("button");
     if (i === CK_SEL) b.className = "sel";
-    var ic = m.kind === "Cliente" ? "👤 " : m.kind === "Proyecto" ? "📁 " : "💬 ";
+    var icoName = m.kind === "Cliente" ? "user" : m.kind === "Proyecto" ? "folder" : "chat";
     var l = document.createElement("span");
-    l.textContent = ic + m.label + (m.sub ? " — " + m.sub : "");
+    l.innerHTML = svgIco(icoName) + " "; l.appendChild(document.createTextNode(m.label + (m.sub ? " — " + m.sub : "")));
     var k = document.createElement("span");
     k.className = "mut";
     k.textContent = m.kind;
@@ -3997,7 +4001,7 @@ function renderBots(p) {
     return;
   }
   p.tenants.forEach(function (t) {
-    box.appendChild(treeBtn("💬 " + t.name + (t.active ? "" : " (apagado)"), t.active ? "" : "off", false, function () { selTenant(t.id); }));
+    box.appendChild(treeBtn(t.name + (t.active ? "" : " (apagado)"), t.active ? "" : "off", false, function () { selTenant(t.id); }));
   });
 }
 
@@ -4215,7 +4219,7 @@ function renderBotOverview() {
     { ok: essentials[3], text: "Activar el asistente", tab: "publicar" }
   ].forEach(function (step) {
     var b = document.createElement("button"); b.className = "next-step" + (step.ok ? " done" : "");
-    b.innerHTML = "<span>" + (step.ok ? "✓" : "○") + "</span><strong></strong><small></small>";
+    b.innerHTML = "<span>" + (step.ok ? svgIco("check") : svgIco("circle")) + "</span><strong></strong><small></small>";
     b.querySelector("strong").textContent = step.text;
     b.querySelector("small").textContent = step.ok ? "Completado" : "Pendiente";
     b.onclick = function () { setBotTab(step.tab); };
@@ -4293,7 +4297,7 @@ function checkRow(ok, label, hint, go) {
   row.className = "chk" + (ok ? " done" : "");
   var ic = document.createElement("span");
   ic.className = "chk-ic";
-  ic.textContent = ok ? "✓" : "○";
+  ic.innerHTML = ok ? svgIco("check") : svgIco("circle");
   var body = document.createElement("div");
   var l1 = document.createElement("div");
   l1.textContent = label;
@@ -4559,7 +4563,7 @@ function setBgMode(m) {
 
 $("cv-dark").onclick = function () {
   cvDark = !cvDark;
-  $("cv-dark").textContent = cvDark ? "☀️ Claro" : "🌙 Oscuro";
+  $("cv-dark").innerHTML = cvDark ? svgIco("sun") + " Claro" : svgIco("moon") + " Oscuro";
   updPrev();
 };
 
@@ -4575,7 +4579,7 @@ function cvResetChat() {
   CV_BUSY = false;
   // el modo oscuro de la vista previa es por-bot: no arrastrarlo al cambiar de bot
   cvDark = false;
-  if ($("cv-dark")) $("cv-dark").textContent = "🌙 Oscuro";
+  if ($("cv-dark")) $("cv-dark").innerHTML = svgIco("moon") + " Oscuro";
   [].forEach.call(document.querySelectorAll("#cv-log .cv-dyn"), function (x) { x.remove(); });
   $("cv-user").classList.remove("hide");
   $("cv-reply").classList.remove("hide");
@@ -4620,7 +4624,7 @@ function cvSend(text) {
     typing.classList.remove("cv-typing");
     typing.textContent = r.reply || r.error || "(sin respuesta)";
     if (r.lead_form) {
-      cvBubble("cv-b", "📋 Aquí el visitante vería el formulario de contacto (nombre, email, teléfono…) dentro del chat.");
+      cvBubble("cv-b", "Aquí el visitante vería el formulario de contacto (nombre, email, teléfono…) dentro del chat.");
     }
     CV_HISTORY.push({ role: "user", content: q });
     CV_HISTORY.push({ role: "assistant", content: typing.textContent });
@@ -4896,8 +4900,8 @@ function loadDocs() {
       row.className = "doc";
       var left = document.createElement("div");
       var title = document.createElement("div");
-      var icon = d.source_type === "url" ? "🌐 " : d.source_type === "file" ? "📄 " : "✍️ ";
-      title.textContent = icon + (d.title || d.source_url || "(sin título)");
+      var iconName = d.source_type === "url" ? "globe" : d.source_type === "file" ? "doc" : "edit";
+      title.innerHTML = svgIco(iconName) + " "; title.appendChild(document.createTextNode(d.title || d.source_url || "(sin título)"));
       var meta = document.createElement("div");
       meta.className = "meta";
       var n = d.chunks && d.chunks.length ? d.chunks[0].count : null;
@@ -4936,7 +4940,7 @@ function renderInteg(t) {
     hint.textContent = "La demo clona https://" + dom + " — se toma del primer dominio de la pestaña «Seguridad y límites».";
     hint.className = "mut";
   } else {
-    hint.textContent = "⚠ Este chatbot no tiene dominio: la demo mostrará una maqueta genérica. Escribe la web del cliente en «Seguridad y límites» → Dominios permitidos y guarda.";
+    hint.innerHTML = svgIco("warning") + " Este chatbot no tiene dominio: la demo mostrará una maqueta genérica. Escribe la web del cliente en «Seguridad y límites» → Dominios permitidos y guarda.";
     hint.className = "err";
   }
   $("integ-msg").textContent = "";
@@ -5144,7 +5148,7 @@ $("ex-run").onclick = function () {
         d.className = "doc";
         d.style.display = "block";
         var q = document.createElement("div");
-        q.textContent = (x.ok ? "✓ " : "✗ ") + x.q;
+        q.innerHTML = (x.ok ? svgIco("check") : svgIco("x")) + " "; q.appendChild(document.createTextNode(x.q));
         q.style.fontWeight = "600";
         q.style.color = x.ok ? "var(--ok)" : "var(--err)";
         var a = document.createElement("div");
@@ -5175,7 +5179,7 @@ $("gap-run").onclick = function () {
     .then(function (r) {
       if (r.error) { $("gap-msg").textContent = r.error; $("gap-msg").className = "err"; return; }
       if (!r.suggestions.length) {
-        $("gap-msg").textContent = "No hay preguntas sin respuesta en los últimos 60 días. 🎉";
+        $("gap-msg").textContent = "No hay preguntas sin respuesta en los últimos 60 días.";
         $("gap-msg").className = "ok";
         return;
       }
@@ -5313,8 +5317,8 @@ $("a-run").onclick = function () {
 function showReport(r) {
   $("g-report").innerHTML = (r.indexed || []).map(function (x) {
     var d = document.createElement("div");
-    d.textContent = (x.ok ? "✓ " : "✗ ") + x.source +
-      (x.ok ? " — " + x.chunks + " fragmentos" : " — " + (x.reason || "error"));
+    d.innerHTML = (x.ok ? svgIco("check") : svgIco("x")) + " ";
+    d.appendChild(document.createTextNode(x.source + (x.ok ? " — " + x.chunks + " fragmentos" : " — " + (x.reason || "error"))));
     return d.outerHTML;
   }).join("");
 }
@@ -5701,6 +5705,49 @@ const PORTAL_HTML = `<!doctype html>
 
 <script>
 var TOKEN = localStorage.getItem("cb_portal") || "";
+// ---- iconos de línea ----
+var IC = {
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14M10 11v6M14 11v6"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off": '<path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 2 12 2 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l1.7-1.3-1.7-3-2 .8a7.6 7.6 0 0 0-1.8-1L15 4H9l-.6 2.5a7.6 7.6 0 0 0-1.8 1l-2-.8-1.7 3L4.6 11a7.6 7.6 0 0 0 0 2l-1.7 1.3 1.7 3 2-.8a7.6 7.6 0 0 0 1.8 1L9 20h6l.6-2.5a7.6 7.6 0 0 0 1.8-1l2 .8 1.7-3z"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M15 13H9M15 17H9"/>',
+  edit: '<path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
+  warning: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  sparkles: '<path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  chat: '<path d="M21 11.5a8 8 0 0 1-8.5 8 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8 8 0 0 1 4 11.5a8 8 0 0 1 8.5-8 8 8 0 0 1 8.5 8z"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M4 4l1.8 1.8M18.2 18.2L20 20M1.5 12h2.5M20 12h2.5M4 20l1.8-1.8M18.2 5.8L20 4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+  building: '<path d="M3 21h18M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2.5" width="8" height="4" rx="1"/>',
+  brain: '<path d="M9.5 3A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.5V4.5A1.5 1.5 0 0 0 9.5 3zM14.5 3A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.5"/>',
+  rocket: '<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.8 2.8 0 0 0-3-3z"/><path d="M9 12a15 15 0 0 1 8-8c2 0 3 1 3 3a15 15 0 0 1-8 8zM15 9h.01"/><path d="M9 12L7 10a10 10 0 0 1 4-1M12 15l2 2a10 10 0 0 0 1-4"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  drop: '<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  party: '<path d="M4 20l5-14 9 9-14 5zM14 6a3 3 0 0 0-3-3M17 9a3 3 0 0 0 3-3M13 2h.01M21 10h.01M20 14h.01"/>',
+  activity: '<path d="M3 12h4l2.5 7 5-14L17 12h4"/>',
+  cap: '<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.8 3 3 6 3s6-1.2 6-3v-5"/>',
+  circle: '<circle cx="12" cy="12" r="8.5"/>',
+  question: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a3 3 0 0 1 5.6 1c0 2-3 2.5-3 4M12 17.5h.01"/>'
+};
+function svgIco(n, s) {
+  return '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 16) + '" height="' + (s || 16) +
+    '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true">' +
+    (IC[n] || "") + "</svg>";
+}
+
 
 function $(id) { return document.getElementById(id); }
 
@@ -5806,7 +5853,7 @@ function addEyes() {
     inp.style.paddingRight = "42px";
     var b = document.createElement("button");
     b.type = "button";
-    b.textContent = "👁";
+    b.innerHTML = svgIco("eye");
     b.title = "Mostrar u ocultar";
     b.setAttribute("aria-label", "Mostrar u ocultar la contraseña");
     b.style.cssText = "position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;" +
@@ -5857,7 +5904,7 @@ function load() {
           var left = document.createElement("div");
           var nm = document.createElement("div");
           nm.className = "name";
-          nm.textContent = "💬 " + t.name;
+          nm.innerHTML = svgIco("chat") + " "; nm.appendChild(document.createTextNode(t.name));
           var st = document.createElement("div");
           st.className = "mut";
           st.textContent = t.active ? "Chatbot · activo" : "Chatbot · apagado";
@@ -6048,6 +6095,49 @@ const FAQ_HTML = `<!doctype html>
 </main>
 <script>
 var token = new URLSearchParams(location.search).get("token") || "";
+// ---- iconos de línea ----
+var IC = {
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14M10 11v6M14 11v6"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off": '<path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 2 12 2 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l1.7-1.3-1.7-3-2 .8a7.6 7.6 0 0 0-1.8-1L15 4H9l-.6 2.5a7.6 7.6 0 0 0-1.8 1l-2-.8-1.7 3L4.6 11a7.6 7.6 0 0 0 0 2l-1.7 1.3 1.7 3 2-.8a7.6 7.6 0 0 0 1.8 1L9 20h6l.6-2.5a7.6 7.6 0 0 0 1.8-1l2 .8 1.7-3z"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M15 13H9M15 17H9"/>',
+  edit: '<path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
+  warning: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  sparkles: '<path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  chat: '<path d="M21 11.5a8 8 0 0 1-8.5 8 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8 8 0 0 1 4 11.5a8 8 0 0 1 8.5-8 8 8 0 0 1 8.5 8z"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M4 4l1.8 1.8M18.2 18.2L20 20M1.5 12h2.5M20 12h2.5M4 20l1.8-1.8M18.2 5.8L20 4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+  building: '<path d="M3 21h18M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2.5" width="8" height="4" rx="1"/>',
+  brain: '<path d="M9.5 3A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.5V4.5A1.5 1.5 0 0 0 9.5 3zM14.5 3A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.5"/>',
+  rocket: '<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.8 2.8 0 0 0-3-3z"/><path d="M9 12a15 15 0 0 1 8-8c2 0 3 1 3 3a15 15 0 0 1-8 8zM15 9h.01"/><path d="M9 12L7 10a10 10 0 0 1 4-1M12 15l2 2a10 10 0 0 0 1-4"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  drop: '<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  party: '<path d="M4 20l5-14 9 9-14 5zM14 6a3 3 0 0 0-3-3M17 9a3 3 0 0 0 3-3M13 2h.01M21 10h.01M20 14h.01"/>',
+  activity: '<path d="M3 12h4l2.5 7 5-14L17 12h4"/>',
+  cap: '<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.8 3 3 6 3s6-1.2 6-3v-5"/>',
+  circle: '<circle cx="12" cy="12" r="8.5"/>',
+  question: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a3 3 0 0 1 5.6 1c0 2-3 2.5-3 4M12 17.5h.01"/>'
+};
+function svgIco(n, s) {
+  return '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 16) + '" height="' + (s || 16) +
+    '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true">' +
+    (IC[n] || "") + "</svg>";
+}
+
 var items = [];
 
 function rowFor(item) {
@@ -6372,6 +6462,49 @@ const PANEL_HTML = `<!doctype html>
   </div>
 </div><script>
 var token = new URLSearchParams(location.search).get("token") || "";
+// ---- iconos de línea ----
+var IC = {
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14M10 11v6M14 11v6"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off": '<path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 2 12 2 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l1.7-1.3-1.7-3-2 .8a7.6 7.6 0 0 0-1.8-1L15 4H9l-.6 2.5a7.6 7.6 0 0 0-1.8 1l-2-.8-1.7 3L4.6 11a7.6 7.6 0 0 0 0 2l-1.7 1.3 1.7 3 2-.8a7.6 7.6 0 0 0 1.8 1L9 20h6l.6-2.5a7.6 7.6 0 0 0 1.8-1l2 .8 1.7-3z"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M15 13H9M15 17H9"/>',
+  edit: '<path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
+  warning: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  sparkles: '<path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  chat: '<path d="M21 11.5a8 8 0 0 1-8.5 8 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8 8 0 0 1 4 11.5a8 8 0 0 1 8.5-8 8 8 0 0 1 8.5 8z"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M4 4l1.8 1.8M18.2 18.2L20 20M1.5 12h2.5M20 12h2.5M4 20l1.8-1.8M18.2 5.8L20 4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+  building: '<path d="M3 21h18M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2.5" width="8" height="4" rx="1"/>',
+  brain: '<path d="M9.5 3A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.5V4.5A1.5 1.5 0 0 0 9.5 3zM14.5 3A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.5"/>',
+  rocket: '<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.8 2.8 0 0 0-3-3z"/><path d="M9 12a15 15 0 0 1 8-8c2 0 3 1 3 3a15 15 0 0 1-8 8zM15 9h.01"/><path d="M9 12L7 10a10 10 0 0 1 4-1M12 15l2 2a10 10 0 0 0 1-4"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  drop: '<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  party: '<path d="M4 20l5-14 9 9-14 5zM14 6a3 3 0 0 0-3-3M17 9a3 3 0 0 0 3-3M13 2h.01M21 10h.01M20 14h.01"/>',
+  activity: '<path d="M3 12h4l2.5 7 5-14L17 12h4"/>',
+  cap: '<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.8 3 3 6 3s6-1.2 6-3v-5"/>',
+  circle: '<circle cx="12" cy="12" r="8.5"/>',
+  question: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a3 3 0 0 1 5.6 1c0 2-3 2.5-3 4M12 17.5h.01"/>'
+};
+function svgIco(n, s) {
+  return '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 16) + '" height="' + (s || 16) +
+    '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true">' +
+    (IC[n] || "") + "</svg>";
+}
+
 var LEADS = [], CONVS = [], GAPS = [], DOCS = [], ACT = [];
 var PERIOD = 30;
 var PRIMARY = "#3c62f0";
@@ -6576,7 +6709,7 @@ function renderLeads() {
     tr.appendChild(td(esc(l.message)));
     var st = document.createElement("td");
     if (l.status === "contactado") {
-      st.innerHTML = "<span class='done'>✓ contactado</span>";
+      st.innerHTML = "<span class='done'>" + svgIco("check") + " contactado</span>";
     } else {
       var b = document.createElement("button");
       b.className = "mini";
@@ -6598,7 +6731,7 @@ function renderLeads() {
     var delTd = document.createElement("td");
     var del = document.createElement("button");
     del.className = "del";
-    del.textContent = "🗑";
+    del.innerHTML = svgIco("trash");
     del.title = "Eliminar este lead";
     del.onclick = function () {
       if (!confirm("¿Eliminar este lead? No se puede deshacer.")) return;
@@ -6666,7 +6799,7 @@ function renderConvs() {
     delRow.className = "convdel";
     var del = document.createElement("button");
     del.className = "mini";
-    del.textContent = "🗑 Eliminar esta conversación";
+    del.innerHTML = svgIco("trash") + " Eliminar esta conversación";
     del.onclick = function () {
       if (!confirm("¿Eliminar esta conversación entera? No se puede deshacer.")) return;
       del.disabled = true;
@@ -6717,7 +6850,7 @@ function renderGaps() {
     card.className = "gapcard";
     var q = document.createElement("div");
     q.className = "q";
-    q.textContent = "❓ " + g.q;
+    q.innerHTML = svgIco("question") + " " + esc(g.q);
     var when = document.createElement("div");
     when.className = "mut";
     when.textContent = "Preguntado el " + fmt(g.at);
@@ -6742,7 +6875,7 @@ function renderGaps() {
         body: JSON.stringify({ question: g.q, answer: a }),
       }).then(function (r) { return r.json(); }).then(function (r) {
         if (r.error) { msg.textContent = r.error; msg.className = "err"; send.disabled = false; return; }
-        card.innerHTML = "<div class='q'>✓ " + esc(g.q) + "</div>" +
+        card.innerHTML = "<div class='q'>" + svgIco("check") + " " + esc(g.q) + "</div>" +
           "<p class='ok' style='margin-top:6px'>El asistente ya conoce esta respuesta. Pruébalo en «Probar el bot».</p>";
       }).catch(function () { msg.textContent = "Error al guardar."; msg.className = "err"; send.disabled = false; });
     };
@@ -6768,9 +6901,9 @@ function renderDocs() {
     var row = document.createElement("div");
     row.className = "doc";
     var left = document.createElement("div");
-    var icon = d.source_type === "url" ? "🌐 " : d.source_type === "file" ? "📄 " : "✍️ ";
+    var iconName = d.source_type === "url" ? "globe" : d.source_type === "file" ? "doc" : "edit";
     var t1 = document.createElement("div");
-    t1.textContent = icon + (d.title || d.source_url || "(sin título)");
+    t1.innerHTML = svgIco(iconName) + " "; t1.appendChild(document.createTextNode(d.title || d.source_url || "(sin título)"));
     var meta = document.createElement("div");
     meta.className = "meta";
     meta.textContent = fmt(d.indexed_at || d.created_at);
@@ -6778,7 +6911,7 @@ function renderDocs() {
     left.appendChild(meta);
     var del = document.createElement("button");
     del.className = "del";
-    del.textContent = "🗑";
+    del.innerHTML = svgIco("trash");
     del.title = "Eliminar del conocimiento del asistente";
     del.onclick = function () {
       if (!confirm("¿Eliminar «" + (d.title || "este documento") + "» del conocimiento del asistente?")) return;
@@ -6930,7 +7063,7 @@ $("up-run").onclick = function () {
     msg.className = "ok";
     $("up-report").innerHTML = (r.indexed || []).map(function (x) {
       var dv = document.createElement("div");
-      dv.textContent = (x.ok ? "✓ " : "✗ ") + x.source + (x.ok ? "" : " — " + (x.reason || "error"));
+      dv.innerHTML = (x.ok ? svgIco("check") : svgIco("x")) + " "; dv.appendChild(document.createTextNode(x.source + (x.ok ? "" : " — " + (x.reason || "error"))));
       return dv.outerHTML;
     }).join("");
     $("up-files").value = "";
