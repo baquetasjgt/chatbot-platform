@@ -1291,7 +1291,7 @@ async function handleAdminApi(request, env, url) {
   if (url.pathname === "/admin/api/leads" && request.method === "GET") {
     const rows = await sb(
       env,
-      `leads?select=id,kind,name,email,phone,company,message,status,created_at,tenants(name,project_id)` +
+      `leads?hidden_admin=is.false&select=id,kind,name,email,phone,company,message,status,created_at,tenants(name,project_id)` +
         `&order=created_at.desc&limit=500`
     );
     return json(rows);
@@ -1302,6 +1302,11 @@ async function handleAdminApi(request, env, url) {
     if (!["nuevo", "contactado"].includes(status)) return json({ error: "estado no válido" }, 400);
     const rows = await sb(env, `leads?id=eq.${mLead[1]}`, { method: "PATCH", body: { status } });
     if (!rows?.length) return json({ error: "lead no encontrado" }, 404);
+    return json({ ok: true });
+  }
+  // borrado suave desde el admin: lo oculta aquí pero lo deja en el panel del cliente
+  if (mLead && request.method === "DELETE") {
+    await sb(env, `leads?id=eq.${mLead[1]}`, { method: "PATCH", body: { hidden_admin: true } });
     return json({ ok: true });
   }
 
@@ -2788,6 +2793,45 @@ var PUB = "https://expobot.es";
 var data = [];
 var sel = { type: null, id: null, isNew: false, parentId: null };
 
+// ---- iconos de línea (monocromos, coherentes con la marca) ----
+var IC = {
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14M10 11v6M14 11v6"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off": '<path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 2 12 2 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l1.7-1.3-1.7-3-2 .8a7.6 7.6 0 0 0-1.8-1L15 4H9l-.6 2.5a7.6 7.6 0 0 0-1.8 1l-2-.8-1.7 3L4.6 11a7.6 7.6 0 0 0 0 2l-1.7 1.3 1.7 3 2-.8a7.6 7.6 0 0 0 1.8 1L9 20h6l.6-2.5a7.6 7.6 0 0 0 1.8-1l2 .8 1.7-3z"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M15 13H9M15 17H9"/>',
+  edit: '<path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
+  warning: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  sparkles: '<path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  chat: '<path d="M21 11.5a8 8 0 0 1-8.5 8 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8 8 0 0 1 4 11.5a8 8 0 0 1 8.5-8 8 8 0 0 1 8.5 8z"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M4 4l1.8 1.8M18.2 18.2L20 20M1.5 12h2.5M20 12h2.5M4 20l1.8-1.8M18.2 5.8L20 4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+  building: '<path d="M3 21h18M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2.5" width="8" height="4" rx="1"/>',
+  brain: '<path d="M9.5 3A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.5V4.5A1.5 1.5 0 0 0 9.5 3zM14.5 3A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.5"/>',
+  rocket: '<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.8 2.8 0 0 0-3-3z"/><path d="M9 12a15 15 0 0 1 8-8c2 0 3 1 3 3a15 15 0 0 1-8 8zM15 9h.01"/><path d="M9 12L7 10a10 10 0 0 1 4-1M12 15l2 2a10 10 0 0 0 1-4"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  drop: '<path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  party: '<path d="M4 20l5-14 9 9-14 5zM14 6a3 3 0 0 0-3-3M17 9a3 3 0 0 0 3-3M13 2h.01M21 10h.01M20 14h.01"/>',
+};
+function ic(n, s) {
+  return '<svg class="ic" viewBox="0 0 24 24" width="' + (s || 16) + '" height="' + (s || 16) +
+    '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true">' +
+    (IC[n] || "") + "</svg>";
+}
+
 function $(id) { return document.getElementById(id); }
 
 function api(path, opts) {
@@ -3052,8 +3096,10 @@ function renderGlobalLeads() {
     tr.appendChild(td(r.message));
     var st = document.createElement("td");
     if (r.status === "contactado") {
-      st.textContent = "✓ contactado";
-      st.className = "ok";
+      var oks = document.createElement("span");
+      oks.className = "ok";
+      oks.innerHTML = ic("check", 14) + " contactado";
+      st.appendChild(oks);
     } else {
       var b = document.createElement("button");
       b.className = "ghost small";
@@ -3069,6 +3115,21 @@ function renderGlobalLeads() {
       };
       st.appendChild(b);
     }
+    var del = document.createElement("button");
+    del.className = "ghost small icon-btn";
+    del.style.marginLeft = "6px";
+    del.title = "Quitar de tu vista (seguirá en el panel del cliente)";
+    del.innerHTML = ic("trash", 15);
+    del.onclick = function (e) {
+      e.stopPropagation();
+      if (!confirm("¿Quitar este lead de tu panel de administración?\\nSeguirá visible en el panel del cliente.")) return;
+      api("/admin/api/leads/" + r.id, { method: "DELETE" }).then(function (x) {
+        if (x.error) { toast(x.error, true); return; }
+        GL_ROWS = GL_ROWS.filter(function (z) { return z.id !== r.id; });
+        renderGlobalLeads();
+      });
+    };
+    st.appendChild(del);
     tr.appendChild(st);
     tb.appendChild(tr);
   });
@@ -7830,12 +7891,14 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         if (!tenant) return json({ error: "token no válido" }, 401);
         const { kind, id } = await request.json();
         if (!/^[0-9a-f-]{36}$/.test(id || "")) return json({ error: "id no válido" }, 400);
+        // borrado suave por lado: ocultar en el panel del cliente no borra la fila
+        // ni la quita del admin (y viceversa)
         if (kind === "lead") {
           if (tenant.panel_features?.leads === false) return json({ error: "no disponible" }, 403);
-          await sb(env, `leads?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "DELETE" });
+          await sb(env, `leads?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "PATCH", body: { hidden_client: true } });
         } else if (kind === "conversation") {
           if (tenant.panel_features?.convs === false) return json({ error: "no disponible" }, 403);
-          await sb(env, `conversations?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "DELETE" });
+          await sb(env, `conversations?id=eq.${id}&tenant_id=eq.${tenant.id}`, { method: "PATCH", body: { hidden_client: true } });
         } else {
           return json({ error: "tipo no válido" }, 400);
         }
@@ -7915,13 +7978,13 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         const [conversations, leads, keys, activity] = await Promise.all([
           sb(
             env,
-            `conversations?tenant_id=eq.${tenant.id}` +
+            `conversations?tenant_id=eq.${tenant.id}&hidden_client=is.false` +
               `&select=id,page_url,created_at,last_message_at,messages(role,content,was_answered,created_at)` +
               `&order=last_message_at.desc&messages.order=created_at.asc&limit=100`
           ),
           sb(
             env,
-            `leads?tenant_id=eq.${tenant.id}` +
+            `leads?tenant_id=eq.${tenant.id}&hidden_client=is.false` +
               `&select=id,kind,name,email,phone,company,message,status,created_at` +
               `&order=created_at.desc&limit=200`
           ),
