@@ -1271,7 +1271,12 @@ function buildInvoicePdf(inv, client) {
   const L = [];
   pdfBrandHeader().forEach((x) => L.push(x));
   L.push({ t: "FACTURA", size: 22, font: 2, color: PDF_INK, gap: 2 });
-  L.push({ t: `N.o ${inv.number || ""}   ·   ${fmtDate(inv.issued_at)}`, size: 10.5, font: 1, color: PDF_MUT, gap: 14 });
+  L.push({ t: `N.o ${inv.number || ""}   ·   Emitida: ${fmtDate(inv.issued_at)}`, size: 10.5, font: 1, color: PDF_MUT, gap: inv.period_start || inv.period_end ? 2 : 14 });
+  if (inv.period_start || inv.period_end) {
+    const pi = inv.period_start ? fmtDate(inv.period_start) : "—";
+    const pf = inv.period_end ? fmtDate(inv.period_end) : "—";
+    L.push({ t: `Periodo de facturación: ${pi} a ${pf}`, size: 10.5, font: 1, color: PDF_MUT, gap: 14 });
+  }
   L.push({ rule: true, h: 1, color: [0.85, 0.85, 0.83], gap: 14 });
   // emisor
   L.push({ t: "EMISOR", size: 9, font: 2, color: PDF_MUSTARD, gap: 3 });
@@ -1743,7 +1748,7 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
     );
   }
   if (mInv && request.method === "POST") {
-    const { number, concept, amount_cents, issued_at, status, pdf_base64 } = await request.json();
+    const { number, concept, amount_cents, issued_at, status, pdf_base64, period_start, period_end } = await request.json();
     if (!number || !amount_cents) return json({ error: "faltan el número o el importe" }, 400);
     const [inv] = await sb(env, "invoices", {
       method: "POST",
@@ -1754,6 +1759,8 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
         amount_cents: Math.round(amount_cents),
         issued_at: issued_at || undefined,
         status: status === "pagada" ? "pagada" : "pendiente",
+        period_start: period_start || null,
+        period_end: period_end || null,
       },
     });
     // PDF: el que suba el admin, o si no, se genera una factura con la marca
@@ -2391,12 +2398,13 @@ const ADMIN_HTML = `<!doctype html>
 
       <div class="card hide" id="v-client-inv">
         <h2>Facturación</h2>
-        <p class="sub">Las facturas de este cliente; él las ve y descarga desde su portal.</p>
+        <p class="sub">Las facturas de este cliente; él las ve y descarga desde su portal.
+        Emite <b>una factura por cada producto facturable</b>, con su periodo correspondiente.</p>
         <div id="inv-list" class="mut">Cargando…</div>
         <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
         <div class="row">
           <div><label>Número</label><input id="iv-num" placeholder="2026-001"></div>
-          <div><label>Importe (€)</label><input id="iv-amt" type="number" step="0.01" min="0"></div>
+          <div><label>Importe total (€, IVA incl.)</label><input id="iv-amt" type="number" step="0.01" min="0"></div>
         </div>
         <div class="row">
           <div><label>Fecha de emisión</label><input id="iv-date" type="date"></div>
@@ -2406,8 +2414,12 @@ const ADMIN_HTML = `<!doctype html>
               <option value="pagada">Pagada</option>
             </select></div>
         </div>
-        <label>Concepto</label>
-        <input id="iv-concept" placeholder="Cuota mensual chatbot — julio 2026">
+        <div class="row">
+          <div><label>Periodo de facturación · desde</label><input id="iv-pstart" type="date"></div>
+          <div><label>Periodo · hasta</label><input id="iv-pend" type="date"></div>
+        </div>
+        <label>Producto / concepto facturable</label>
+        <input id="iv-concept" placeholder="Chatbot FISIOEXPO — cuota mensual">
         <label>PDF de la factura (opcional)</label>
         <input id="iv-pdf" type="file" accept=".pdf">
         <p class="mut" style="margin:6px 0 0">Si no adjuntas un PDF, se genera automáticamente una factura con la imagen de marca de ExpoBot.</p>
@@ -3631,8 +3643,9 @@ function loadInvoices() {
         (v.status === "pagada" ? "✓ pagada" : "pendiente");
       var meta = document.createElement("div");
       meta.className = "meta";
-      meta.textContent = (v.issued_at || "") + (v.concept ? " · " + v.concept : "") +
-        (v.pdf_path ? " · con PDF" : " · sin PDF");
+      var per = (v.period_start || v.period_end) ? "Periodo " + (v.period_start || "—") + " a " + (v.period_end || "—") : "";
+      meta.textContent = [v.issued_at || "", v.concept || "", per, v.pdf_path ? "con PDF" : "sin PDF"]
+        .filter(Boolean).join(" · ");
       left.appendChild(t1);
       left.appendChild(meta);
       var btns = document.createElement("div");
@@ -3680,12 +3693,15 @@ $("iv-add").onclick = function () {
         amount_cents: amt,
         issued_at: $("iv-date").value || null,
         status: $("iv-status").value,
+        period_start: $("iv-pstart").value || null,
+        period_end: $("iv-pend").value || null,
         pdf_base64: pdf64 || null,
       }),
     }).then(function (r) {
       if (r.error) { $("iv-msg").textContent = r.error; $("iv-msg").className = "err"; return; }
       $("iv-msg").textContent = "Factura añadida ✓"; $("iv-msg").className = "ok";
-      $("iv-num").value = ""; $("iv-amt").value = ""; $("iv-concept").value = ""; $("iv-pdf").value = "";
+      $("iv-num").value = ""; $("iv-amt").value = ""; $("iv-concept").value = "";
+      $("iv-pstart").value = ""; $("iv-pend").value = ""; $("iv-pdf").value = "";
       toast("Factura añadida ✓");
       loadInvoices();
     }).catch(function () { $("iv-msg").textContent = "Error al guardar."; $("iv-msg").className = "err"; });
@@ -6045,7 +6061,15 @@ function load() {
         function td(x) { var c = document.createElement("td"); c.textContent = x; return c; }
         tr.appendChild(td(fmtd(v.issued_at)));
         tr.appendChild(td(v.number));
-        tr.appendChild(td(v.concept));
+        var cc = document.createElement("td");
+        cc.textContent = v.concept || "";
+        if (v.period_start || v.period_end) {
+          var pd = document.createElement("div");
+          pd.className = "mut"; pd.style.fontSize = "12px";
+          pd.textContent = "Periodo: " + (v.period_start || "—") + " a " + (v.period_end || "—");
+          cc.appendChild(pd);
+        }
+        tr.appendChild(cc);
         tr.appendChild(td(euros(v.amount_cents, v.currency)));
         var st = document.createElement("td");
         var sp = document.createElement("span");
@@ -7861,7 +7885,7 @@ ${inject}</body></html>`;
         if (client.portal_enabled === false) return json({ error: "el acceso al portal está desactivado" }, 403);
         const invoices = await sb(
           env,
-          `invoices?client_id=eq.${cid}&select=id,number,concept,amount_cents,currency,issued_at,status,pdf_path&order=issued_at.desc,created_at.desc`
+          `invoices?client_id=eq.${cid}&select=id,number,concept,amount_cents,currency,issued_at,status,pdf_path,period_start,period_end&order=issued_at.desc,created_at.desc`
         );
         return json({ ...client, invoices }, 200, { "Cache-Control": "no-store" });
       }
