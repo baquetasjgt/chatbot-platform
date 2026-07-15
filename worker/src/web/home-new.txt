@@ -44,7 +44,7 @@
         <p class="hero-intro">Atiende consultas 24/7, detecta intención comercial y entrega cada lead organizado en tu panel.</p>
         <div class="hero-actions">
           <a class="button button-yellow" href="#recorrido">Ver cómo capta un lead <span aria-hidden="true">→</span></a>
-          <a class="text-link" href="#demo">Solicitar demo de 20 min <span aria-hidden="true">↓</span></a>
+          <a class="button button-outline" href="#demo">Solicitar demo de 20 min <span aria-hidden="true">↓</span></a>
         </div>
         <div class="channel-line" aria-label="Canales disponibles">
           <span>Disponible en</span>
