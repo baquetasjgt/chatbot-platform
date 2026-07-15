@@ -1891,8 +1891,11 @@ const ADMIN_HTML = `<!doctype html>
   .cv-typing{opacity:.65}
   #cv-brand{text-align:center;font-size:10.5px;color:#999;padding:0 0 6px;background:#fff}
   #cv-btnrow{display:flex}
-  #cv-btn{height:52px;min-width:52px;border-radius:26px;background:#111;display:flex;gap:8px;
+  #cv-btn{height:52px;min-width:52px;border-radius:26px;background:#111;display:flex;gap:8px;position:relative;
     align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:0 14px}
+  #cv-btn.radar:before,#cv-btn.radar:after{content:"";position:absolute;inset:-1px;border:1px solid var(--preview-radar,#f5be10);
+    border-radius:inherit;animation:preview-radar 2.4s ease-out infinite;pointer-events:none}
+  #cv-btn.radar:after{animation-delay:1.2s}@keyframes preview-radar{to{opacity:0;transform:scale(1.65)}}
   @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px}}
   #bot-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   #bot-tabs button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 16px;
@@ -2260,6 +2263,12 @@ const ADMIN_HTML = `<!doctype html>
               <input id="f-color2" type="color" value="#f2f2f0" style="width:100%;height:42px;padding:4px"></div>
           </div>
           <div class="row">
+            <div><label>Color de la cabecera</label>
+              <input id="f-colorhead" type="color" value="#111111" style="width:100%;height:42px;padding:4px"></div>
+            <div><label>Color de bordes y controles</label>
+              <input id="f-controlborder" type="color" value="#d9d9d4" style="width:100%;height:42px;padding:4px"></div>
+          </div>
+          <div class="row">
             <div><label>Fondo de la ventana de chat</label>
               <input id="f-colorbg" type="color" value="#ffffff" style="width:100%;height:42px;padding:4px"></div>
             <div><label>Tipografía</label>
@@ -2292,8 +2301,10 @@ const ADMIN_HTML = `<!doctype html>
             <div><label>Subtítulo de la cabecera</label>
               <input id="f-subtitle" placeholder="Suele responder al instante"></div>
           </div>
-          <label>Logo del cliente (URL de una imagen cuadrada; vacío = inicial del nombre)</label>
-          <input id="f-logo" type="url" placeholder="https://cliente.com/logo.png">
+          <label>Isotipo o avatar (URL de una imagen cuadrada; vacío = inicial del nombre)</label>
+          <input id="f-logo" type="url" placeholder="https://cliente.com/isotipo.svg">
+          <label>Logotipo de cabecera (opcional; sustituye el nombre escrito)</label>
+          <input id="f-wordmark" type="url" placeholder="https://cliente.com/logotipo.svg">
           <div class="row">
             <div class="check" style="margin-top:18px"><input id="f-teaser" type="checkbox" checked>
               <label for="f-teaser" style="margin:0">Burbuja de invitación automática</label></div>
@@ -2302,6 +2313,17 @@ const ADMIN_HTML = `<!doctype html>
           </div>
           <label>Icono del botón del chat</label>
           <div class="icopick" id="pick-btn"></div>
+          <label>Isotipo personalizado del botón (URL; sustituye el icono elegido)</label>
+          <input id="f-btnicon" type="url" placeholder="https://cliente.com/isotipo.svg">
+          <div class="row">
+            <div><label>Fondo del botón</label><input id="f-btnbg" type="color" value="#111111" style="width:100%;height:42px;padding:4px"></div>
+            <div><label>Color del borde</label><input id="f-btnborder" type="color" value="#f5be10" style="width:100%;height:42px;padding:4px"></div>
+          </div>
+          <div class="row">
+            <div class="check"><input id="f-btnborderon" type="checkbox"><label for="f-btnborderon" style="margin:0">Mostrar borde fino</label></div>
+            <div class="check"><input id="f-radar" type="checkbox"><label for="f-radar" style="margin:0">Efecto radar</label></div>
+          </div>
+          <div><label>Color del radar</label><input id="f-radarcolor" type="color" value="#f5be10" style="width:100%;height:42px;padding:4px"></div>
           <div class="row">
             <div><label>Forma del botón</label>
               <select id="f-btnshape">
@@ -2362,6 +2384,8 @@ const ADMIN_HTML = `<!doctype html>
             <div><label>Tu marca (vacío = sin pie)</label><input id="f-brand" placeholder="Tu Agencia"></div>
             <div><label>Enlace de la marca (opcional)</label><input id="f-brandurl" type="url" placeholder="https://tuagencia.com"></div>
           </div>
+          <label>Logotipo del pie (opcional; sustituye el nombre escrito)</label>
+          <input id="f-brandlogo" type="url" placeholder="https://tuagencia.com/logotipo.svg">
           <div class="check"><input id="f-sound" type="checkbox">
             <label for="f-sound" style="margin:0">Sonido sutil al aparecer la invitación (si el navegador lo permite)</label></div>
           <label>CSS personalizado (avanzado; se inyecta tal cual en la web del cliente)</label>
@@ -3487,6 +3511,8 @@ function selTenant(id, projectId) {
   $("f-pftest").checked = pf.test !== false;
   var th = (t && t.theme) || {};
   $("f-color2").value = th.secondary_color || "#f2f2f0";
+  $("f-colorhead").value = th.header_color || (t && t.primary_color) || "#111111";
+  $("f-controlborder").value = th.control_border_color || "#d9d9d4";
   $("f-colorbg").value = th.bg_color || "#ffffff";
   $("f-font").value = th.font || "system";
   $("f-radius").value = th.radius == null ? 14 : th.radius;
@@ -3495,6 +3521,7 @@ function selTenant(id, projectId) {
   $("f-side").value = th.position || "derecha";
   $("f-subtitle").value = th.subtitle || "";
   $("f-logo").value = th.logo_url || "";
+  $("f-wordmark").value = th.wordmark_url || "";
   $("f-teaser").checked = th.teaser !== false;
   $("f-tdelay").value = th.teaser_delay || 4;
   $("f-size").value = th.size || "estandar";
@@ -3521,6 +3548,13 @@ function selTenant(id, projectId) {
   $("f-tteaser").value = th.t_teaser || "";
   $("f-brand").value = th.brand_name || "";
   $("f-brandurl").value = th.brand_url || "";
+  $("f-brandlogo").value = th.brand_logo_url || "";
+  $("f-btnicon").value = th.btn_icon_url || "";
+  $("f-btnbg").value = th.btn_bg || (t && t.primary_color) || "#111111";
+  $("f-btnborder").value = th.btn_border_color || "#f5be10";
+  $("f-btnborderon").checked = !!(th.btn_border_color || th.btn_border);
+  $("f-radar").checked = !!th.radar;
+  $("f-radarcolor").value = th.radar_color || th.btn_border_color || "#f5be10";
   $("f-sound").checked = !!th.sound;
   $("f-css").value = th.custom_css || "";
   iconBtnSel = th.icon_btn || "burbuja";
@@ -3960,6 +3994,9 @@ $("f-name").addEventListener("input", function () {
 function updPrev() {
   var c = $("f-color").value || "#111111";
   var t = contrastFor(c);
+  var head = $("f-colorhead").value || c;
+  var headText = contrastFor(head);
+  var controlBorder = $("f-controlborder").value || "#d9d9d4";
   var c2 = cvDark ? "#2a2a2e" : ($("f-color2").value || "#f2f2f0");
   var c2t = cvDark ? "#ececec" : contrastFor(c2);
   var cbg = cvDark ? "#17171a" : ($("f-colorbg").value || "#ffffff");
@@ -3976,9 +4013,10 @@ function updPrev() {
   w.style.borderRadius = Math.min(rad + 4, 28) + "px";
   w.style.boxShadow = sh === "ninguna" ? "none" :
     sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.4)" : "0 12px 40px rgba(20,20,60,.18)";
+  w.style.border = "1px solid " + controlBorder;
 
-  $("cv-h").style.background = c;
-  $("cv-h").style.color = t;
+  $("cv-h").style.background = head;
+  $("cv-h").style.color = headText;
   var logo = $("f-logo").value.trim();
   var av = $("cv-av");
   if (logo) {
@@ -3986,7 +4024,10 @@ function updPrev() {
   } else {
     av.textContent = name.charAt(0).toUpperCase();
   }
-  $("cv-name").textContent = name;
+  var wordmark = $("f-wordmark").value.trim();
+  $("cv-name").innerHTML = wordmark
+    ? '<img src="' + wordmark.replace(/"/g, "") + '" alt="' + name.replace(/"/g, "") + '" style="display:block;max-width:100px;max-height:22px;object-fit:contain">'
+    : name;
   $("cv-sub").textContent = $("f-subtitle").value.trim() || "Suele responder al instante";
 
   var bg = bgValue();
@@ -4019,6 +4060,7 @@ function updPrev() {
       s.style.color = "#ddd";
       s.style.borderColor = "#3a3a40";
     }
+    s.style.borderColor = controlBorder;
     sug.appendChild(s);
   });
 
@@ -4027,7 +4069,7 @@ function updPrev() {
   inp.placeholder = $("f-tplaceholder").value.trim() || "Escribe tu pregunta…";
   inp.style.background = cvDark ? "#232327" : "#fff";
   inp.style.color = cvDark ? "#eee" : "#333";
-  inp.style.borderColor = cvDark ? "#3a3a40" : "#ddd";
+  inp.style.borderColor = cvDark ? "#3a3a40" : controlBorder;
   inp.style.borderRadius = Math.round(rad * 0.72 + 4) + "px";
 
   var snd = $("cv-send");
@@ -4043,31 +4085,42 @@ function updPrev() {
   }
 
   var brand = $("f-brand").value.trim();
-  $("cv-brand").classList.toggle("hide", !brand);
-  $("cv-brand").textContent = brand ? "Impulsado por " + brand : "";
+  var brandLogo = $("f-brandlogo").value.trim();
+  $("cv-brand").classList.toggle("hide", !brand && !brandLogo);
+  $("cv-brand").innerHTML = brandLogo
+    ? 'Impulsado por <img src="' + brandLogo.replace(/"/g, "") + '" alt="' + (brand || "Marca") + '" style="max-width:62px;max-height:14px;vertical-align:middle;margin-left:4px">'
+    : (brand ? "Impulsado por " + brand : "");
   $("cv-brand").style.background = cbg;
   $("cv-brand").style.color = cvDark ? "#777" : "#999";
 
   var shape = $("f-btnshape").value;
   var pb = $("cv-btn");
-  pb.style.background = c;
+  var btnBg = $("f-btnbg").value || c;
+  var btnText = contrastFor(btnBg);
+  pb.style.background = btnBg;
+  pb.style.border = $("f-btnborderon").checked ? "1px solid " + $("f-btnborder").value : "0";
+  pb.classList.toggle("radar", $("f-radar").checked);
+  pb.style.setProperty("--preview-radar", $("f-radarcolor").value);
   pb.style.borderRadius = shape === "redondeado" ? Math.min(rad + 4, 18) + "px" : "26px";
-  pb.innerHTML = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:' + t +
-    ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' +
-    (BTN_ICONS[iconBtnSel] || BTN_ICONS.burbuja) + "</svg>";
+  var btnIconUrl = $("f-btnicon").value.trim();
+  pb.innerHTML = btnIconUrl
+    ? '<img src="' + btnIconUrl.replace(/"/g, "") + '" alt="" style="width:30px;height:30px;object-fit:contain">'
+    : '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:' + btnText +
+      ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' +
+      (BTN_ICONS[iconBtnSel] || BTN_ICONS.burbuja) + "</svg>";
   if (shape === "pastilla") {
     var lbl = document.createElement("span");
     lbl.textContent = $("f-btnlabel").value.trim() || "Chat";
-    lbl.style.cssText = "color:" + t + ";font:600 14px system-ui,sans-serif";
+    lbl.style.cssText = "color:" + btnText + ";font:600 14px system-ui,sans-serif";
     pb.appendChild(lbl);
   }
   syncSwatches();
 }
-["f-color", "f-color2", "f-colorbg", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
- "f-tplaceholder", "f-tsend", "f-brand", "f-sugg", "f-logo", "f-bgimg"].forEach(function (id) {
+["f-color", "f-colorhead", "f-color2", "f-colorbg", "f-controlborder", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
+ "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg"].forEach(function (id) {
   $(id).oninput = updPrev;
 });
-["f-font", "f-shadow", "f-btnshape"].forEach(function (id) {
+["f-font", "f-shadow", "f-btnshape", "f-btnborderon", "f-radar"].forEach(function (id) {
   $(id).onchange = updPrev;
 });
 ["g-c1", "g-c2"].forEach(function (id) {
@@ -4260,7 +4313,10 @@ function collect() {
       test: $("f-pftest").checked,
     },
     theme: {
+      header_color: $("f-colorhead").value,
       secondary_color: $("f-color2").value,
+      control_border_color: $("f-controlborder").value,
+      panel_border_color: $("f-controlborder").value,
       bg_color: $("f-colorbg").value,
       font: $("f-font").value,
       radius: parseInt($("f-radius").value, 10),
@@ -4268,6 +4324,7 @@ function collect() {
       position: $("f-side").value,
       subtitle: $("f-subtitle").value.trim(),
       logo_url: $("f-logo").value.trim(),
+      wordmark_url: $("f-wordmark").value.trim(),
       teaser: $("f-teaser").checked,
       teaser_delay: parseInt($("f-tdelay").value, 10) || 4,
       size: $("f-size").value,
@@ -4279,6 +4336,12 @@ function collect() {
       t_teaser: $("f-tteaser").value.trim(),
       brand_name: $("f-brand").value.trim(),
       brand_url: $("f-brandurl").value.trim(),
+      brand_logo_url: $("f-brandlogo").value.trim(),
+      btn_icon_url: $("f-btnicon").value.trim(),
+      btn_bg: $("f-btnbg").value,
+      btn_border_color: $("f-btnborderon").checked ? $("f-btnborder").value : "",
+      radar: $("f-radar").checked,
+      radar_color: $("f-radarcolor").value,
       sound: $("f-sound").checked,
       custom_css: $("f-css").value.slice(0, 5000),
       icon_btn: iconBtnSel,
