@@ -2083,63 +2083,67 @@ const ADMIN_HTML = `<!doctype html>
   .cp-btn{width:54px!important;height:36px!important;border-radius:9px!important;padding:0!important;flex:0 0 auto}
   .cp-btn.mini{width:46px!important}
   /* fila de swatches + hex del color principal (plantilla) */
-  #ft-ap .swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
-  #ft-ap .swatches .sw{width:30px;height:30px;border-radius:8px;border:2px solid transparent;
+  #v-tenant .swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  #v-tenant .swatches .sw{width:30px;height:30px;border-radius:8px;border:2px solid transparent;
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);cursor:pointer;padding:0}
-  #ft-ap .swatches .sw.on{border-color:var(--ink)}
-  #ft-ap .hexbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;
+  #v-tenant .swatches .sw.on{border-color:var(--ink)}
+  #v-tenant .hexbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;
     padding:6px 10px;width:132px;background:#fff}
-  #ft-ap .hexbox span{width:16px;height:16px;border-radius:4px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
-  #ft-ap .hexbox input{border:0!important;outline:0;font-family:ui-monospace,monospace;font-size:12.5px;
+  #v-tenant .hexbox span{width:16px;height:16px;border-radius:4px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+  #v-tenant .hexbox input{border:0!important;outline:0;font-family:ui-monospace,monospace;font-size:12.5px;
     width:100%;background:transparent!important;padding:0!important;text-transform:uppercase;box-shadow:none!important}
   /* galería de iconos estilo plantilla */
-  #ft-ap .icopick{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
-  #ft-ap .icopick button{width:auto;height:auto;aspect-ratio:1;border-radius:8px}
+  #v-tenant .icopick{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+  #v-tenant .icopick button{width:auto;height:auto;aspect-ratio:1;border-radius:8px}
   .icopick svg.botiso{fill:currentColor!important;stroke:none!important;width:20px;height:20px}
   #cv-btn>span{display:grid;place-items:center}
   #cv-btn>span svg{width:100%;height:100%}
   #cv-btn .botiso,#cv-av .botiso{fill:currentColor!important;stroke:none!important}
   #cv-av .botiso{width:22px;height:22px}
   /* segmentados (Forma/Modo/Posición/Tamaño) como la plantilla */
-  #ft-ap .segfull{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);
+  #v-tenant .segfull{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);
     border-radius:8px;overflow:hidden;margin-top:2px}
-  #ft-ap .segfull button{border:0;background:#fff;padding:9px 6px;font-size:12.5px;font-weight:600;
+  #v-tenant .segfull button{border:0;background:#fff;padding:9px 6px;font-size:12.5px;font-weight:600;
     color:var(--mut);border-right:1px solid var(--line);cursor:pointer}
-  #ft-ap .segfull button:last-child{border-right:0}
-  #ft-ap .segfull button.on{background:var(--ink);color:#fff}
+  #v-tenant .segfull button:last-child{border-right:0}
+  #v-tenant .segfull button.on{background:var(--ink);color:#fff}
   /* en Diseño ocultamos cabecera nombre/slug: empieza en las secciones */
   #v-tenant.dsn-only .tenant-head{display:none}
   #v-tenant.dsn-only{padding-top:16px}
   /* interruptor exacto de la plantilla (riel + bolita) */
-  #ft-ap .swrow{display:flex;align-items:center;gap:14px;justify-content:space-between;margin-top:4px}
-  #ft-ap .swrow .swlab{font-size:12.5px;font-weight:600;color:var(--ink)}
-  #ft-ap .swrow .swlab small{display:block;font-weight:400;color:var(--mut);font-size:11px;margin-top:1px}
-  #ft-ap .switch{position:relative;width:44px;height:26px;flex:0 0 auto;margin:0;display:inline-block}
-  #ft-ap .switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer;position:absolute;inset:0;z-index:2}
-  #ft-ap .switch .track{position:absolute;inset:0;border-radius:99px;background:#cfcfc9;transition:.2s;pointer-events:none}
-  #ft-ap .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
-  #ft-ap .switch input:checked ~ .track{background:var(--acc)}
-  #ft-ap .switch input:checked ~ .knob{left:21px}
+  #v-tenant .swrow{display:flex;align-items:center;gap:14px;justify-content:space-between;margin-top:4px}
+  #v-tenant .swrow .swlab{font-size:12.5px;font-weight:600;color:var(--ink)}
+  #v-tenant .swrow .swlab small{display:block;font-weight:400;color:var(--mut);font-size:11px;margin-top:1px}
+  #v-tenant .switch{position:relative;width:44px;height:26px;flex:0 0 auto;margin:0;display:inline-block}
+  #v-tenant .switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer;position:absolute;inset:0;z-index:2}
+  #v-tenant .switch .track{position:absolute;inset:0;border-radius:99px;background:#cfcfc9;transition:.2s;pointer-events:none}
+  #v-tenant .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+  #v-tenant .switch input:checked ~ .track{background:var(--acc)}
+  #v-tenant .switch input:checked ~ .knob{left:21px}
   /* chips de color un poco mas compactos, redondeados como la plantilla */
-  #ft-ap input[type=color]{width:44px!important;height:34px!important;border-radius:8px!important}
-  #ft-ap .reveal{display:none;flex-direction:column;gap:11px;border-left:2px solid var(--acc);padding-left:12px;margin:2px 0 2px 2px}
-  #ft-ap .reveal.show{display:flex}
-  #ft-ap .qrow{display:flex;align-items:center;gap:8px}
-  #ft-ap .qrow .gp{color:var(--mut);flex:0 0 auto;display:grid;place-items:center;width:16px;cursor:grab}
-  #ft-ap .qrow input{flex:1}
-  #ft-ap .qdel{background:transparent;border:0;color:var(--mut);cursor:pointer;padding:4px;display:flex}
-  #ft-ap .qdel:hover{color:var(--err)}
-  #ft-ap .miniadd{align-self:flex-start;background:var(--soft);border:1px solid var(--acc);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
-  #ft-ap .drop{border:1.5px dashed var(--line-strong,#d3d3cc);border-radius:9px;padding:16px;display:flex;align-items:center;gap:12px;color:var(--mut);font-size:12.5px;cursor:pointer;transition:border-color .15s}
-  #ft-ap .drop .ph{width:40px;height:40px;border-radius:8px;background:var(--soft);display:grid;place-items:center;flex:0 0 auto;color:var(--ink);overflow:hidden}
-  #ft-ap .drop .ph svg{width:20px;height:20px}
-  #ft-ap .drop .ph img{width:100%;height:100%;object-fit:contain}
-  #ft-ap .note{font-size:11.5px;color:var(--mut);display:flex;gap:8px;align-items:flex-start;background:var(--soft);border-radius:8px;padding:10px 12px}
-  #ft-ap .logoclr{background:transparent;border:0;color:#a53222;font-size:11.5px;font-weight:600;cursor:pointer;padding:4px 2px;margin-top:1px;align-self:flex-start;text-align:left}
-  #ft-ap .logoclr:hover{text-decoration:underline}
-  #ft-ap .note svg{width:15px;height:15px;flex:0 0 auto;margin-top:1px}
-  #ft-ap .fontprev{font-size:14px;color:var(--ink)}
-  #ft-ap #pilllab{display:none}
+  #v-tenant input[type=color]{width:44px!important;height:34px!important;border-radius:8px!important}
+  #v-tenant .reveal{display:none;flex-direction:column;gap:11px;border-left:2px solid var(--acc);padding-left:12px;margin:2px 0 2px 2px}
+  #v-tenant .reveal.show{display:flex}
+  #v-tenant .qrow{display:flex;align-items:center;gap:8px}
+  #v-tenant .qrow .gp{color:var(--mut);flex:0 0 auto;display:grid;place-items:center;width:16px;cursor:grab}
+  #v-tenant .qrow input{flex:1}
+  #v-tenant .qdel{background:transparent;border:0;color:var(--mut);cursor:pointer;padding:4px;display:flex}
+  #v-tenant .qdel:hover{color:var(--err)}
+  #v-tenant .miniadd{align-self:flex-start;background:var(--soft);border:1px solid var(--acc);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+  #v-tenant .drop{border:1.5px dashed var(--line-strong,#d3d3cc);border-radius:9px;padding:16px;display:flex;align-items:center;gap:12px;color:var(--mut);font-size:12.5px;cursor:pointer;transition:border-color .15s}
+  #v-tenant .drop .ph{width:40px;height:40px;border-radius:8px;background:var(--soft);display:grid;place-items:center;flex:0 0 auto;color:var(--ink);overflow:hidden}
+  #v-tenant .drop .ph svg{width:20px;height:20px}
+  #v-tenant .drop .ph img{width:100%;height:100%;object-fit:contain}
+  #v-tenant .note{font-size:11.5px;color:var(--mut);display:flex;gap:8px;align-items:flex-start;background:var(--soft);border-radius:8px;padding:10px 12px}
+  #v-tenant .logoclr{background:transparent;border:0;color:#a53222;font-size:11.5px;font-weight:600;cursor:pointer;padding:4px 2px;margin-top:1px;align-self:flex-start;text-align:left}
+  #v-tenant .logoclr:hover{text-decoration:underline}
+  #v-tenant .note svg{width:15px;height:15px;flex:0 0 auto;margin-top:1px}
+  #v-tenant .fontprev{font-size:14px;color:var(--ink)}
+  #v-tenant #pilllab{display:none}
+  #v-tenant .rchip-lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9a7600;margin:12px 0 7px}
+  #v-tenant .rchips{display:flex;flex-wrap:wrap;gap:7px}
+  #v-tenant .rchip{border:1px dashed var(--line-strong,#d3d3cc);background:#fff;color:#8a6900;border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+  #v-tenant .rchip:hover{border-color:var(--acc);background:#fffaf0}
   details.cfg.devbrand{background:linear-gradient(180deg,var(--soft),#fff);border-color:var(--acc)}
   details.cfg.devbrand>summary .ci{background:var(--acc);color:#0a0a0a}
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
@@ -2713,18 +2717,16 @@ const ADMIN_HTML = `<!doctype html>
           <button data-ft="ft-seg">Seguridad y límites</button>
         </div>
         <div class="ft on" id="ft-comp">
-          <label>Personalidad e instrucciones del bot: quién es, qué puede y qué no puede decir</label>
-          <textarea id="f-prompt" rows="8"></textarea>
-          <div class="row">
-            <div>
+          <details class="cfg" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 2h-5l-.3 2.6a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L3.1 11a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.4h5l.3-2.6a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6a7 7 0 0 0 .1-.8z"/></svg></span>
+              <div><div class="ct">Motor de IA</div><div class="cs">Proveedor y modelo</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
               <label>Proveedor de IA</label>
               <select id="f-provider">
                 <option value="anthropic">Anthropic (Claude)</option>
                 <option value="google">Google (Gemini)</option>
               </select>
-            </div>
-            <div>
-              <label>Modelo</label>
+              <label style="margin-top:12px">Modelo</label>
               <input id="f-model" list="models">
               <datalist id="models">
                 <option value="claude-sonnet-4-6"><option value="claude-sonnet-5">
@@ -2732,8 +2734,24 @@ const ADMIN_HTML = `<!doctype html>
                 <option value="gemini-3.1-flash-lite"><option value="gemini-flash-latest">
                 <option value="gemini-flash-lite-latest">
               </datalist>
+              <div class="note" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Claude Sonnet = mejor calidad · Haiku = más rápido y económico. El modelo se ajusta al proveedor.</div>
             </div>
-          </div>
+          </details>
+          <details class="cfg" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a4 4 0 0 0-4 4c0 1 .3 1.7.8 2.4A4 4 0 0 0 7 13a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4 4 4 0 0 0-1.8-3.6c.5-.7.8-1.5.8-2.4a4 4 0 0 0-4-4z"/></svg></span>
+              <div><div class="ct">Objetivo y comportamiento</div><div class="cs">Personalidad, qué puede y qué no</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <label>Instrucciones del bot: quién es, qué puede y qué no puede decir</label>
+              <textarea id="f-prompt" rows="9"></textarea>
+              <div class="rchip-lbl">Reglas rápidas · toca para insertar</div>
+              <div class="rchips" id="rulechips">
+                <button type="button" class="rchip" data-rule="No inventes nunca fechas, precios ni condiciones. Si no está en el contexto, deriva a contacto.">+ No inventar fechas ni precios</button>
+                <button type="button" class="rchip" data-rule="No des consejo clínico: esto es una feria, no una consulta.">+ Nada de consejo clínico</button>
+                <button type="button" class="rchip" data-rule="Si es una empresa interesada en un stand, captura el lead con la herramienta guardar_lead.">+ Capturar lead si es empresa</button>
+                <button type="button" class="rchip" data-rule="Si no sabes algo o no está en tu conocimiento, derívalo a contacto en lugar de inventar.">+ Derivar a contacto si no lo sabe</button>
+              </div>
+            </div>
+          </details>
         </div>
         <div class="ft" id="ft-ap">
           <div class="cfg-ai">
@@ -6203,6 +6221,19 @@ segify("f-side", { derecha: "Abajo derecha", izquierda: "Abajo izquierda" });
 segify("f-dark", { off: "Claro", dark: "Oscuro", auto: "Automático" });
 segify("f-shadow", { ninguna: "Ninguna", suave: "Suave", media: "Media", fuerte: "Fuerte" });
 segify("f-density", { cozy: "Cómoda", dense: "Compacta" });
+segify("f-provider", { anthropic: "Anthropic (Claude)", google: "Google (Gemini)" });
+(function () {
+  var box = document.getElementById("rulechips");
+  if (!box) return;
+  box.addEventListener("click", function (e) {
+    var b = e.target.closest(".rchip"); if (!b) return;
+    var ta = $("f-prompt");
+    var rule = b.dataset.rule || "";
+    if (ta.value.indexOf(rule) >= 0) return;
+    ta.value = (ta.value.trim() ? ta.value.replace(/\\s*$/, "") + "\\n" : "") + "- " + rule;
+    markDirty(); ta.focus();
+  });
+})();
 // reveals + dropzone + lista editable de sugeridas
 (function () {
   function rev(sw, box) { var s = document.getElementById(sw), b = document.getElementById(box); if (!s || !b) return; function u() { b.classList.toggle("show", s.checked); } s.addEventListener("change", function () { u(); if (typeof updPrev === "function") updPrev(); }); u(); }
