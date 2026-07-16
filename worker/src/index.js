@@ -8419,6 +8419,7 @@ const PANEL_HTML = `<!doctype html>
           <div class="eyebrow" id="greeting">Buenos días</div>
           <h1>Panel de actividad</h1>
           <div class="mut" id="name">Cargando…</div>
+          <select id="bot-switch" class="hide" aria-label="Cambiar de asistente" style="margin-top:6px;max-width:300px"></select>
         </div>
         <div class="top-actions">
           <div class="period-control" id="period" aria-label="Periodo analizado">
@@ -9114,6 +9115,23 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     ACT = d.activity || [];
     PRIMARY = d.primary_color || "#3c62f0";
     $("name").textContent = d.name;
+    // selector de bots del mismo cliente: solo aparece si hay más de uno
+    var BOTS = d.bots || [];
+    if (BOTS.length > 1) {
+      var sw = $("bot-switch");
+      sw.innerHTML = "";
+      BOTS.forEach(function (bt) {
+        var o = document.createElement("option");
+        o.value = bt.token; o.textContent = bt.name;
+        if (bt.current) o.selected = true;
+        sw.appendChild(o);
+      });
+      sw.classList.remove("hide");
+      $("name").classList.add("hide");
+      sw.onchange = function () {
+        if (sw.value && sw.value !== token) location.href = "/panel?token=" + encodeURIComponent(sw.value);
+      };
+    }
     if (d.logo_url) {
       $("clogo").src = d.logo_url;
       $("clogo").style.display = "block";
@@ -10438,6 +10456,26 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           channels.push({ key: "whatsapp", label: "WhatsApp", client_on: tf.whatsapp_client !== false });
         if (tf.telegram !== false && connProv.has("telegram"))
           channels.push({ key: "telegram", label: "Telegram", client_on: tf.telegram_client !== false });
+        // bots del MISMO cliente, para el selector del panel (poder cambiar de bot
+        // sin salir). Solo los que tienen el panel accesible. Se devuelven con su
+        // token de panel porque son todos del mismo cliente (misma frontera de acceso).
+        let bots = [];
+        try {
+          const [proj] = await sb(env, `projects?id=eq.${tenant.project_id}&select=client_id`);
+          if (proj?.client_id) {
+            const projs = await sb(env, `projects?client_id=eq.${proj.client_id}&select=id`);
+            const pids = (projs || []).map((p) => p.id);
+            if (pids.length) {
+              const sib = await sb(
+                env,
+                `tenants?project_id=in.(${pids.join(",")})&select=id,name,panel_token,panel_enabled&order=name.asc`
+              );
+              bots = (sib || [])
+                .filter((t) => t.panel_enabled !== false && t.panel_token)
+                .map((t) => ({ name: t.name, token: t.panel_token, current: t.id === tenant.id }));
+            }
+          }
+        } catch (e) {}
         // las pestañas desactivadas no solo se ocultan en la interfaz: no se envían
         // los datos, para que no se puedan leer directamente desde la respuesta JSON.
         const feat = tenant.panel_features || {};
@@ -10450,6 +10488,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
             features: feat,
             leads_ret_client: parseInt((tenant.features || {}).leads_ret_client, 10) || 0,
             channels,
+            bots,
             conversations: feat.convs === false ? [] : conversations,
             leads: feat.leads === false ? [] : leads,
             activity,
