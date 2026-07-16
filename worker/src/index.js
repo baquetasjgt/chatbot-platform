@@ -2202,6 +2202,15 @@ const ADMIN_HTML = `<!doctype html>
   .cv-typing{opacity:.65}
   #cv-brand{text-align:center;font-size:11px;color:#8a8a86;padding:8px 10px;background:#fff;
     border-top:1px solid rgba(0,0,0,.05)}
+  .cv-reset{display:none;margin-left:auto;opacity:.8;cursor:pointer}
+  #cv-widget.cv-hasreset .cv-reset{display:inline-flex}
+  #cv-widget.cv-dense #cv-log{gap:5px;padding:11px}
+  #cv-widget.cv-dense .cv-b,#cv-widget.cv-dense .cv-m{padding:7px 10px}
+  #cv-widget.cv-times .cv-b::after,#cv-widget.cv-times .cv-m::after{content:attr(data-t);display:block;text-align:right;font-size:9px;opacity:.5;margin-top:3px;font-variant-numeric:tabular-nums}
+  #cv-widget.cv-avatars .cv-b{margin-left:28px}
+  #cv-widget.cv-avatars .cv-b::before{content:"";position:absolute;left:-28px;bottom:0;width:22px;height:22px;border-radius:50%;background:var(--cv-accent,#f5be10)}
+  #cv-widget.cv-avatars .cv-b{position:relative}
+  #cv-cta{margin:0 14px 12px;border:0;border-radius:11px;padding:11px;font-weight:700;font-size:13px;text-align:center;background:#f5be10;color:#0a0a0a}
   #cv-btnrow{display:flex;justify-content:flex-end}
   #cv-btn{width:58px;height:58px;min-width:58px;border-radius:50%;background:#f5be10;display:flex;gap:8px;position:relative;
     align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:0}
@@ -2639,16 +2648,6 @@ const ADMIN_HTML = `<!doctype html>
         <div class="ft on" id="ft-comp">
           <label>Personalidad e instrucciones del bot: quién es, qué puede y qué no puede decir</label>
           <textarea id="f-prompt" rows="8"></textarea>
-          <label>Mensaje de bienvenida</label>
-          <input id="f-welcome">
-          <label>Preguntas sugeridas (una por línea)</label>
-          <textarea id="f-sugg" rows="3"></textarea>
-          <label>Pregunta de clasificación al abrir el chat (opcional)</label>
-          <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
-          <label>Opciones de respuesta (una por línea, máx. 4; vacío = sin pregunta)</label>
-          <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
-          <p class="mut" style="margin-top:4px">El visitante elige con un botón antes de empezar; su elección
-          clasifica el lead (si la opción contiene «expositor», «visitante» o «prensa») y el bot la conoce.</p>
           <div class="row">
             <div>
               <label>Proveedor de IA</label>
@@ -2683,7 +2682,7 @@ const ADMIN_HTML = `<!doctype html>
 
           <details class="cfg" open>
             <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z"/></svg></span>
-              <div><div class="ct">Identidad y colores</div><div class="cs">Colores, tipografía, logo, cabecera</div></div>
+              <div><div class="ct">Identidad de marca</div><div class="cs">Color, logo y nombre</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
               <label>Color principal <span class="lh">cabecera, botón, mensajes del usuario</span></label>
@@ -2697,28 +2696,12 @@ const ADMIN_HTML = `<!doctype html>
                 <input id="f-color" type="color">
                 <div class="hexbox"><span id="prim-hexdot"></span><input id="prim-hex" spellcheck="false" maxlength="7" placeholder="#000000"></div>
               </div>
-              <div class="row">
-                <div><label>Color de las respuestas del bot</label>
-                  <input id="f-color2" type="color" value="#f2f2f0"></div>
-                <div><label>Color de la cabecera</label>
-                  <input id="f-colorhead" type="color" value="#111111"></div>
-              </div>
-              <div><label>Color de bordes y controles</label>
-                <input id="f-controlborder" type="color" value="#d9d9d4"></div>
-              <div><label>Tipografía</label>
-                <select id="f-font">
-                  <option value="system">Sistema (por defecto)</option>
-                  <option value="Inter">Inter</option>
-                  <option value="Poppins">Poppins</option>
-                  <option value="Roboto">Roboto</option>
-                  <option value="Montserrat">Montserrat</option>
-                  <option value="Lato">Lato</option>
-                  <option value="georgia">Georgia (serif clásica)</option>
-                </select></div>
-              <label>Isotipo o avatar <span class="lh">URL de una imagen cuadrada; vacío = inicial del nombre</span></label>
+              <label>Logo del asistente <span class="lh">URL de una imagen cuadrada; vacío = inicial del nombre</span></label>
               <input id="f-logo" type="url" placeholder="https://cliente.com/isotipo.svg">
               <label>Logotipo de cabecera <span class="lh">opcional; sustituye el nombre escrito</span></label>
               <input id="f-wordmark" type="url" placeholder="https://cliente.com/logotipo.svg">
+              <label>Nombre visible</label>
+              <input id="f-name2" type="text" placeholder="Asistente FISIOEXPO">
               <label>Subtítulo de la cabecera</label>
               <input id="f-subtitle" placeholder="Suele responder al instante">
             </div>
@@ -2726,9 +2709,16 @@ const ADMIN_HTML = `<!doctype html>
 
           <details class="cfg">
             <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/></svg></span>
-              <div><div class="ct">Botón flotante</div><div class="cs">Icono, tamaño, borde, efecto, posición</div></div>
+              <div><div class="ct">Botón flotante</div><div class="cs">Forma, icono, efecto, posición</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
+              <label>Forma del botón</label>
+              <select id="f-btnshape">
+                <option value="circulo">Círculo</option>
+                <option value="redondeado">Redondeado</option>
+                <option value="pastilla">Píldora</option>
+              </select>
+              <div id="pilllab"><label>Texto de la píldora</label><input id="f-btnlabel" placeholder="Chat"></div>
               <label>Icono del botón del chat</label>
               <div class="icopick" id="pick-btn"></div>
               <div class="cfgrow"><div class="cfgl">Tamaño del icono <small>dentro del botón</small></div>
@@ -2737,32 +2727,21 @@ const ADMIN_HTML = `<!doctype html>
               <input id="f-btnicon" type="url" placeholder="https://cliente.com/isotipo.svg">
               <div class="row">
                 <div><label>Fondo del botón</label><input id="f-btnbg" type="color" value="#111111"></div>
-                <div><label>Color del borde</label><input id="f-btnborder" type="color" value="#f5be10"></div>
-              </div>
-              <div class="swrow"><span class="swlab">Mostrar borde en el botón</span><label class="switch"><input id="f-btnborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <div class="cfgrow"><div class="cfgl">Grosor del borde</div>
-                <input id="f-btnborderw" type="range" min="1" max="8" value="2"><span class="cfgval"><span id="f-btnborderw-v">2</span> px</span></div>
-              <div class="row">
-                <div><label>Efecto de llamada de atención</label>
-                  <select id="f-effect">
-                    <option value="ninguno">Ninguno</option>
-                    <option value="radar">Radar (ondas)</option>
-                    <option value="latido">Latido</option>
-                    <option value="rebote">Rebote</option>
-                    <option value="brillo">Brillo</option>
-                    <option value="sacudida">Sacudida</option>
-                  </select></div>
                 <div><label>Color del efecto</label><input id="f-radarcolor" type="color" value="#f5be10"></div>
               </div>
+              <label>Efecto de llamada de atención</label>
+              <select id="f-effect">
+                <option value="ninguno">Ninguno</option>
+                <option value="radar">Radar (ondas)</option>
+                <option value="latido">Latido</option>
+                <option value="rebote">Rebote</option>
+                <option value="brillo">Brillo</option>
+                <option value="sacudida">Sacudida</option>
+              </select>
+              <div class="swrow"><span class="swlab">Mostrar borde en el botón</span><label class="switch"><input id="f-btnborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="row">
-                <div><label>Forma del botón</label>
-                  <select id="f-btnshape">
-                    <option value="circulo">Círculo</option>
-                    <option value="redondeado">Cuadrado redondeado</option>
-                    <option value="pastilla">Pastilla con texto</option>
-                  </select></div>
-                <div><label>Texto de la pastilla <span class="lh">si eliges esa forma</span></label>
-                  <input id="f-btnlabel" placeholder="Chat"></div>
+                <div><label>Color del borde</label><input id="f-btnborder" type="color" value="#f5be10"></div>
+                <div><label>Grosor: <span id="f-btnborderw-v">2</span> px</label><input id="f-btnborderw" type="range" min="1" max="8" value="2"></div>
               </div>
               <label>Posición en la web</label>
               <select id="f-side">
@@ -2774,49 +2753,56 @@ const ADMIN_HTML = `<!doctype html>
 
           <details class="cfg">
             <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></span>
-              <div><div class="ct">Ventana de chat</div><div class="cs">Esquinas, sombra, borde, fondo, modo</div></div>
+              <div><div class="ct">Ventana de chat</div><div class="cs">Tipografía, esquinas, sombra, fondo</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
+              <label>Tipografía</label>
+              <select id="f-font">
+                <option value="system">Sistema (por defecto)</option>
+                <option value="Inter">Inter</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Lato">Lato</option>
+                <option value="georgia">Georgia (serif clásica)</option>
+              </select>
               <div class="cfgrow"><div class="cfgl">Redondez de bordes</div>
                 <input id="f-radius" type="range" min="0" max="24" step="2" value="14"><span class="cfgval"><span id="f-radius-v">14</span> px</span></div>
+              <label>Sombra de la ventana</label>
+              <select id="f-shadow">
+                <option value="ninguna">Ninguna</option>
+                <option value="suave">Suave</option>
+                <option value="fuerte">Marcada</option>
+              </select>
+              <label>Modo de color</label>
+              <select id="f-dark">
+                <option value="off">Claro</option>
+                <option value="auto">Automático (según el visitante)</option>
+              </select>
               <div class="row">
-                <div><label>Sombras</label>
-                  <select id="f-shadow">
-                    <option value="suave">Suaves</option>
-                    <option value="ninguna">Sin sombra</option>
-                    <option value="fuerte">Marcadas</option>
-                  </select></div>
-                <div><label>Modo oscuro</label>
-                  <select id="f-dark">
-                    <option value="off">Desactivado</option>
-                    <option value="auto">Automático (según el visitante)</option>
-                  </select></div>
+                <div><label>Color de la cabecera</label><input id="f-colorhead" type="color" value="#111111"></div>
+                <div><label>Bordes y controles</label><input id="f-controlborder" type="color" value="#d9d9d4"></div>
               </div>
-              <div><label>Fondo de la ventana de chat</label>
-                <input id="f-colorbg" type="color" value="#ffffff"></div>
               <div class="swrow"><span class="swlab">Borde en la ventana de chat</span><label class="switch"><input id="f-winborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="row">
-                <div><label>Color del borde de la ventana</label><input id="f-winborder" type="color" value="#d9d9d4"></div>
-                <div><label>Grosor del borde: <span id="f-winborderw-v">1</span> px</label>
-                  <input id="f-winborderw" type="range" min="1" max="6" value="1"></div>
+                <div><label>Color del borde</label><input id="f-winborder" type="color" value="#d9d9d4"></div>
+                <div><label>Grosor: <span id="f-winborderw-v">1</span> px</label><input id="f-winborderw" type="range" min="1" max="6" value="1"></div>
               </div>
-              <div class="row">
-                <div><label>Tamaño del widget</label>
-                  <select id="f-size">
-                    <option value="compacto">Compacto</option>
-                    <option value="estandar" selected>Estándar</option>
-                    <option value="amplio">Amplio</option>
-                  </select></div>
-                <div></div>
-              </div>
-              <label>Fondo del área de mensajes</label>
+              <div class="divide"></div>
+              <label>Tamaño del widget</label>
+              <select id="f-size">
+                <option value="compacto">Compacto</option>
+                <option value="estandar" selected>Estándar</option>
+                <option value="amplio">Amplio</option>
+              </select>
+              <label style="margin-top:8px">Fondo del área de mensajes</label>
               <div class="seg" id="bg-seg">
-                <button type="button" data-m="solid" class="on">Color sólido</button>
+                <button type="button" data-m="solid" class="on">Sólido</button>
                 <button type="button" data-m="grad">Degradado</button>
                 <button type="button" data-m="img">Imagen</button>
               </div>
               <div id="bg-solid" style="margin-top:8px">
-                <p class="mut">Se usa el color «Fondo de la ventana de chat» de arriba.</p>
+                <label style="margin-top:0">Color de fondo</label><input id="f-colorbg" type="color" value="#ffffff">
               </div>
               <div id="bg-grad" class="hide" style="margin-top:8px">
                 <label style="margin-top:0">Colores del degradado</label>
@@ -2834,49 +2820,92 @@ const ADMIN_HTML = `<!doctype html>
           </details>
 
           <details class="cfg">
-            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
-              <div><div class="ct">Textos y burbuja de invitación</div><div class="cs">Campo de escritura, invitación, mensajes</div></div>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H8l-4 3z"/><path d="M9 14v2a2 2 0 0 0 2 2h5l4 3v-9a2 2 0 0 0-2-2"/></svg></span>
+              <div><div class="ct">Burbujas de mensaje</div><div class="cs">Color del bot y del visitante</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="swrow"><span class="swlab">Burbuja de invitación automática</span><label class="switch"><input id="f-teaser" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
-              <div class="row">
-                <div><label>Segundos hasta la invitación</label>
-                  <input id="f-tdelay" type="number" min="1" max="60" value="4"></div>
-                <div><label>Texto de la invitación <span class="lh">vacío = la bienvenida</span></label>
-                  <input id="f-tteaser"></div>
-              </div>
-              <div class="row">
-                <div><label>Campo de escritura</label><input id="f-tplaceholder" placeholder="Escribe tu pregunta…"></div>
-                <div><label>Botón de enviar (texto)</label><input id="f-tsend" placeholder="→"></div>
-              </div>
-              <label>Icono del botón de enviar <span class="lh">«Abc» = usa el texto de arriba</span></label>
-              <div class="icopick" id="pick-send"></div>
-              <label>Mensaje de error de conexión</label>
-              <input id="f-terror" placeholder="No he podido conectar…">
+              <div class="cfgrow"><div class="cfgl">Mensaje del visitante <small>vacío = tu color principal</small></div><input id="f-userbubble" type="color" value="#f5be10"></div>
+              <div class="cfgrow"><div class="cfgl">Mensaje del bot</div><input id="f-color2" type="color" value="#f2f2f0"></div>
             </div>
           </details>
 
           <details class="cfg">
-            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="2"/><path d="M12 8V5"/><circle cx="12" cy="3.6" r="1.1" fill="currentColor"/></svg></span>
-              <div><div class="ct">Marca y avanzado</div><div class="cs">Pie del chat, tu firma, sonido, CSS</div></div>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+              <div><div class="ct">Textos</div><div class="cs">Saludo y campo de escritura</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="swrow"><span class="swlab">Mostrar «Con tecnología de ExpoBot» <small>+ enlace a expobot.es; solo si no defines una marca propia debajo</small></span><label class="switch"><input id="f-expobot" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
-              <label style="margin-top:16px">Marca propia en el pie <span class="lh">«Impulsado por…» — vacío = sin pie propio</span></label>
+              <label>Saludo de bienvenida</label>
+              <input id="f-welcome" placeholder="¡Hola! ¿En qué puedo ayudarte?">
+              <label>Texto del campo de escritura</label>
+              <input id="f-tplaceholder" placeholder="Escribe tu pregunta…">
+              <div class="row">
+                <div><label>Botón de enviar (texto)</label><input id="f-tsend" placeholder="→"></div>
+                <div><label>Mensaje de error de conexión</label><input id="f-terror" placeholder="No he podido conectar…"></div>
+              </div>
+              <label>Icono del botón de enviar <span class="lh">«Abc» = usa el texto de arriba</span></label>
+              <div class="icopick" id="pick-send"></div>
+            </div>
+          </details>
+
+          <details class="cfg">
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6l1.5 1.5M16.5 16.5L18 18"/><circle cx="12" cy="12" r="4"/></svg></span>
+              <div><div class="ct">Comportamiento</div><div class="cs">Aviso, apertura, sugerencias</div></div>
+              <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
+            <div class="cfgb">
+              <div class="swrow"><span class="swlab">Burbuja de invitación automática</span><label class="switch"><input id="f-teaser" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+              <div class="row">
+                <div><label>Segundos hasta la invitación</label><input id="f-tdelay" type="number" min="1" max="60" value="4"></div>
+                <div><label>Texto de la invitación <span class="lh">vacío = la bienvenida</span></label><input id="f-tteaser"></div>
+              </div>
+              <label>Preguntas sugeridas <span class="lh">una por línea; aparecen como botones</span></label>
+              <textarea id="f-sugg" rows="3"></textarea>
+              <label>Pregunta de clasificación al abrir <span class="lh">opcional</span></label>
+              <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
+              <label>Opciones de respuesta <span class="lh">una por línea, máx. 4; clasifica el lead</span></label>
+              <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
+              <div class="swrow"><span class="swlab">Sonido al aparecer la invitación</span><label class="switch"><input id="f-sound" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            </div>
+          </details>
+
+          <details class="cfg">
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6M6 15v6M12 3v3M12 12v9M18 3v9M18 18v3"/><circle cx="6" cy="12" r="2"/><circle cx="12" cy="9" r="2"/><circle cx="18" cy="15" r="2"/></svg></span>
+              <div><div class="ct">Opciones avanzadas</div><div class="cs">Densidad, hora, avatar, CTA, idioma</div></div>
+              <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
+            <div class="cfgb">
+              <label>Densidad de los mensajes</label>
+              <select id="f-density"><option value="cozy">Cómoda</option><option value="dense">Compacta</option></select>
+              <div class="swrow"><span class="swlab">Mostrar la hora en los mensajes</span><label class="switch"><input id="f-timestamps" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><span class="swlab">Avatar junto a los mensajes del bot</span><label class="switch"><input id="f-avatars" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><span class="swlab">Botón de reiniciar conversación</span><label class="switch"><input id="f-reset" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <label>Botón de acción destacado (CTA) <span class="lh">vacío = oculto; aparece sobre el campo de escritura</span></label>
+              <input id="f-cta" type="text" placeholder="Ej.: Pedir cita">
+              <label>Idioma de la interfaz</label>
+              <select id="f-lang"><option>Español</option><option>English</option><option>Português</option><option>Français</option><option>Detectar automáticamente</option></select>
+              <div class="divide"></div>
+              <label>Marca propia en el pie <span class="lh">«Impulsado por…» — vacío = sin pie propio</span></label>
               <div class="row">
                 <div><label>Nombre de tu marca</label><input id="f-brand" placeholder="Tu Agencia"></div>
                 <div><label>Enlace de la marca</label><input id="f-brandurl" type="url" placeholder="https://tuagencia.com"></div>
               </div>
               <label>Logotipo del pie <span class="lh">opcional; sustituye el nombre</span></label>
               <input id="f-brandlogo" type="url" placeholder="https://tuagencia.com/logotipo.svg">
-              <div class="swrow"><span class="swlab">Sonido sutil al aparecer la invitación</span><label class="switch"><input id="f-sound" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <label style="margin-top:16px">CSS personalizado <span class="lh">avanzado; se inyecta tal cual en la web del cliente</span></label>
+              <label>CSS personalizado <span class="lh">avanzado; se inyecta tal cual</span></label>
               <textarea id="f-css" rows="3" placeholder=".cb-btn{ } .cb-panel{ } .cb-msg.bot{ } …"></textarea>
             </div>
           </details>
 
-          <p class="mut" style="margin-top:14px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Todos los cambios se ven al momento en la
-          <b>vista en vivo</b> de la derecha.</p>
+          <details class="cfg devbrand" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="2"/><path d="M12 8V5"/><circle cx="12" cy="3.6" r="1.1" fill="currentColor"/><path d="M9.5 13h.01M14.5 13h.01"/></svg></span>
+              <div><div class="ct">Marca de ExpoBot</div><div class="cs">Tu firma como desarrollador</div></div>
+              <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
+            <div class="cfgb">
+              <div class="swrow"><span class="swlab">Mostrar «Con tecnología de ExpoBot» <small>+ enlace a expobot.es; solo si no defines una marca propia arriba</small></span><label class="switch"><input id="f-expobot" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+              <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                Actívalo para dejar tu firma en los bots de los clientes, o desactívalo cuando el cliente prefiera marca blanca.</div>
+            </div>
+          </details>
+
+          <p class="mut" style="margin-top:14px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Todos los cambios se ven al momento en la <b>vista en vivo</b> de la izquierda.</p>
         </div>
         <div class="ft" id="ft-leads">
           <div class="row">
@@ -3028,13 +3057,15 @@ const ADMIN_HTML = `<!doctype html>
           <div id="cv-frame">
             <div id="cv-widget">
               <div id="cv-h"><div id="cv-av">A</div>
-                <div><div id="cv-name">Asistente</div><div id="cv-sub">Suele responder al instante</div></div></div>
+                <div><div id="cv-name">Asistente</div><div id="cv-sub">Suele responder al instante</div></div>
+                <span class="cv-reset" id="cv-reset" title="Reiniciar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span></div>
               <div id="cv-log">
-                <div class="cv-b" id="cv-welcome">¡Hola!</div>
-                <div class="cv-m" id="cv-user">Tengo una duda</div>
-                <div class="cv-b" id="cv-reply">¡Claro! Cuéntame y te ayudo 😊</div>
+                <div class="cv-b" id="cv-welcome" data-t="10:24">¡Hola!</div>
+                <div class="cv-m" id="cv-user" data-t="10:24">Tengo una duda</div>
+                <div class="cv-b" id="cv-reply" data-t="10:25">¡Claro! Cuéntame y te ayudo 😊</div>
                 <div id="cv-sug"></div>
               </div>
+              <div id="cv-cta" style="display:none"></div>
               <div id="cv-foot"><input id="cv-in" placeholder="Escribe tu pregunta…"><div id="cv-send"></div></div>
               <div id="cv-brand" class="hide"></div>
             </div>
@@ -4394,6 +4425,14 @@ function selTenant(id, projectId) {
   $("f-pftest").checked = pf.test !== false;
   var th = (t && t.theme) || {};
   $("f-color2").value = th.secondary_color || "#f2f2f0";
+  $("f-name2").value = isNew ? "" : (t.name || "");
+  $("f-userbubble").value = th.user_bubble || (t && t.primary_color) || "#f5be10";
+  $("f-density").value = th.density || "cozy";
+  $("f-timestamps").checked = !!th.timestamps;
+  $("f-avatars").checked = !!th.msg_avatars;
+  $("f-reset").checked = !!th.reset_btn;
+  $("f-cta").value = th.cta_text || "";
+  $("f-lang").value = th.lang || "Español";
   $("f-colorhead").value = th.header_color || (t && t.primary_color) || "#111111";
   $("f-controlborder").value = th.control_border_color || "#d9d9d4";
   $("f-colorbg").value = th.bg_color || "#ffffff";
@@ -5011,12 +5050,25 @@ function updPrev() {
     b.style.borderBottomLeftRadius = "4px";
   });
   $("cv-welcome").textContent = $("f-welcome").value.trim() || "¡Hola! ¿En qué puedo ayudarte?";
+  var ub = $("f-userbubble").value || c;
+  var ubt = contrastFor(ub);
   [].forEach.call(document.querySelectorAll(".cv-m"), function (um) {
-    um.style.background = c;
-    um.style.color = t;
+    um.style.background = ub;
+    um.style.color = ubt;
     um.style.borderRadius = rad + "px";
     um.style.borderBottomRightRadius = "4px";
   });
+  // opciones avanzadas + pastilla (vista previa)
+  $("pilllab").style.display = $("f-btnshape").value === "pastilla" ? "" : "none";
+  var wdg = $("cv-widget");
+  wdg.style.setProperty("--cv-accent", c);
+  wdg.classList.toggle("cv-dense", $("f-density").value === "dense");
+  wdg.classList.toggle("cv-times", $("f-timestamps").checked);
+  wdg.classList.toggle("cv-avatars", $("f-avatars").checked);
+  wdg.classList.toggle("cv-hasreset", $("f-reset").checked);
+  var ctaTxt = $("f-cta").value.trim();
+  var ctaEl = $("cv-cta");
+  if (ctaEl) { ctaEl.style.display = ctaTxt ? "block" : "none"; ctaEl.textContent = ctaTxt || ""; ctaEl.style.background = ub; ctaEl.style.color = ubt; }
 
   var sug = $("cv-sug");
   sug.innerHTML = "";
@@ -5296,6 +5348,13 @@ function collect() {
     theme: {
       header_color: $("f-colorhead").value,
       secondary_color: $("f-color2").value,
+      user_bubble: $("f-userbubble").value,
+      density: $("f-density").value,
+      timestamps: $("f-timestamps").checked,
+      msg_avatars: $("f-avatars").checked,
+      reset_btn: $("f-reset").checked,
+      cta_text: $("f-cta").value.trim(),
+      lang: $("f-lang").value,
       control_border_color: $("f-controlborder").value,
       panel_border_color: $("f-winborderon").checked ? $("f-winborder").value : "",
       panel_border_width: parseInt($("f-winborderw").value, 10) || 1,
@@ -5916,6 +5975,12 @@ segify("f-btnshape", { circulo: "Círculo", redondeado: "Redondeado", pastilla: 
 segify("f-side", { derecha: "Derecha", izquierda: "Izquierda" });
 segify("f-dark", { off: "Claro", auto: "Automático" });
 segify("f-size", { compacto: "Compacto", estandar: "Estándar", amplio: "Amplio" });
+segify("f-shadow", { ninguna: "Ninguna", suave: "Suave", fuerte: "Marcada" });
+segify("f-density", { cozy: "Cómoda", dense: "Compacta" });
+(function () {
+  var n2 = document.getElementById("f-name2"), n = document.getElementById("f-name");
+  if (n2 && n) n2.addEventListener("input", function () { n.value = this.value; updPrev(); });
+})();
 
 if (TOKEN) load(); else showLogin();
 </script>
