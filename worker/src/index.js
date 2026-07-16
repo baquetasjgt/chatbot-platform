@@ -2144,6 +2144,95 @@ const ADMIN_HTML = `<!doctype html>
   #v-tenant .rchips{display:flex;flex-wrap:wrap;gap:7px}
   #v-tenant .rchip{border:1px dashed var(--line-strong,#d3d3cc);background:#fff;color:#8a6900;border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
   #v-tenant .rchip:hover{border-color:var(--acc);background:#fffaf0}
+  /* ---- piel de estudio reutilizable (Resumen/Conocimiento/Captacion/Canales/Pruebas/Publicar) ---- */
+  .studio .cfgb{padding:6px 16px 18px;display:flex;flex-direction:column;gap:15px}
+  .studio .fieldset{display:flex;flex-direction:column;gap:5px}
+  .studio .fieldset>label{margin:0}
+  .studio .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.studio .two{grid-template-columns:1fr}}
+  .studio .swrow{display:flex;align-items:center;gap:14px;justify-content:space-between}
+  .studio .swrow .swlab{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .studio .swrow .swlab small{display:block;font-weight:400;color:var(--mut);font-size:11px;margin-top:1px}
+  .studio .switch{position:relative;width:44px;height:26px;flex:0 0 auto;margin:0;display:inline-block}
+  .studio .switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer;position:absolute;inset:0;z-index:2}
+  .studio .switch .track{position:absolute;inset:0;border-radius:99px;background:#cfcfc9;transition:.2s;pointer-events:none}
+  .studio .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+  .studio .switch input:checked ~ .track{background:var(--acc)}
+  .studio .switch input:checked ~ .knob{left:21px}
+  .studio .switch.big{width:52px;height:30px}
+  .studio .switch.big .knob{width:24px;height:24px}
+  .studio .switch.big input:checked ~ .knob{left:25px}
+  .studio .switch.dis{opacity:.45;pointer-events:none}
+  .studio .segfull{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px}
+  .studio .segfull button{border:0;background:#fff;padding:9px 6px;font-size:12.5px;font-weight:600;color:var(--mut);border-right:1px solid var(--line);cursor:pointer;font-family:inherit}
+  .studio .segfull button:last-child{border-right:0}
+  .studio .segfull button.on{background:var(--ink);color:#fff}
+  .studio .note{font-size:11.5px;color:var(--mut);display:flex;gap:8px;align-items:flex-start;background:var(--soft);border-radius:8px;padding:10px 12px}
+  .studio .note svg{width:15px;height:15px;flex:0 0 auto;margin-top:1px}
+  .studio .note.warn{background:#fff0ed;color:#8a3222}
+  .studio .note.ok{background:#eaf6ed;color:#23733a}
+  .studio .reveal{display:none;flex-direction:column;gap:12px;border-left:2px solid var(--acc);padding-left:12px;margin-left:2px}
+  .studio .reveal.show{display:flex}
+  .studio .divlabel{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9a9a95;margin:2px 0}
+  .studio .hint{font-size:11.5px;color:var(--mut);margin-top:3px}
+  .studio .chrow{display:flex;align-items:center;gap:12px;padding:3px 0}
+  .studio .chrow .mi{width:40px;height:40px;border-radius:11px;background:#111;color:var(--acc);display:grid;place-items:center;flex:0 0 auto}
+  .studio .chrow .mi svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .studio .chrow .cbody{flex:1;min-width:0}
+  .studio .chrow .cbody strong{font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .studio .chrow .cbody small{color:var(--mut);font-size:11px;display:block;margin-top:1px}
+  .studio .pill{display:inline-flex;align-items:center;gap:6px;min-height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;border:1px solid var(--line)}
+  .studio .pill.on{background:#eaf6ed;color:#23733a;border-color:#b9dfc3}
+  .studio .pill.off{background:#f3f3ef;color:#777}
+  .studio .pill.err{background:#fff0ed;color:#a53222;border-color:#efc4bc}
+  .studio .prog{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px 18px;margin-bottom:12px}
+  .studio .ring{--p:60;width:56px;height:56px;border-radius:50%;flex:0 0 auto;background:conic-gradient(var(--acc) calc(var(--p)*1%),#eceae2 0);display:grid;place-items:center}
+  .studio .ring b{width:42px;height:42px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+  .studio .kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:640px){.studio .kgrid{grid-template-columns:1fr}}
+  .studio .kbox{background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px 18px}
+  .studio .kbox span{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .studio .kbox strong{display:block;font-size:30px;line-height:1;margin:11px 0 4px;font-variant-numeric:tabular-nums}
+  .studio .kbox small{color:var(--mut);font-size:11px}
+  .studio .steps{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .studio .step{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:none;width:100%;text-align:left;font:inherit;color:var(--ink)}
+  .studio .step:last-child{border-bottom:0}
+  .studio .step:hover{background:#faf9f5}
+  .studio .step .s{width:22px;height:22px;border-radius:50%;border:1px solid var(--acc);display:grid;place-items:center;color:#8a6900;font-size:12px}
+  .studio .step.done .s{background:var(--acc);color:#111;border-color:var(--acc)}
+  .studio .step strong{font-size:13px;display:block}
+  .studio .step small{color:var(--mut);font-size:11px}
+  .studio .chinstall{border:1px solid var(--line);border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:10px}
+  .studio .chinstall .ch-h{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13px}
+  .studio .chinstall .mi{width:30px;height:30px;border-radius:8px;background:#111;color:var(--acc);display:grid;place-items:center;flex:0 0 auto}
+  .studio .chinstall .mi svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .studio .chinstall.soon{opacity:.6}
+  .studio .selrow{display:flex;align-items:center;gap:11px;border:1px solid var(--line-strong);border-radius:8px;padding:10px 12px;cursor:pointer}
+  .studio .selrow.sel{border-color:var(--acc);background:#fffaf0}
+  .studio .selrow.off{opacity:.5;cursor:default}
+  .studio .selrow input{width:18px;height:18px;flex:0 0 auto;accent-color:#f5be10;margin:0}
+  .studio .selrow .mi{width:30px;height:30px;border-radius:8px;background:#111;color:var(--acc);display:grid;place-items:center;flex:0 0 auto}
+  .studio .selrow .mi svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .studio .selrow strong{font-size:13px;display:block}
+  .studio .selrow small{color:var(--mut);font-size:11px;display:block}
+  .studio .doclist{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .studio .docrow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .studio .docrow:last-child{border-bottom:0}
+  .studio .docrow strong{font-size:13px}
+  .studio .docrow small{color:var(--mut);font-size:11px;display:block}
+  .studio .src{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#8a6900;background:var(--soft);border-radius:5px;padding:2px 7px}
+  .studio .qres{border:1px solid var(--line);border-radius:8px;padding:12px 13px;display:flex;gap:10px;align-items:flex-start}
+  .studio .qres.pass{border-color:#b9dfc3;background:#f5fbf6}
+  .studio .qres.fail{border-color:#efc4bc;background:#fdf5f3}
+  .studio .qbadge{font-size:10px;font-weight:800;text-transform:uppercase;padding:3px 8px;border-radius:5px;flex:0 0 auto}
+  .studio .qbadge.p{background:#d7efdd;color:#1e6b37}
+  .studio .qbadge.f{background:#f6d4cc;color:#9a2c1c}
+  .studio .drop{border:1.5px dashed var(--line-strong,#d3d3cc);border-radius:9px;padding:16px;display:flex;align-items:center;gap:12px;color:var(--mut);font-size:12.5px;cursor:pointer;transition:border-color .15s}
+  .studio .drop:hover{border-color:var(--acc)}
+  .studio .drop .ph{width:40px;height:40px;border-radius:8px;background:var(--soft);display:grid;place-items:center;flex:0 0 auto;color:var(--ink)}
+  .studio .drop .ph svg{width:20px;height:20px}
+  details.cfg.danger-card{border-color:#e4b8ae}
+  details.cfg.danger-card>summary .ci{background:#fbe9e5;color:var(--err,#a53222)}
   details.cfg.devbrand{background:linear-gradient(180deg,var(--soft),#fff);border-color:var(--acc)}
   details.cfg.devbrand>summary .ci{background:var(--acc);color:#0a0a0a}
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
@@ -2447,11 +2536,19 @@ const ADMIN_HTML = `<!doctype html>
         <p class="mut" style="margin-top:8px"><a href="#" id="w-manual" style="color:var(--mut)">Prefiero crearlo a mano, paso a paso</a></p>
       </div>
 
-      <div class="card hide" id="v-check">
-        <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Listo para publicar</h2>
-        <p class="sub">Los pasos que separan este chatbot de estar funcionando en la web del cliente.</p>
+      <section class="workspace-view studio hide" id="v-check">
+        <div class="page-heading"><div><p class="section-kicker">EL PASO FINAL</p><h1>Publicar</h1><p>Comprueba que todo está listo, activa el asistente y entrega el material de instalación.</p></div></div>
+        <div class="prog" id="pub-prog"><div class="ring" id="pub-ring" style="--p:0"><b id="pub-ringtx">0/0</b></div><div><strong id="pub-progtitle">Comprobando…</strong><div class="hint" id="pub-proghint"></div></div></div>
         <div id="check-list" class="mut">Cargando…</div>
-      </div>
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 16.5 3 21l4.5-1.5M12 15l-3-3M15 12 9 6l4-4 8 8-4 4z"/><path d="M9 12l-4 4"/></svg></span>
+            <div><div class="ct">Publicar el asistente</div><div class="cs">Borrador → En vivo</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="swrow"><div class="swlab">Asistente en vivo<small>Cuando está activo responde en los canales encendidos. Apagarlo lo detiene por completo.</small></div><label class="switch big"><input id="f-active" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            <div class="note" id="pub-active-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>El cambio se aplica al momento, sin pulsar Guardar.</div>
+          </div>
+        </details>
+      </section>
 
       <div class="card hide" id="v-home">
         <h2>Resumen del mes</h2>
@@ -2665,14 +2762,39 @@ const ADMIN_HTML = `<!doctype html>
         <div class="actions"><button id="bot-create" class="primary">+ Añadir chatbot</button></div>
       </div>
 
-      <section class="workspace-view hide" id="v-bot-overview">
+      <section class="workspace-view studio hide" id="v-bot-overview">
         <div class="bot-overview-head"><div><p class="section-kicker">ASISTENTE</p><h1 id="bot-overview-title">Asistente</h1><p id="bot-overview-meta"></p></div><span id="bot-overview-status" class="status-pill">Borrador</span></div>
-        <div class="project-summary-grid"><div><span>Conocimiento</span><strong id="bot-doc-count">0</strong><small>Fuentes indexadas</small></div><div><span>Canales</span><strong id="bot-channel-count">0</strong><small>Integraciones asignadas</small></div><div><span>Estado</span><strong id="bot-ready-score">0%</strong><small>Preparación para publicar</small></div></div>
-        <div class="data-surface"><div class="surface-head"><div><h2>Siguientes pasos</h2><span>Completa lo esencial antes de publicar</span></div></div><div id="bot-next-steps"></div></div>
+        <div class="kgrid">
+          <div class="kbox"><span>Conocimiento</span><strong id="bot-doc-count">0</strong><small>Fuentes indexadas</small></div>
+          <div class="kbox"><span>Canales</span><strong id="bot-channel-count">0</strong><small>Integraciones asignadas</small></div>
+          <div class="kbox"><span>Preparación</span><strong id="bot-ready-score">0%</strong><small>Listo para publicar</small></div>
+        </div>
+        <div class="divlabel">Siguientes pasos</div>
+        <div class="steps" id="bot-next-steps"></div>
+        <details class="cfg" style="margin-top:16px"><summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><div><div class="ct">Salud del motor</div><div class="cs">Últimos errores registrados del motor</div></div><span class="cv">›</span></summary><div class="cfgb"><div id="bot-health" class="mut">Cargando…</div></div></details>
       </section>
 
-      <section class="workspace-view hide" id="v-bot-channels">
-        <div class="section-heading-row"><div><h2>Canales e integraciones</h2><p>Conexiones disponibles en el proyecto y asignadas a este asistente.</p></div><button id="bot-manage-integrations" class="ghost">Gestionar en el proyecto</button></div><div id="bot-integration-list" class="integration-list"></div>
+      <section class="workspace-view studio hide" id="v-bot-channels">
+        <div class="page-heading"><div><p class="section-kicker">POR DÓNDE HABLA</p><h1>Canales</h1><p>El asistente está encendido desde Publicar. Aquí eliges por qué canales habla.</p></div></div>
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12.5a7 7 0 0 1 14 0"/><path d="M2 9a11 11 0 0 1 20 0"/><circle cx="12" cy="17" r="2"/></svg></span>
+            <div><div class="ct">Canales de propagación</div><div class="cs">Enciende o apaga por dónde habla el bot</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><div class="cbody"><strong>Web</strong><small>El chat embebido en la web del cliente</small></div><label class="switch"><input id="f-chweb" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></span><div class="cbody"><strong>WhatsApp <span class="pill off">Próximamente</span></strong><small>Meta Cloud API</small></div><label class="switch dis"><input type="checkbox" disabled><span class="track"></span><span class="knob"></span></label></div>
+            <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><path d="M21.5 4.5 2.5 11.8l5.5 1.7M21.5 4.5 18 20l-6-5.5M21.5 4.5 8 13.5M8 13.5V19l3-3.2"/></svg></span><div class="cbody"><strong>Telegram <span class="pill off">Próximamente</span></strong><small>Bot API</small></div><label class="switch dis"><input type="checkbox" disabled><span class="track"></span><span class="knob"></span></label></div>
+            <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span><div class="cbody"><strong>Chatbot telefónico <span class="pill off">Próximamente</span></strong><small>Voz · atiende llamadas entrantes con IA</small></div><label class="switch dis"><input type="checkbox" disabled><span class="track"></span><span class="knob"></span></label></div>
+            <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>El <b>código de instalación</b> del canal web está en <b>Publicar</b> → «Instalación por canal». Si apagas el canal web, el widget deja de responder aunque el bot esté activo.</span></div>
+          </div>
+        </details>
+        <details class="cfg">
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3v12M18 9v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/></svg></span>
+            <div><div class="ct">Integraciones asignadas</div><div class="cs">Conexiones del proyecto en este bot</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div id="bot-integration-list" class="integration-list"></div>
+            <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Las conexiones se crean una vez a nivel de proyecto y se reutilizan. <a href="#" id="bot-manage-integrations">Gestionar en el proyecto</a></div>
+          </div>
+        </details>
       </section>
       <div class="card hide" id="v-assist">
         <div id="bot-creation-progress" class="creation-progress hide" aria-label="Proceso de creacion">
@@ -2688,18 +2810,22 @@ const ADMIN_HTML = `<!doctype html>
         </div>
       </div>
 
-      <div class="card hide" id="v-exam">
-        <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.8 3 3 6 3s6-1.2 6-3v-5"/></svg> Examen del bot</h2>
-        <p class="sub">La IA le hace 6 preguntas trampa (precios, fechas y datos fáciles de inventar)
-        usando el motor real, y evalúa si responde solo con su contenido o se lo inventa. Ideal antes
-        de entregar el bot a un cliente.</p>
-        <div class="actions" style="margin-top:0">
-          <button id="ex-run" class="ghost small">Examinar ahora (≈1 minuto)</button>
-          <span id="ex-msg" class="mut"></span>
-        </div>
-        <div id="ex-score" style="font-weight:700;font-size:17px;margin-top:10px"></div>
-        <div id="ex-list"></div>
-      </div>
+      <section class="workspace-view studio hide" id="v-exam">
+        <div class="page-heading"><div><p class="section-kicker">CALIDAD</p><h1>Pruebas</h1><p>Examina el bot con preguntas trampa antes de publicarlo y revisa dónde flojea.</p></div></div>
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3h6M10 3v6l-4 8a2 2 0 0 0 2 3h8a2 2 0 0 0 2-3l-4-8V3"/></svg></span>
+            <div><div class="ct">Examen del bot</div><div class="cs">6 preguntas trampa + juez IA</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>La IA genera 6 preguntas fáciles de inventar (precios, fechas, aforo…), las lanza al motor real y un juez evalúa si el bot responde solo con su contenido o se lo inventa. Ideal antes de entregar el bot a un cliente.</div>
+            <div class="actions" style="margin-top:0">
+              <button id="ex-run" class="primary"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg> Examinar ahora (≈1 minuto)</button>
+              <span id="ex-msg" class="mut"></span>
+            </div>
+            <div id="ex-score" style="font-weight:700;font-size:17px"></div>
+            <div id="ex-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </details>
+      </section>
 
       <div class="card hide" id="v-tenant">
         <div class="tenant-head">
@@ -3037,8 +3163,7 @@ const ADMIN_HTML = `<!doctype html>
               <textarea id="f-domains" rows="2"></textarea>
               <label style="margin-top:12px">Límite de mensajes al mes</label>
               <input id="f-limit" type="number" min="0" style="max-width:200px">
-              <div class="note" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Al alcanzar el límite, el bot responde un aviso fijo sin gastar IA.</div>
-              <div class="swrow" style="margin-top:14px"><div class="swlab">Bot activo<small>Desactívalo para apagar el chatbot por completo</small></div><label class="switch"><input id="f-active" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="note" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Al alcanzar el límite, el bot responde un aviso fijo sin gastar IA. El interruptor para encender o apagar el asistente está en <b>Publicar</b>.</div>
             </div>
           </details>
           <details class="cfg">
@@ -3061,102 +3186,149 @@ const ADMIN_HTML = `<!doctype html>
         </div>
       </div>
 
-      <div class="card hide" id="integ">
-        <h2>Integración y demo</h2>
-        <p class="sub">El snippet para la web del cliente, su panel de datos y la demo para enseñárselo
-        antes de desplegar.</p>
-        <label>Demo para el cliente: copia de su web con el bot funcionando de verdad</label>
-        <div class="copyrow"><input id="i-demo" readonly>
-          <button class="ghost small" data-copy="i-demo">Copiar</button>
-          <button id="i-demo-open" class="ghost small">Abrir</button></div>
-        <p id="i-demo-hint" class="mut" style="margin-top:6px"></p>
-        <label>Snippet del widget (pegar en la web del cliente cuando dé el visto bueno)</label>
-        <div class="copyrow"><textarea id="i-snippet" rows="3" readonly></textarea>
-          <button class="ghost small" data-copy="i-snippet">Copiar</button></div>
-        <div class="actions" style="margin-top:6px">
-          <button id="ig-run" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> ¿Cómo se integra en su web?</button>
-          <span id="ig-msg" class="mut"></span>
-        </div>
-        <div id="ig-box" class="hide" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:8px">
-          <div id="ig-title" style="font-weight:600;margin-bottom:6px"></div>
-          <ol id="ig-steps" style="padding-left:20px;font-size:14px"></ol>
-          <p id="ig-note" class="mut" style="margin-top:8px"></p>
-          <label>Enlace con estas instrucciones (para el informático del cliente)</label>
-          <div class="copyrow"><input id="ig-url" readonly>
-            <button class="ghost small" data-copy="ig-url">Copiar</button>
-            <button id="ig-url-open" class="ghost small">Abrir</button></div>
-          <div class="actions">
-            <button id="ig-pdf" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Descargar PDF</button>
-            <button id="ig-copy" class="ghost small">Copiar instrucciones + código como texto</button>
+      <div class="card studio hide" id="integ" style="border:0;padding:0;background:transparent;box-shadow:none">
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.7 6.3a4 4 0 0 1 0 5.6l-2 2a4 4 0 0 1-5.6-5.6l1-1"/><path d="M9.3 17.7a4 4 0 0 1 0-5.6l2-2a4 4 0 0 1 5.6 5.6l-1 1"/></svg></span>
+            <div><div class="ct">Instalación por canal</div><div class="cs">Código y pasos de cada canal</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="chinstall">
+              <div class="ch-h"><span class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span>Web <span class="pill on">Canal principal</span></div>
+              <div class="fieldset"><label>Código del widget — pegar en la web del cliente cuando dé el visto bueno</label>
+                <div class="copyrow"><textarea id="i-snippet" rows="3" readonly></textarea>
+                  <button class="ghost small" data-copy="i-snippet">Copiar</button></div></div>
+              <div class="actions" style="margin-top:2px">
+                <button id="ig-run" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Detectar plataforma y ver los pasos</button>
+                <span id="ig-msg" class="mut"></span>
+              </div>
+              <div id="ig-box" class="hide" style="border:1px solid var(--line);border-radius:10px;padding:14px">
+                <div id="ig-title" style="font-weight:600;margin-bottom:6px"></div>
+                <ol id="ig-steps" style="padding-left:20px;font-size:14px"></ol>
+                <p id="ig-note" class="mut" style="margin-top:8px"></p>
+                <label>Enlace con estas instrucciones (para el informático del cliente)</label>
+                <div class="copyrow"><input id="ig-url" readonly>
+                  <button class="ghost small" data-copy="ig-url">Copiar</button>
+                  <button id="ig-url-open" class="ghost small">Abrir</button></div>
+                <div class="actions">
+                  <button id="ig-pdf" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Descargar PDF</button>
+                  <button id="ig-copy" class="ghost small">Copiar instrucciones + código como texto</button>
+                </div>
+              </div>
+            </div>
+            <div class="chinstall soon"><div class="ch-h"><span class="mi">WA</span>WhatsApp <span class="pill off">Próximamente</span></div><div class="hint">Conexión vía Meta Cloud API (número, token, webhook). Disponible al activar el canal.</div></div>
+            <div class="chinstall soon"><div class="ch-h"><span class="mi">TG</span>Telegram <span class="pill off">Próximamente</span></div><div class="hint">Alta del bot en BotFather y token. Disponible al activar el canal.</div></div>
+            <div class="chinstall soon"><div class="ch-h"><span class="mi"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span>Chatbot telefónico <span class="pill off">Próximamente</span></div><div class="hint">Número de voz y enrutado de llamadas entrantes. Disponible al activar el canal.</div></div>
           </div>
-        </div>
-        <label>Panel del cliente (conversaciones, leads, preguntas sin respuesta)</label>
-        <div class="copyrow"><input id="i-panel" readonly>
-          <button class="ghost small" data-copy="i-panel">Copiar</button>
-          <button id="i-open" class="ghost small">Abrir</button></div>
-        <div class="actions">
-          <button id="rep-send" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/></svg> Enviar informe del mes al cliente</button>
-          <button id="rot-key" class="ghost small">Rotar clave del widget</button>
-          <button id="rot-panel" class="ghost small">Rotar enlace del panel</button>
-          <span id="integ-msg" class="mut"></span>
-        </div>
-        <p class="mut" style="margin-top:10px">Rotar invalida lo anterior al momento: tendrás que
-        actualizar el snippet en la web del cliente o reenviarle el enlace nuevo.</p>
+        </details>
+
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>
+            <div><div class="ct">Generador de manuales técnicos</div><div class="cs">Documento para el desarrollador del cliente</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Elige los canales y genera un <b>documento técnico específico de este bot y este cliente</b> (con su clave y sus pasos), listo para enviar al informático o desarrollador.</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <label class="selrow sel"><input type="checkbox" id="man-web" checked><span class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><div><strong>Web (widget)</strong><small>Instalación en su web · WordPress, Shopify, HTML, Wix…</small></div></label>
+              <label class="selrow off"><input type="checkbox" disabled><span class="mi">WA</span><div><strong>WhatsApp</strong><small>Próximamente</small></div></label>
+              <label class="selrow off"><input type="checkbox" disabled><span class="mi">TG</span><div><strong>Telegram</strong><small>Próximamente</small></div></label>
+              <label class="selrow off"><input type="checkbox" disabled><span class="mi"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span><div><strong>Chatbot telefónico</strong><small>Próximamente</small></div></label>
+            </div>
+            <div class="actions" style="margin-top:2px">
+              <button id="man-pdf" class="primary"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Generar documento (PDF)</button>
+              <button id="man-link" class="ghost small">Enlace para el desarrollador</button>
+              <span id="man-msg" class="mut"></span>
+            </div>
+          </div>
+        </details>
+
+        <details class="cfg">
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <div><div class="ct">Enseñar antes de desplegar</div><div class="cs">Demo con la web real del cliente</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="fieldset"><label>Copia de su web con el bot funcionando de verdad</label>
+              <div class="copyrow"><input id="i-demo" readonly>
+                <button class="ghost small" data-copy="i-demo">Copiar</button>
+                <button id="i-demo-open" class="ghost small">Abrir</button></div></div>
+            <p id="i-demo-hint" class="mut" style="margin-top:2px"></p>
+          </div>
+        </details>
+
+        <details class="cfg">
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/></svg></span>
+            <div><div class="ct">Panel del cliente e informes</div><div class="cs">Enlace del panel y envío del informe</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="fieldset"><label>Panel del cliente (conversaciones, leads, preguntas sin respuesta)</label>
+              <div class="copyrow"><input id="i-panel" readonly>
+                <button class="ghost small" data-copy="i-panel">Copiar</button>
+                <button id="i-open" class="ghost small">Abrir</button></div></div>
+            <div class="actions" style="margin-top:2px">
+              <button id="rep-send" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/></svg> Enviar informe del mes al cliente</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="cfg danger-card">
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+            <div><div class="ct">Claves y enlaces</div><div class="cs">Zona sensible · acciones irreversibles</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="swrow"><div class="swlab">Rotar clave del widget<small>Invalida la instalación actual en la web del cliente</small></div><button id="rot-key" class="ghost small">Rotar clave</button></div>
+            <div class="swrow"><div class="swlab">Rotar enlace del panel<small>El enlace anterior deja de funcionar</small></div><button id="rot-panel" class="ghost small">Rotar enlace</button></div>
+            <span id="integ-msg" class="mut"></span>
+          </div>
+        </details>
       </div>
 
-      <div class="card hide" id="ingest">
-        <h2>Contenido del bot</h2>
-        <p class="sub">Lo que el bot sabe. Reindexar la misma fuente (URL o archivo con el mismo nombre)
-        reemplaza la versión anterior, no duplica.</p>
-        <label>Documentos indexados — incluye los que suba el cliente desde su panel</label>
-        <div id="doc-list" class="mut">Cargando…</div>
-        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <label>Formulario de preguntas frecuentes para el cliente</label>
-        <p id="faq-box" class="mut" style="margin-bottom:8px">La IA propone las preguntas típicas del
-        negocio; le envías el enlace al cliente, las responde (puede añadir o quitar) y al enviar
-        quedan indexadas en el bot automáticamente.</p>
-        <div class="copyrow hide" id="faq-linkrow"><input id="faq-link" readonly>
-          <button class="ghost small" data-copy="faq-link">Copiar</button>
-          <button id="faq-open" class="ghost small">Abrir</button></div>
-        <label>Indicaciones para la IA (opcional): qué temas cubrir, cuántas preguntas, qué evitar…</label>
-        <textarea id="faq-brief" rows="2" placeholder="Ej.: céntrate en precios de stands y patrocinio; añade preguntas sobre parking y horarios de montaje; unas 8 preguntas en total; nada de temas clínicos."></textarea>
-        <div class="actions" style="margin-top:8px">
-          <button id="faq-gen" class="ghost small">Generar formulario con IA</button>
-          <span id="faq-msg" class="mut"></span>
-        </div>
-        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <label><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M9.5 3A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.5V4.5A1.5 1.5 0 0 0 9.5 3zM14.5 3A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.5"/></svg> Huecos de conocimiento — lo que preguntaron y el bot no supo responder</label>
-        <p class="mut" style="margin-bottom:8px">La IA revisa las preguntas sin respuesta de los
-        últimos 60 días y redacta borradores. Rellena los datos entre [corchetes], marca las que
-        quieras y apruébalas: quedan indexadas al momento.</p>
-        <div class="actions" style="margin-top:0">
-          <button id="gap-run" class="ghost small">Analizar con IA</button>
-          <span id="gap-msg" class="mut"></span>
-        </div>
-        <div id="gap-list"></div>
-        <div class="actions hide" id="gap-approve-row">
-          <button id="gap-approve" class="primary">Aprobar e indexar las marcadas</button>
-        </div>
-        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <label>Subir archivos (PDF, TXT, MD, CSV, HTML, imágenes…)</label>
-        <input id="g-files" type="file" multiple
-          accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg">
-        <div class="actions">
-          <button id="g-upload" class="primary">Subir e indexar archivos</button>
-          <span id="g-upmsg" class="mut"></span>
-        </div>
-        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-        <label>URLs a indexar (una por línea)</label>
-        <textarea id="g-urls" rows="3"></textarea>
-        <label>O texto pegado a mano — título</label>
-        <input id="g-title" placeholder="FAQ oficial y tarifas">
-        <label>Contenido</label>
-        <textarea id="g-content" rows="6" placeholder="Fechas: … Horarios: … Precios: … Contacto: …"></textarea>
-        <div class="actions">
-          <button id="g-run" class="primary">Indexar</button>
-          <span id="g-msg" class="mut"></span>
-        </div>
-        <div id="g-report" class="mut" style="margin-top:10px"></div>
+      <div class="card studio hide" id="ingest" style="border:0;padding:0;background:transparent;box-shadow:none">
+        <div class="page-heading"><div><p class="section-kicker">LO QUE EL BOT SABE</p><h1>Conocimiento</h1><p>La biblioteca de contenido indexado y las formas de añadir más. El bot solo responde con lo que hay aquí. Reindexar la misma fuente la reemplaza, no la duplica.</p></div></div>
+
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+            <div><div class="ct">Biblioteca de conocimiento</div><div class="cs">Documentos indexados, incluidos los del cliente</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <input id="doc-search" type="search" placeholder="Buscar en los documentos…">
+            <div id="doc-list" class="mut">Cargando…</div>
+          </div>
+        </details>
+
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg></span>
+            <div><div class="ct">Añadir contenido</div><div class="cs">Archivos, páginas web o texto</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="segfull" id="add-seg"><button type="button" class="on" data-add="files">Archivos</button><button type="button" data-add="web">Webs y texto</button></div>
+            <div class="reveal show" id="add-files">
+              <div class="fieldset"><label>Subir archivos (PDF, TXT, MD, CSV, HTML, imágenes…)</label>
+                <input id="g-files" type="file" multiple accept=".pdf,.txt,.md,.csv,.html,.htm,.jpg,.jpeg,.png,.webp,.svg"></div>
+              <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Las imágenes se leen con IA (texto y datos). Máximo 10 MB por archivo.</div>
+              <div class="actions" style="margin-top:0"><button id="g-upload" class="primary">Subir e indexar archivos</button><span id="g-upmsg" class="mut"></span></div>
+            </div>
+            <div class="reveal" id="add-web">
+              <div class="fieldset"><label>URLs a indexar (una por línea)</label><textarea id="g-urls" rows="3"></textarea></div>
+              <div class="fieldset"><label>O texto pegado a mano — título</label><input id="g-title" placeholder="FAQ oficial y tarifas"></div>
+              <div class="fieldset"><label>Contenido</label><textarea id="g-content" rows="6" placeholder="Fechas: … Horarios: … Precios: … Contacto: …"></textarea></div>
+              <div class="actions" style="margin-top:0"><button id="g-run" class="primary">Indexar URLs y texto</button><span id="g-msg" class="mut"></span></div>
+            </div>
+            <div id="g-report" class="mut"></div>
+          </div>
+        </details>
+
+        <details class="cfg">
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg></span>
+            <div><div class="ct">Contenido asistido por IA</div><div class="cs">Formulario FAQ para el cliente + huecos de conocimiento</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div class="divlabel">Formulario de preguntas frecuentes para el cliente</div>
+            <p id="faq-box" class="mut" style="margin:0">La IA propone las preguntas típicas del negocio; le envías el enlace al cliente, las responde (puede añadir o quitar) y al enviar quedan indexadas en el bot automáticamente.</p>
+            <div class="copyrow hide" id="faq-linkrow"><input id="faq-link" readonly>
+              <button class="ghost small" data-copy="faq-link">Copiar</button>
+              <button id="faq-open" class="ghost small">Abrir</button></div>
+            <div class="fieldset"><label>Indicaciones para la IA (opcional): qué temas cubrir, cuántas preguntas, qué evitar…</label>
+              <textarea id="faq-brief" rows="2" placeholder="Ej.: céntrate en precios de stands y patrocinio; añade preguntas sobre parking y horarios de montaje; unas 8 preguntas en total; nada de temas clínicos."></textarea></div>
+            <div class="actions" style="margin-top:0"><button id="faq-gen" class="ghost small">Generar formulario con IA</button><span id="faq-msg" class="mut"></span></div>
+            <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">
+            <div class="divlabel">Huecos de conocimiento — lo que preguntaron y el bot no supo responder</div>
+            <p class="mut" style="margin:0">La IA revisa las preguntas sin respuesta de los últimos 60 días y redacta borradores. Rellena los datos entre [corchetes], marca las que quieras y apruébalas: quedan indexadas al momento.</p>
+            <div class="actions" style="margin-top:0"><button id="gap-run" class="ghost small">Analizar con IA</button><span id="gap-msg" class="mut"></span></div>
+            <div id="gap-list"></div>
+            <div class="actions hide" id="gap-approve-row"><button id="gap-approve" class="primary">Aprobar e indexar las marcadas</button></div>
+          </div>
+        </details>
       </div>
 
       </div>
@@ -4638,6 +4810,7 @@ function selTenant(id, projectId) {
   var feats = (t && t.features) || {};
   $("f-featleads").checked = feats.leads !== false;
   $("f-leadnotify").value = feats.lead_notify || "off";
+  $("f-chweb").checked = feats.web !== false;
   $("f-panelon").checked = !t || t.panel_enabled !== false;
   var pf = (t && t.panel_features) || {};
   $("f-pfleads").checked = pf.leads !== false;
@@ -4782,23 +4955,60 @@ function renderBotOverview() {
   $("bot-ready-score").textContent = score + "%";
   var box = $("bot-next-steps"); box.innerHTML = "";
   [
-    { ok: essentials[0], text: "Definir objetivo y limites", tab: "cerebro" },
+    { ok: essentials[0], text: "Definir objetivo y comportamiento", tab: "cerebro" },
     { ok: essentials[2], text: "Configurar dominio y seguridad", tab: "cerebro" },
     { ok: assigned.length > 0, text: "Asignar al menos un canal", tab: "canales" },
     { ok: essentials[3], text: "Activar el asistente", tab: "publicar" }
   ].forEach(function (step) {
-    var b = document.createElement("button"); b.className = "next-step" + (step.ok ? " done" : "");
-    b.innerHTML = "<span>" + (step.ok ? svgIco("check") : svgIco("circle")) + "</span><strong></strong><small></small>";
+    var b = document.createElement("button"); b.className = "step" + (step.ok ? " done" : "");
+    b.innerHTML = "<span class='s'>" + (step.ok ? "✓" : "○") + "</span><div><strong></strong><small></small></div><span style='color:#9a9a95'>→</span>";
     b.querySelector("strong").textContent = step.text;
     b.querySelector("small").textContent = step.ok ? "Completado" : "Pendiente";
     b.onclick = function () { setBotTab(step.tab); };
     box.appendChild(b);
   });
+  loadBotHealth();
   if (!PROJECT_INTEGRATIONS[f.project.id]) loadProjectIntegrations(f.project.id, renderBotOverview);
+}
+
+// salud del motor: últimos errores registrados del motor (error_log global)
+function loadBotHealth() {
+  var box = $("bot-health"); if (!box) return;
+  box.className = "mut"; box.textContent = "Cargando…";
+  api("/admin/api/errors").then(function (errs) {
+    errs = Array.isArray(errs) ? errs : [];
+    if (!errs.length) {
+      box.className = "note ok";
+      box.innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20 6 9 17l-5-5'/></svg>Sin errores registrados en el motor.";
+      return;
+    }
+    box.className = "";
+    box.innerHTML = errs.slice(0, 5).map(function (e) {
+      var when = e.created_at ? new Date(e.created_at).toLocaleString("es-ES") : "";
+      return "<div class='note warn' style='margin-bottom:6px'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/></svg><span><b>" + esc(when) + "</b> · " + esc(e.route || "") + " — " + esc(e.message || "error") + "</span></div>";
+    }).join("");
+  }).catch(function () {
+    box.className = "note";
+    box.innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg>No se ha podido comprobar la salud ahora mismo.";
+  });
+}
+
+// PATCH parcial de un tenant desde controles fuera del formulario (Canales, Publicar).
+// Actualiza el estado local para que el resto del panel lo vea sin recargar.
+function patchTenant(partial, cb) {
+  api("/admin/api/tenants/" + sel.id, { method: "PATCH", body: JSON.stringify(partial) })
+    .then(function (r) {
+      if (r && r.error) { toast(r.error, true); if (cb) cb(false); return; }
+      var f = findTenant(sel.id); if (f) Object.assign(f.tenant, partial);
+      if (cb) cb(true, r);
+    })
+    .catch(function () { toast("No se ha podido guardar.", true); if (cb) cb(false); });
 }
 
 function renderBotChannels() {
   var f = findTenant(sel.id); if (!f) return;
+  var feats = f.tenant.features || {};
+  $("f-chweb").checked = feats.web !== false;
   var integrations = PROJECT_INTEGRATIONS[f.project.id] || [], box = $("bot-integration-list");
   box.innerHTML = "";
   var assigned = integrations.filter(function (x) { return (x.assigned_tenant_ids || []).indexOf(f.tenant.id) >= 0; });
@@ -4819,11 +5029,20 @@ function renderBotChannels() {
   if (!PROJECT_INTEGRATIONS[f.project.id]) loadProjectIntegrations(f.project.id, renderBotChannels);
 }
 
-$("bot-manage-integrations").onclick = function () {
+$("bot-manage-integrations").onclick = function (e) {
+  if (e && e.preventDefault) e.preventDefault();
   var f = findTenant(sel.id); if (!f) return;
   selProject(f.project.id);
   showProjectSection("integrations");
 };
+// canal web: efecto real inmediato (features.web gatea widget y chat)
+$("f-chweb").addEventListener("change", function () {
+  var f = findTenant(sel.id); if (!f) return;
+  var feats = Object.assign({}, f.tenant.features || {}, { web: $("f-chweb").checked });
+  patchTenant({ features: feats }, function (ok) {
+    if (ok) toast($("f-chweb").checked ? "Canal web encendido ✓" : "Canal web apagado");
+  });
+});
 function ftShow(id) {
   [].forEach.call(document.querySelectorAll(".ftabs button"), function (x) {
     x.classList.toggle("on", x.dataset.ft === id);
@@ -4856,6 +5075,12 @@ function setBotTab(bt) {
   }
   var vt = document.getElementById("v-tenant");
   if (vt) vt.classList.toggle("dsn-only", bt === "diseno");
+  // el lienzo (vista en vivo) solo tiene sentido en Diseño y Objetivo;
+  // en Captación se oculta aunque comparta el formulario v-tenant
+  if (bt === "captacion") {
+    $("canvas-panel").classList.add("hide");
+    $("main").classList.remove("with-canvas");
+  }
   if (bt === "resumen") renderBotOverview();
   if (bt === "canales") renderBotChannels();
   if (bt === "publicar") loadChecklist();
@@ -4905,31 +5130,51 @@ function checkRow(ok, label, hint, go) {
   return row;
 }
 
+// anillo de progreso de Publicar: cuántos pasos esenciales están hechos
+function pubProgress(done, total) {
+  var pct = total ? Math.round(100 * done / total) : 0;
+  var ring = $("pub-ring"); if (ring) ring.style.setProperty("--p", pct);
+  var rt = $("pub-ringtx"); if (rt) rt.textContent = done + "/" + total;
+  var full = done >= total;
+  var title = $("pub-progtitle"); if (title) title.textContent = full ? "Todo listo para publicar" : (done >= total - 1 ? "Casi listo para publicar" : "En preparación");
+  var hint = $("pub-proghint");
+  if (hint) hint.textContent = full ? "Puedes activar el asistente y entregar la instalación." : "Faltan " + (total - done) + " paso(s). Toca cada uno para resolverlo.";
+}
+
 function loadChecklist() {
   var box = $("check-list");
   var f = findTenant(sel.id);
   if (!f) { box.textContent = ""; return; }
   var t = f.tenant;
   var c = f.client;
+  // interruptor maestro (Asistente en vivo) con efecto inmediato
+  $("f-active").checked = !!t.active;
+  reflectActive(t.active);
   box.className = "";
+  box.style.marginBottom = "16px";
   box.innerHTML = "";
   var dom = (t.allowed_domains || [])[0] || "";
-  box.appendChild(checkRow(!!(t.system_prompt || "").trim(), "Cerebro configurado",
-    "El bot no tiene instrucciones. Ve a Cerebro y usa el asistente de IA.",
-    function () { setBotTab("cerebro"); }));
-  box.appendChild(checkRow(!!dom, "Dominio del cliente añadido",
-    "Sin dominio no funcionan ni el widget ni la demo. Cerebro → Seguridad y límites.",
-    function () { setBotTab("cerebro"); ftShow("ft-seg"); }));
-  var rowDocs = checkRow(DOCS_COUNT > 0, "Contenido indexado",
-    "El bot no tiene conocimiento: sube documentos o responde el FAQ en Contenido.",
-    function () { setBotTab("contenido"); });
-  box.appendChild(rowDocs);
-  box.appendChild(checkRow(!!c.portal_password_hash, "Acceso del cliente creado",
-    "Genera su contraseña del portal en la ficha del cliente.",
-    function () { selClient(c.id); }));
+  var checks = [
+    { ok: !!(t.system_prompt || "").trim(), label: "Cerebro configurado",
+      hint: "El bot no tiene instrucciones. Ve a Cerebro y usa el asistente de IA.",
+      go: function () { setBotTab("cerebro"); } },
+    { ok: !!dom, label: "Dominio del cliente añadido",
+      hint: "Sin dominio no funcionan ni el widget ni la demo. Cerebro → Seguridad y límites.",
+      go: function () { setBotTab("cerebro"); ftShow("ft-seg"); } },
+    { ok: DOCS_COUNT > 0, label: "Contenido indexado",
+      hint: "El bot no tiene conocimiento: sube documentos o responde el FAQ en Conocimiento.",
+      go: function () { setBotTab("contenido"); } },
+    { ok: !!c.portal_password_hash, label: "Acceso del cliente creado",
+      hint: "Genera su contraseña del portal en la ficha del cliente.",
+      go: function () { selClient(c.id); } },
+  ];
+  var total = checks.length + 1; // + widget instalado
+  var done = checks.filter(function (x) { return x.ok; }).length;
+  checks.forEach(function (x) { box.appendChild(checkRow(x.ok, x.label, x.hint, x.go)); });
   var rowLive = checkRow(false, "Widget instalado en la web del cliente",
     "Comprobando si hay conversaciones reales…", null);
   box.appendChild(rowLive);
+  pubProgress(done, total);
   if (!t.panel_token) {
     rowLive.querySelector(".meta").textContent = "Aún sin comprobar: guarda el chatbot primero.";
     return;
@@ -4945,14 +5190,25 @@ function loadChecklist() {
       var any = convs.length > 0;
       var fresh = checkRow(live, "Widget instalado en la web del cliente",
         any ? "Hay conversaciones de prueba, pero ninguna desde " + (dom || "la web del cliente") +
-              ". Copia el snippet de la pestaña Publicar y pégalo en su web."
-            : "Todavía no hay ninguna conversación. Prueba el bot en la demo y luego instala el snippet.",
+              ". Copia el código de «Instalación por canal» y pégalo en su web."
+            : "Todavía no hay ninguna conversación. Prueba el bot en la demo y luego instala el código.",
         null);
       rowLive.parentNode.replaceChild(fresh, rowLive);
+      pubProgress(done + (live ? 1 : 0), total);
     })
     .catch(function () {
       rowLive.querySelector(".meta").textContent = "No se ha podido comprobar ahora mismo.";
     });
+}
+
+// refleja el estado activo/borrador del bot en la nota de Publicar
+function reflectActive(on) {
+  var note = $("pub-active-note");
+  if (!note) return;
+  note.className = "note " + (on ? "ok" : "warn");
+  note.innerHTML = (on
+    ? "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20 6 9 17l-5-5'/></svg><span>El asistente está <b>en vivo</b>: responde en los canales encendidos.</span>"
+    : "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg><span>El asistente está en <b>borrador</b>: no responde en ningún canal hasta que lo actives.</span>");
 }
 
 function loadFaq() {
@@ -5634,7 +5890,7 @@ function collect() {
     handoff_email: $("f-email").value.trim() || null,
     lead_webhook_url: $("f-webhook").value.trim() || null,
     active: $("f-active").checked,
-    features: { leads: $("f-featleads").checked, lead_notify: $("f-leadnotify").value },
+    features: { leads: $("f-featleads").checked, lead_notify: $("f-leadnotify").value, web: $("f-chweb").checked },
     panel_enabled: $("f-panelon").checked,
     panel_features: {
       leads: $("f-pfleads").checked,
@@ -5947,6 +6203,61 @@ document.querySelectorAll("[data-copy]").forEach(function (b) {
       setTimeout(function () { b.textContent = "Copiar"; }, 1500);
     });
   };
+});
+
+// ----- Publicar: interruptor maestro «Asistente en vivo» (efecto inmediato) -----
+$("f-active").addEventListener("change", function () {
+  var on = $("f-active").checked;
+  reflectActive(on);
+  patchTenant({ active: on }, function (ok) {
+    if (!ok) { $("f-active").checked = !on; reflectActive(!on); return; }
+    toast(on ? "Asistente en vivo ✓" : "Asistente en borrador");
+  });
+});
+
+// ----- Publicar: generador de manuales técnicos (por ahora, canal web) -----
+function ensureGuide(cb) {
+  if (!curTenant()) return;
+  if (IG_LAST) { cb(); return; }
+  $("man-msg").textContent = "Preparando el manual…"; $("man-msg").className = "mut";
+  api("/admin/api/tenants/" + sel.id + "/integration-guide").then(function (r) {
+    if (r.error) { $("man-msg").textContent = r.error; $("man-msg").className = "err"; return; }
+    IG_LAST = r; $("man-msg").textContent = ""; cb();
+  }).catch(function () { $("man-msg").textContent = "No se ha podido preparar el manual."; $("man-msg").className = "err"; });
+}
+$("man-pdf").onclick = function () {
+  if (!$("man-web").checked) { $("man-msg").textContent = "Selecciona al menos un canal."; $("man-msg").className = "err"; return; }
+  ensureGuide(function () {
+    var k = activeKey(curTenant());
+    window.open(PUB + "/instrucciones.pdf?key=" + k + "&p=" + IG_LAST.key, "_blank");
+  });
+};
+$("man-link").onclick = function () {
+  if (!$("man-web").checked) { $("man-msg").textContent = "Selecciona al menos un canal."; $("man-msg").className = "err"; return; }
+  ensureGuide(function () {
+    var k = activeKey(curTenant());
+    var url = PUB + "/instrucciones?key=" + k + "&p=" + IG_LAST.key;
+    navigator.clipboard.writeText(url).then(function () { $("man-msg").textContent = "Enlace copiado ✓"; $("man-msg").className = "ok"; });
+  });
+};
+document.querySelectorAll(".studio .selrow input:not([disabled])").forEach(function (inp) {
+  inp.addEventListener("change", function () { inp.closest(".selrow").classList.toggle("sel", inp.checked); });
+});
+
+// ----- Conocimiento: conmutador Archivos / Webs y texto -----
+$("add-seg").addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  [].forEach.call(this.children, function (x) { x.classList.toggle("on", x === b); });
+  $("add-files").classList.toggle("show", b.dataset.add === "files");
+  $("add-web").classList.toggle("show", b.dataset.add === "web");
+});
+// ----- Conocimiento: filtro de la biblioteca -----
+$("doc-search").addEventListener("input", function () {
+  var q = this.value.trim().toLowerCase();
+  [].forEach.call($("doc-list").children, function (el) {
+    var hit = !q || (el.textContent || "").toLowerCase().indexOf(q) >= 0;
+    el.style.display = hit ? "" : "none";
+  });
 });
 
 // ----- asistente IA -----
@@ -8099,6 +8410,11 @@ ${inject}</body></html>`;
       if (url.pathname === "/api/config") {
         const tenant = await getTenant(env, url.searchParams.get("key"));
         if (!tenant) return json({ error: "clave no válida" }, 401);
+        // canal web apagado desde el panel (Canales): el widget no se renderiza
+        if (tenant.features && tenant.features.web === false) {
+          return json({ error: "canal web desactivado" }, 403,
+            cors(origin, [...(tenant.allowed_domains || []), url.hostname]));
+        }
         return json(
           {
             name: tenant.name,
@@ -8122,6 +8438,10 @@ ${inject}</body></html>`;
         const ch = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
         if (ch["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, ch);
+        }
+        // canal web apagado desde el panel (Canales): el widget no responde
+        if (tenant.features && tenant.features.web === false) {
+          return json({ error: "canal web desactivado" }, 403, ch);
         }
         if (typeof message !== "string" || !message || message.length > 2000) {
           return json({ error: "mensaje no válido" }, 400, ch);
