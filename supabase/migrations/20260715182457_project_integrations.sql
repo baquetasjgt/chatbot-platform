@@ -14,11 +14,8 @@ create table if not exists public.project_integrations (
   updated_at timestamptz not null default now(),
   unique (project_id, provider, name)
 );
-
 alter table public.project_integrations enable row level security;
-
 create index if not exists project_integrations_project_idx
   on public.project_integrations(project_id, category, status);
-
 comment on table public.project_integrations is
   'Integraciones configuradas por proyecto. No almacena secretos sin cifrar; el Worker usa service_role.';
