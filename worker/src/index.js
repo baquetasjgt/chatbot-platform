@@ -1165,6 +1165,46 @@ async function runMonthlyReports(env) {
   }
 }
 
+// Purga automática de leads por retención. Cada bot puede fijar, de forma
+// independiente, cuántos días conserva sus leads en la vista admin
+// (features.leads_ret_admin) y en la vista del cliente (features.leads_ret_client).
+// Al vencer el plazo, el lead se oculta SOLO de ese lado (mismo mecanismo que el
+// borrado manual). Cuando queda oculto por ambos lados ya no lo ve nadie, así que
+// se borra físicamente para no acumular basura. 0 o ausente = no borrar nunca.
+async function runLeadsRetention(env) {
+  const tenants = await sb(env, "tenants?select=id,slug,features");
+  const now = Date.now();
+  for (const t of tenants || []) {
+    try {
+      const f = t.features || {};
+      const ra = parseInt(f.leads_ret_admin, 10) || 0;
+      const rc = parseInt(f.leads_ret_client, 10) || 0;
+      if (ra > 0) {
+        const cut = new Date(now - ra * 86400000).toISOString();
+        await sb(env, `leads?tenant_id=eq.${t.id}&hidden_admin=is.false&created_at=lt.${cut}`, {
+          method: "PATCH",
+          body: { hidden_admin: true },
+        });
+      }
+      if (rc > 0) {
+        const cut = new Date(now - rc * 86400000).toISOString();
+        await sb(env, `leads?tenant_id=eq.${t.id}&hidden_client=is.false&created_at=lt.${cut}`, {
+          method: "PATCH",
+          body: { hidden_client: true },
+        });
+      }
+    } catch (err) {
+      await logError(env, "retencion-leads/" + (t.slug || t.id), err?.message || err);
+    }
+  }
+  // limpieza física: los leads ocultos por admin Y cliente no los ve ya nadie
+  try {
+    await sb(env, `leads?hidden_admin=is.true&hidden_client=is.true`, { method: "DELETE" });
+  } catch (err) {
+    await logError(env, "retencion-leads/purga", err?.message || err);
+  }
+}
+
 // ---------- portal de clientes: sesiones y contraseñas ----------
 
 function b64(buf) {
@@ -2321,11 +2361,18 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
   if (mConvList && request.method === "GET") {
     const rows = await sb(
       env,
-      `conversations?tenant_id=eq.${mConvList[1]}` +
+      `conversations?tenant_id=eq.${mConvList[1]}&hidden_admin=is.false` +
         `&select=id,session_id,page_url,human_handoff,last_message_at,messages(role,content,created_at)` +
         `&order=last_message_at.desc&messages.order=created_at.asc&limit=100`
     );
     return json(rows || []);
+  }
+
+  // borrar (ocultar) una conversación desde el admin, independiente del cliente
+  const mConvDel = url.pathname.match(/^\/admin\/api\/conversations\/([0-9a-f-]{36})$/);
+  if (mConvDel && request.method === "DELETE") {
+    await sb(env, `conversations?id=eq.${mConvDel[1]}`, { method: "PATCH", body: { hidden_admin: true } });
+    return json({ ok: true });
   }
 
   // --- relevo humano desde el admin (mismas acciones que el panel del cliente) ---
@@ -3693,6 +3740,18 @@ const ADMIN_HTML = `<!doctype html>
                 <option value="daily">Resumen diario — un email a las 07:00 con los del día</option>
               </select>
               <div class="note" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>El aviso por email necesita Resend configurado. El webhook recibe cada lead al momento; con Zapier o Make lo reenvías a hoja de cálculo o CRM sin programar.</div>
+            </div>
+          </details>
+          <details class="cfg">
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M12 11v6"/></svg></span>
+              <div><div class="ct">Borrado automático de leads</div><div class="cs">Cada cuánto se limpian solos</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <label>Borrar los leads automáticamente pasados</label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input id="f-retadmin" type="number" min="0" step="1" style="max-width:120px" placeholder="0">
+                <span class="mut">días (0 = no borrar nunca)</span>
+              </div>
+              <div class="note" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Solo afecta a <b>tu vista</b> (la del admin). El cliente tiene su propio plazo en su panel, independiente de este. Un lead solo desaparece del todo cuando lo borráis los dos.</div>
             </div>
           </details>
         </div>
@@ -5493,6 +5552,7 @@ function selTenant(id, projectId) {
   var feats = (t && t.features) || {};
   $("f-featleads").checked = feats.leads !== false;
   $("f-leadnotify").value = feats.lead_notify || "off";
+  $("f-retadmin").value = parseInt(feats.leads_ret_admin, 10) || 0;
   $("f-chweb").checked = feats.web !== false;
   $("f-panelon").checked = !t || t.panel_enabled !== false;
   var pf = (t && t.panel_features) || {};
@@ -5811,7 +5871,15 @@ function inboxCard(c) {
       .then(function (r) { tgl.disabled = false; if (r && r.ok !== false && !r.error) { c.human_handoff = r.human_handoff; INBOX_OPEN[c.id] = true; renderInbox(); } else toast((r && r.error) || "No se pudo", true); })
       .catch(function () { tgl.disabled = false; });
   };
-  bar.appendChild(state); bar.appendChild(tgl); body.appendChild(bar);
+  var del = document.createElement("button"); del.className = "ghost small"; del.textContent = "Borrar";
+  del.onclick = function () {
+    if (!confirm("¿Borrar esta conversación de tu bandeja? El cliente la seguirá viendo en su panel.")) return;
+    del.disabled = true;
+    api("/admin/api/conversations/" + c.id, { method: "DELETE" })
+      .then(function (r) { if (r && !r.error) { delete INBOX_OPEN[c.id]; renderInbox(); } else { del.disabled = false; toast((r && r.error) || "No se pudo", true); } })
+      .catch(function () { del.disabled = false; toast("No se pudo", true); });
+  };
+  bar.appendChild(state); bar.appendChild(tgl); bar.appendChild(del); body.appendChild(bar);
   if (c.human_handoff) {
     var rrow = document.createElement("div"); rrow.className = "convreply";
     var inp = document.createElement("input"); inp.placeholder = "Escribe y responde por " + chan + "…";
@@ -6687,7 +6755,12 @@ function collect() {
     handoff_email: $("f-email").value.trim() || null,
     lead_webhook_url: $("f-webhook").value.trim() || null,
     active: $("f-active").checked,
-    features: { leads: $("f-featleads").checked, lead_notify: $("f-leadnotify").value, web: $("f-chweb").checked },
+    features: Object.assign({}, ((findTenant(sel.id) || {}).tenant || {}).features || {}, {
+      leads: $("f-featleads").checked,
+      lead_notify: $("f-leadnotify").value,
+      web: $("f-chweb").checked,
+      leads_ret_admin: parseInt($("f-retadmin").value, 10) || 0,
+    }),
     panel_enabled: $("f-panelon").checked,
     panel_features: {
       leads: $("f-pfleads").checked,
@@ -8334,6 +8407,14 @@ const PANEL_HTML = `<!doctype html>
 
       <section id="t-leads">
         <div class="section-head"><div><h2>Leads</h2><p>Contactos captados y estado de seguimiento comercial.</p></div></div>
+        <div class="box" id="lead-retention" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <span style="font-weight:600">Borrar mis leads automáticamente pasados</span>
+          <input id="lret-days" type="number" min="0" step="1" style="max-width:110px;width:110px" placeholder="0">
+          <span style="color:var(--mut);font-size:13px">días (0 = no borrar nunca)</span>
+          <button id="lret-save" class="ghost">Guardar</button>
+          <span id="lret-msg" style="color:var(--mut);font-size:13px"></span>
+          <p style="flex-basis:100%;margin:2px 0 0;color:var(--mut);font-size:13px">Solo afecta a tu vista. El proveedor puede tener su propio plazo, independiente del tuyo.</p>
+        </div>
         <div class="filters"><input id="lf-q" type="search" placeholder="Buscar por nombre, email o empresa">
           <select id="lf-status"><option value="">Todos</option><option value="nuevo">Nuevos</option><option value="contactado">Contactados</option></select>
           <input id="lf-from" type="date" title="Desde"><input id="lf-to" type="date" title="Hasta"><span class="count" id="lf-count"></span><button id="csv" class="ghost">Descargar CSV</button></div>
@@ -8971,6 +9052,23 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     renderGaps();
     renderDocs();
     renderBadges();
+    var lret = $("lret-days");
+    if (lret) {
+      lret.value = d.leads_ret_client || 0;
+      var lsave = $("lret-save"), lmsg = $("lret-msg");
+      lsave.onclick = function () {
+        var days = parseInt(lret.value, 10); if (!(days >= 0)) days = 0;
+        lsave.disabled = true; lmsg.textContent = "Guardando…";
+        fetch("/panel/retention?token=" + encodeURIComponent(token), {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: days }),
+        }).then(function (r) { return r.json(); }).then(function (x) {
+          lsave.disabled = false;
+          if (x && x.ok) { lret.value = x.days; lmsg.textContent = x.days ? "Guardado, se borrarán pasados " + x.days + " días" : "Guardado, no se borrarán solos"; }
+          else lmsg.textContent = (x && x.error) || "No se pudo guardar";
+          setTimeout(function () { lmsg.textContent = ""; }, 4000);
+        }).catch(function () { lsave.disabled = false; lmsg.textContent = "No se pudo guardar"; });
+      };
+    }
     localStorage.setItem(SEEN_KEY, new Date().toISOString());
   })
   .catch(function () {
@@ -9154,9 +9252,13 @@ function serveWeb(url) {
 
 export default {
   async scheduled(event, env, ctx) {
-    // día 1 de cada mes: informes a los clientes; a diario: resumen de leads (si está activado)
+    // día 1 de cada mes: informes a los clientes; a diario: resumen de leads
+    // (si está activado) + purga de leads por retención de cada bot
     if (event.cron === "0 7 1 * *") ctx.waitUntil(runMonthlyReports(env));
-    else ctx.waitUntil(runDailyLeadDigests(env));
+    else {
+      ctx.waitUntil(runDailyLeadDigests(env));
+      ctx.waitUntil(runLeadsRetention(env));
+    }
   },
 
   async fetch(request, env, ctx) {
@@ -10213,6 +10315,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
             logo_url: tenant.theme?.logo_url || null,
             public_key: keys?.[keys.length - 1]?.public_key || null,
             features: feat,
+            leads_ret_client: parseInt((tenant.features || {}).leads_ret_client, 10) || 0,
             conversations: feat.convs === false ? [] : conversations,
             leads: feat.leads === false ? [] : leads,
             activity,
@@ -10221,6 +10324,20 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           200,
           { "Cache-Control": "no-store" }
         );
+      }
+
+      // el cliente fija cuántos días conserva SUS leads (independiente del admin)
+      if (url.pathname === "/panel/retention" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        if ((tenant.panel_features || {}).leads === false) return json({ error: "no disponible" }, 403);
+        const body = await request.json().catch(() => ({}));
+        let days = parseInt(body.days, 10);
+        if (!Number.isFinite(days) || days < 0) days = 0;
+        if (days > 3650) days = 3650;
+        const features = Object.assign({}, tenant.features || {}, { leads_ret_client: days });
+        await sb(env, `tenants?id=eq.${tenant.id}`, { method: "PATCH", body: { features } });
+        return json({ ok: true, days });
       }
 
       return json({ error: "no encontrado" }, 404);
