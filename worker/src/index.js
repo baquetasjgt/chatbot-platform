@@ -432,6 +432,15 @@ function leadCaptureEnabled(tenant) {
   return !(tenant.features && tenant.features.leads === false);
 }
 
+// ¿está vivo un canal para este bot? Dos niveles, ambos deben estar en ON:
+// el admin manda (features.<canal>) y el cliente ajusta (features.<canal>_client).
+// Por defecto (sin la clave) se considera encendido. Para WhatsApp/Telegram, además,
+// hace falta que la integración esté conectada (eso se comprueba aparte, con status).
+function channelOn(tenant, ch) {
+  const f = (tenant && tenant.features) || {};
+  return f[ch] !== false && f[ch + "_client"] !== false;
+}
+
 // el modelo manda sobre el proveedor guardado: una combinación incoherente
 // (p. ej. provider=google con un modelo claude-*) no debe tumbar el chat
 function pickRunner(tenant) {
@@ -3341,8 +3350,8 @@ const ADMIN_HTML = `<!doctype html>
             <div><div class="ct">Canales de propagación</div><div class="cs">Enciende o apaga por dónde habla el bot</div></div><span class="cv">›</span></summary>
           <div class="cfgb">
             <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span><div class="cbody"><strong>Web</strong><small>El chat embebido en la web del cliente</small></div><label class="switch"><input id="f-chweb" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-            <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></span><div class="cbody"><strong>WhatsApp <span class="pill off">Próximamente</span></strong><small>Meta Cloud API</small></div><label class="switch dis"><input type="checkbox" disabled><span class="track"></span><span class="knob"></span></label></div>
-            <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><path d="M21.5 4.5 2.5 11.8l5.5 1.7M21.5 4.5 18 20l-6-5.5M21.5 4.5 8 13.5M8 13.5V19l3-3.2"/></svg></span><div class="cbody"><strong>Telegram <span class="pill off">Próximamente</span></strong><small>Bot API</small></div><label class="switch dis"><input type="checkbox" disabled><span class="track"></span><span class="knob"></span></label></div>
+            <div class="chrow" id="chrow-wa"><span class="mi"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></span><div class="cbody"><strong>WhatsApp <span class="pill off hide" id="pill-wa">Sin conectar</span></strong><small id="cs-wa">Meta Cloud API</small></div><label class="switch" id="sw-wa"><input id="f-chwa" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            <div class="chrow" id="chrow-tg"><span class="mi"><svg viewBox="0 0 24 24"><path d="M21.5 4.5 2.5 11.8l5.5 1.7M21.5 4.5 18 20l-6-5.5M21.5 4.5 8 13.5M8 13.5V19l3-3.2"/></svg></span><div class="cbody"><strong>Telegram <span class="pill off hide" id="pill-tg">Sin conectar</span></strong><small id="cs-tg">Bot API</small></div><label class="switch" id="sw-tg"><input id="f-chtg" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
             <div class="chrow"><span class="mi"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span><div class="cbody"><strong>Chatbot telefónico <span class="pill off">Próximamente</span></strong><small>Voz · atiende llamadas entrantes con IA</small></div><label class="switch dis"><input type="checkbox" disabled><span class="track"></span><span class="knob"></span></label></div>
             <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>El <b>código de instalación</b> del canal web está en <b>Publicar</b> → «Instalación por canal». Si apagas el canal web, el widget deja de responder aunque el bot esté activo.</span></div>
           </div>
@@ -5753,6 +5762,24 @@ function renderBotChannels() {
   var f = findTenant(sel.id); if (!f) return;
   var feats = f.tenant.features || {};
   $("f-chweb").checked = feats.web !== false;
+  // WhatsApp / Telegram: el interruptor maestro solo tiene sentido si hay una
+  // integración CONECTADA para este bot. Si no, se muestra apagado y deshabilitado.
+  ["whatsapp", "telegram"].forEach(function (prov) {
+    var short = prov === "whatsapp" ? "wa" : "tg";
+    var inp = $("f-ch" + short), sw = $("sw-" + short), pill = $("pill-" + short), cs = $("cs-" + short);
+    var list = PROJECT_INTEGRATIONS[f.project.id] || [];
+    var conn = list.some(function (x) {
+      return x.provider === prov && x.status === "connected" && (x.assigned_tenant_ids || []).indexOf(f.tenant.id) >= 0;
+    });
+    if (conn) {
+      inp.disabled = false; sw.classList.remove("dis"); pill.classList.add("hide");
+      inp.checked = feats[prov] !== false;
+      cs.textContent = feats[prov] !== false ? "Conectado y encendido" : "Conectado, apagado por ti";
+    } else {
+      inp.disabled = true; inp.checked = false; sw.classList.add("dis"); pill.classList.remove("hide");
+      cs.textContent = prov === "whatsapp" ? "Meta Cloud API — conéctalo en Integraciones" : "Bot API — conéctalo en Integraciones";
+    }
+  });
   var integrations = PROJECT_INTEGRATIONS[f.project.id] || [], box = $("bot-integration-list");
   box.innerHTML = "";
   var assigned = integrations.filter(function (x) { return (x.assigned_tenant_ids || []).indexOf(f.tenant.id) >= 0; });
@@ -5787,6 +5814,21 @@ $("f-chweb").addEventListener("change", function () {
     if (ok) toast($("f-chweb").checked ? "Canal web encendido ✓" : "Canal web apagado");
   });
 });
+// WhatsApp / Telegram: interruptor maestro del admin. Apagarlo mata el canal y lo
+// oculta del panel del cliente; el cliente no podrá volver a encenderlo.
+function wireMasterChannel(short, prov, label) {
+  $("f-ch" + short).addEventListener("change", function () {
+    var f = findTenant(sel.id); if (!f) return;
+    var on = $("f-ch" + short).checked;
+    var patch = {}; patch[prov] = on;
+    var feats = Object.assign({}, f.tenant.features || {}, patch);
+    patchTenant({ features: feats }, function (ok) {
+      if (ok) { toast(on ? label + " encendido ✓" : label + " apagado"); renderBotChannels(); }
+    });
+  });
+}
+wireMasterChannel("wa", "whatsapp", "WhatsApp");
+wireMasterChannel("tg", "telegram", "Telegram");
 
 // ---------- bandeja de atención humana (admin) ----------
 var INBOX_OPEN = {};
@@ -8362,6 +8404,7 @@ const PANEL_HTML = `<!doctype html>
       <button data-tab="t-gaps" aria-label="Preguntas pendientes"><span class="nav-ico" aria-hidden="true">?</span><span class="nav-label">Preguntas pendientes</span></button>
       <button data-tab="t-add" aria-label="Conocimiento"><span class="nav-ico" aria-hidden="true">+</span><span class="nav-label">Conocimiento</span></button>
       <button data-tab="t-test" aria-label="Probar asistente"><span class="nav-ico" aria-hidden="true">▷</span><span class="nav-label">Probar asistente</span></button>
+      <button data-tab="t-channels" aria-label="Canales"><span class="nav-ico" aria-hidden="true">◈</span><span class="nav-label">Canales</span></button>
     </nav>
     <div class="side-bottom">
       <a class="side-link" href="/acceso" target="_blank" rel="noopener" aria-label="Facturación" title="Facturación">€</a>
@@ -8444,6 +8487,12 @@ const PANEL_HTML = `<!doctype html>
       <section id="t-test">
         <div class="section-head"><div><h2>Probar el asistente</h2><p>Comprueba la experiencia exactamente como la verá un visitante.</p></div></div>
         <div class="box"><p><b>El botón del asistente está en la esquina inferior derecha.</b></p><p class="mut" style="margin-top:8px">Las conversaciones de prueba también quedan registradas. Si acabas de subir contenido, pregúntale sobre ello para comprobarlo.</p></div>
+      </section>
+
+      <section id="t-channels">
+        <div class="section-head"><div><h2>Canales</h2><p>Enciende o apaga por dónde habla tu asistente. Solo aparecen los canales activados para ti.</p></div></div>
+        <div id="channels-list"></div>
+        <div id="channels-empty" class="empty hide"><b>Sin canales disponibles</b>Cuando se active un canal para tu asistente, aparecerá aquí para que lo enciendas o lo apagues.</div>
       </section>
 
       <footer class="panel-footer">© 2026 · Panel privado del cliente.</footer>
@@ -8757,6 +8806,42 @@ function convMatches(c) {
   return true;
 }
 
+function renderChannels(list) {
+  var box = $("channels-list"); if (!box) return;
+  box.innerHTML = "";
+  if (!list.length) { $("channels-empty").classList.remove("hide"); return; }
+  $("channels-empty").classList.add("hide");
+  list.forEach(function (ch) {
+    var row = document.createElement("div");
+    row.className = "box";
+    row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px";
+    var lab = document.createElement("div");
+    lab.innerHTML = "<b>" + esc(ch.label) + "</b><br><span style='font-size:13px'></span>";
+    var btn = document.createElement("button");
+    btn.className = "mini";
+    var paint = function () {
+      var sp = lab.querySelector("span");
+      sp.textContent = ch.client_on ? "Encendido" : "Apagado";
+      sp.style.color = ch.client_on ? "var(--ok)" : "var(--mut)";
+      btn.textContent = ch.client_on ? "Apagar" : "Encender";
+    };
+    paint();
+    btn.onclick = function () {
+      btn.disabled = true;
+      fetch("/panel/channel?token=" + encodeURIComponent(token), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: ch.key, on: !ch.client_on }),
+      }).then(function (r) { return r.json(); }).then(function (r) {
+        btn.disabled = false;
+        if (r && r.ok) { ch.client_on = r.on; paint(); }
+        else alert((r && r.error) || "No se ha podido cambiar.");
+      }).catch(function () { btn.disabled = false; alert("No se ha podido cambiar."); });
+    };
+    row.appendChild(lab); row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+
 function renderConvs() {
   if (!$("convs-empty")) return; // pestaña desactivada
   var rows = CONVS.filter(convMatches);
@@ -8777,8 +8862,9 @@ function renderConvs() {
     var box = document.createElement("div");
     box.className = "conv";
     var chan = /^wa:/.test(c.session_id || "") ? "WhatsApp" : /^tg:/.test(c.session_id || "") ? "Telegram" : "";
+    var tag = chan || "Web"; // web no lleva prefijo en el session_id: si no es wa:/tg:, viene de la web
     var head = document.createElement("button");
-    head.innerHTML = "<span>" + (chan ? "<b class='chtag'>" + chan + "</b> " : "") + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
+    head.innerHTML = "<span><b class='chtag'>" + tag + "</b> " + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
       "<span class='meta'>" + (c.human_handoff ? "<b class='hotag'>Atendiendo tú</b> · " : "") + ms.length + " mensajes · " + esc(fmt(c.last_message_at)) + "</span>";
     head.onclick = function () { box.classList.toggle("open"); OPEN_CONVS[c.id] = box.classList.contains("open"); };
     var body = document.createElement("div");
@@ -9052,6 +9138,14 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     renderGaps();
     renderDocs();
     renderBadges();
+    var CH = d.channels || [];
+    if (!CH.length) {
+      var cbtn = document.querySelector('nav button[data-tab="t-channels"]');
+      var csec = document.getElementById("t-channels");
+      if (cbtn) cbtn.remove(); if (csec) csec.remove();
+    } else {
+      renderChannels(CH);
+    }
     var lret = $("lret-days");
     if (lret) {
       lret.value = d.leads_ret_client || 0;
@@ -9417,6 +9511,7 @@ ${inject}</body></html>`;
               if (!integ || integ.status !== "connected" || !integ.settings?.access_token) return;
               const tenant = await tenantForIntegration(env, integ);
               if (!tenant) return;
+              if (!channelOn(tenant, "whatsapp")) return; // canal apagado (admin o cliente)
               for (const e of body.entry || []) {
                 for (const c of e.changes || []) {
                   const val = c.value || {};
@@ -9461,6 +9556,7 @@ ${inject}</body></html>`;
             if (!token || !msg || !msg.text || !msg.chat) return;
             const tenant = await tenantForIntegration(env, integ);
             if (!tenant) return;
+            if (!channelOn(tenant, "telegram")) return; // canal apagado (admin o cliente)
             const chatId = msg.chat.id;
             if ((await rpc(env, "check_rate", { p_ip: "tg:" + chatId, p_limit: 20 })) === false) return;
             const sid = "tg:" + chatId, txt = String(msg.text).slice(0, 2000);
@@ -9554,8 +9650,8 @@ ${inject}</body></html>`;
         if (origin && cc["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, cc);
         }
-        // canal web apagado desde el panel (Canales): el widget no se renderiza
-        if (tenant.features && tenant.features.web === false) {
+        // canal web apagado (admin o cliente, en Canales): el widget no se renderiza
+        if (!channelOn(tenant, "web")) {
           return json({ error: "canal web desactivado" }, 403, cc);
         }
         return json(
@@ -9581,8 +9677,8 @@ ${inject}</body></html>`;
         if (ch["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, ch);
         }
-        // canal web apagado desde el panel (Canales): el widget no responde
-        if (tenant.features && tenant.features.web === false) {
+        // canal web apagado (admin o cliente, en Canales): el widget no responde
+        if (!channelOn(tenant, "web")) {
           return json({ error: "canal web desactivado" }, 403, ch);
         }
         if (typeof message !== "string" || !message || message.length > 2000) {
@@ -10305,6 +10401,24 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           `documents?tenant_id=eq.${tenant.id}` +
             `&select=id,title,source_type,source_url,created_at,indexed_at&order=created_at.desc&limit=100`
         );
+        // canales que el cliente puede ver y ajustar: SOLO los que el admin tiene
+        // encendidos (features.<canal> !== false). WhatsApp/Telegram, además,
+        // requieren una integración conectada asignada a este bot. Si el admin
+        // apaga un canal, no aparece aquí y el cliente no puede tocarlo.
+        const tf = tenant.features || {};
+        const chIntegs = await sb(
+          env,
+          `project_integrations?project_id=eq.${tenant.project_id}&status=eq.connected&select=provider,assigned_tenant_ids`
+        );
+        const connProv = new Set(
+          (chIntegs || []).filter((x) => (x.assigned_tenant_ids || []).includes(tenant.id)).map((x) => x.provider)
+        );
+        const channels = [];
+        if (tf.web !== false) channels.push({ key: "web", label: "Web", client_on: tf.web_client !== false });
+        if (tf.whatsapp !== false && connProv.has("whatsapp"))
+          channels.push({ key: "whatsapp", label: "WhatsApp", client_on: tf.whatsapp_client !== false });
+        if (tf.telegram !== false && connProv.has("telegram"))
+          channels.push({ key: "telegram", label: "Telegram", client_on: tf.telegram_client !== false });
         // las pestañas desactivadas no solo se ocultan en la interfaz: no se envían
         // los datos, para que no se puedan leer directamente desde la respuesta JSON.
         const feat = tenant.panel_features || {};
@@ -10316,6 +10430,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
             public_key: keys?.[keys.length - 1]?.public_key || null,
             features: feat,
             leads_ret_client: parseInt((tenant.features || {}).leads_ret_client, 10) || 0,
+            channels,
             conversations: feat.convs === false ? [] : conversations,
             leads: feat.leads === false ? [] : leads,
             activity,
@@ -10338,6 +10453,30 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         const features = Object.assign({}, tenant.features || {}, { leads_ret_client: days });
         await sb(env, `tenants?id=eq.${tenant.id}`, { method: "PATCH", body: { features } });
         return json({ ok: true, days });
+      }
+
+      // el cliente enciende/apaga un canal (SU nivel). El admin manda: si el admin
+      // tiene el canal apagado, o (wa/tg) no hay integración conectada, se rechaza.
+      if (url.pathname === "/panel/channel" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const key = String(body.channel || "");
+        if (["web", "whatsapp", "telegram"].indexOf(key) < 0) return json({ error: "canal no válido" }, 400);
+        const f = tenant.features || {};
+        if (f[key] === false) return json({ error: "no disponible" }, 403); // admin lo tiene apagado
+        if (key !== "web") {
+          const integ = await sb(
+            env,
+            `project_integrations?project_id=eq.${tenant.project_id}&provider=eq.${key}&status=eq.connected&select=assigned_tenant_ids`
+          );
+          const conn = (integ || []).some((x) => (x.assigned_tenant_ids || []).includes(tenant.id));
+          if (!conn) return json({ error: "no disponible" }, 403);
+        }
+        const patch = {}; patch[key + "_client"] = !!body.on;
+        const features = Object.assign({}, f, patch);
+        await sb(env, `tenants?id=eq.${tenant.id}`, { method: "PATCH", body: { features } });
+        return json({ ok: true, channel: key, on: !!body.on });
       }
 
       return json({ error: "no encontrado" }, 404);
