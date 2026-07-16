@@ -1336,7 +1336,7 @@ const TENANT_FIELDS = [
   "handoff_email", "lead_webhook_url", "monthly_message_limit", "project_id", "theme",
   "panel_enabled", "panel_features", "features",
 ];
-const CLIENT_FIELDS = ["name", "contact_name", "email", "phone", "notes", "portal_enabled"];
+const CLIENT_FIELDS = ["name", "contact_name", "email", "phone", "notes", "portal_enabled", "panel_bot_switcher"];
 const PROJECT_FIELDS = ["client_id", "name", "description"];
 const INTEGRATION_FIELDS = [
   "project_id", "provider", "category", "name", "status", "settings",
@@ -3210,6 +3210,9 @@ const ADMIN_HTML = `<!doctype html>
         <div class="check"><input id="c-portal-on" type="checkbox">
           <label for="c-portal-on" style="margin:0">Acceso al portal activo
           (si lo desactivas, el cliente no podrá entrar aunque tenga contraseña)</label></div>
+        <div class="check"><input id="c-botswitch-on" type="checkbox">
+          <label for="c-botswitch-on" style="margin:0">Permitir cambiar entre bots en el panel
+          (si el cliente tiene varios bots, verá un selector para pasar de uno a otro; desactívalo si cada enlace de panel solo debe ver su bot)</label></div>
         <div class="actions">
           <button id="portal-pass" class="ghost small">Generar contraseña nueva</button>
           <button id="portal-revoke" class="ghost small">Revocar contraseña</button>
@@ -4726,6 +4729,7 @@ function selClient(id) {
     renderProjects(c);
     $("portal-url").value = PUB + "/acceso";
     $("c-portal-on").checked = c.portal_enabled !== false;
+    $("c-botswitch-on").checked = c.panel_bot_switcher !== false;
     $("portal-pass-out").textContent = c.portal_password_hash
       ? "El cliente ya tiene contraseña. Genera una nueva solo si la ha perdido (la anterior dejará de valer)."
       : "Este cliente aún no tiene contraseña: genera una y envíasela junto con el enlace de acceso.";
@@ -4999,7 +5003,7 @@ $("c-save").onclick = function () {
     phone: $("c-phone").value.trim() || null,
     notes: $("c-notes").value,
   };
-  if (!sel.isNew) d.portal_enabled = $("c-portal-on").checked;
+  if (!sel.isNew) { d.portal_enabled = $("c-portal-on").checked; d.panel_bot_switcher = $("c-botswitch-on").checked; }
   if (!d.name) { $("c-msg").textContent = "El nombre es obligatorio."; $("c-msg").className = "err"; return; }
   var req = sel.isNew
     ? api("/admin/api/clients", { method: "POST", body: JSON.stringify(d) })
@@ -10461,8 +10465,10 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         // token de panel porque son todos del mismo cliente (misma frontera de acceso).
         let bots = [];
         try {
-          const [proj] = await sb(env, `projects?id=eq.${tenant.project_id}&select=client_id`);
-          if (proj?.client_id) {
+          const [proj] = await sb(env, `projects?id=eq.${tenant.project_id}&select=client_id,clients(panel_bot_switcher)`);
+          // el admin puede desactivar el selector por cliente: entonces cada enlace
+          // de panel solo ve su propio bot (no se devuelven los hermanos)
+          if (proj?.client_id && proj.clients?.panel_bot_switcher !== false) {
             const projs = await sb(env, `projects?client_id=eq.${proj.client_id}&select=id`);
             const pids = (projs || []).map((p) => p.id);
             if (pids.length) {
