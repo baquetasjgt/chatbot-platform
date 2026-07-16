@@ -4795,7 +4795,8 @@ function openChannelWizard(provider, row) {
   $("cw-sub").textContent = g.sub;
   var ol = $("cw-guide"); ol.innerHTML = "";
   g.steps.forEach(function (s) { var li = document.createElement("li"); li.textContent = s; ol.appendChild(li); });
-  $("cw-guidenote").innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg><span>" + esc(g.note) + "</span>";
+  $("cw-guidenote").innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg><span></span>";
+  $("cw-guidenote").querySelector("span").textContent = g.note;
   $("cw-name").value = row ? row.name : (provider === "whatsapp" ? "WhatsApp" : "Telegram");
   $("cw-wa").classList.toggle("hide", provider !== "whatsapp");
   $("cw-tg").classList.toggle("hide", provider !== "telegram");
@@ -4838,7 +4839,8 @@ function renderChannelResult(provider, settings, id) {
   var box = $("cw-result"); $("cw-resultcard").classList.remove("hide");
   if (provider === "telegram") {
     var uname = settings.bot_username ? "@" + settings.bot_username : "tu bot";
-    box.innerHTML = "<div class='note ok'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20 6 9 17l-5-5'/></svg><span>" + esc(uname) + " está conectado. Ya responde a quien le escriba en Telegram.</span></div>";
+    box.innerHTML = "<div class='note ok'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20 6 9 17l-5-5'/></svg><span></span></div>";
+    box.querySelector("span").textContent = uname + " está conectado. Ya responde a quien le escriba en Telegram.";
     return;
   }
   var hook = origin + "/webhooks/whatsapp/" + id;
