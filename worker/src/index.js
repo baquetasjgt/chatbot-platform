@@ -367,11 +367,39 @@ function toolsFor(tenant, allowEscalate) {
   return t;
 }
 
+// instrucción de captación que depende SOLO del interruptor "Capturar leads"
+// (tenant.features.leads). Así, encenderlo o apagarlo cambia el comportamiento del
+// bot al instante, sin tener que tocar el system_prompt a mano en cada bot.
+function leadDirective(tenant) {
+  if (leadCaptureEnabled(tenant)) {
+    return (
+      "\n\n== Captación de leads: ACTIVADA ==\n" +
+      "Cuando un usuario muestre interés real o comercial legítimo, pídele con naturalidad y " +
+      "cortesía su nombre y su email (o teléfono) y usa la herramienta 'guardar_lead' para " +
+      "registrarlo. Necesitas como mínimo su nombre y un medio de contacto (email o teléfono) " +
+      "antes de guardarlo. No lo hagas al saludar ni ante preguntas normales que puedas " +
+      "responder: solo cuando haya un interés claro."
+    );
+  }
+  return (
+    "\n\n== Captación de leads: DESACTIVADA ==\n" +
+    "NO pidas datos de contacto para registrarlos ni intentes captar leads: esa función está " +
+    "apagada para este bot. Si alguien quiere que le contacten, derívalo con normalidad al canal " +
+    "o departamento correspondiente, pero sin pedirle sus datos para guardarlos."
+  );
+}
+
+// texto de sistema base, compartido por todos los proveedores: instrucciones del
+// bot + normas generales (prompt maestro) + directiva de captación según el switch
+function systemBase(tenant) {
+  return (tenant.system_prompt || "") + MASTER_PROMPT + leadDirective(tenant);
+}
+
 // ---------- llamada a Claude ----------
 
 async function callClaude(env, tenant, messages, contextBlock, allowEscalate) {
   const system = [
-    { type: "text", text: (tenant.system_prompt || "") + MASTER_PROMPT },
+    { type: "text", text: systemBase(tenant) },
     {
       type: "text",
       text:
@@ -469,7 +497,7 @@ async function callGemini(env, tenant, contents, contextBlock, allowEscalate) {
   if (!env.GEMINI_API_KEY) throw new Error("Falta el secreto GEMINI_API_KEY");
 
   const system =
-    (tenant.system_prompt || "") + MASTER_PROMPT +
+    systemBase(tenant) +
     "\n\nCONTEXTO (única fuente de verdad; si la respuesta no está aquí, dilo y ofrece el contacto):\n\n" +
     (contextBlock || "[No se ha encontrado información relevante para esta pregunta.]");
 
