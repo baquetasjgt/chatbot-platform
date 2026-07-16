@@ -1272,26 +1272,48 @@ function emailStat(n, label) {
 // ---------- informe mensual ----------
 
 async function monthlyReportData(env, t) {
+  const monthStats = async (start, end) => {
+    const range = `created_at=gte.${start.toISOString()}&created_at=lt.${end.toISOString()}`;
+    const [convs, users, unans, leads] = await Promise.all([
+      sb(env, `conversations?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
+      sb(env, `messages?tenant_id=eq.${t.id}&role=eq.user&${range}&select=id&limit=1000`),
+      sb(env, `messages?tenant_id=eq.${t.id}&role=eq.assistant&was_answered=eq.false&${range}&select=id&limit=1000`),
+      sb(env, `leads?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
+    ]);
+    const q = users?.length || 0;
+    return {
+      convs: convs?.length || 0,
+      questions: q,
+      rate: q ? Math.max(0, Math.round((100 * (q - (unans?.length || 0))) / q)) : 0,
+      leads: leads?.length || 0,
+    };
+  };
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const range = `created_at=gte.${start.toISOString()}&created_at=lt.${end.toISOString()}`;
-  const [convs, users, unans, leads, gaps] = await Promise.all([
-    sb(env, `conversations?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
-    sb(env, `messages?tenant_id=eq.${t.id}&role=eq.user&${range}&select=id&limit=1000`),
-    sb(env, `messages?tenant_id=eq.${t.id}&role=eq.assistant&was_answered=eq.false&${range}&select=id&limit=1000`),
-    sb(env, `leads?tenant_id=eq.${t.id}&${range}&select=id&limit=1000`),
+  const prevStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1));
+  const [cur, prev, gaps] = await Promise.all([
+    monthStats(start, end),
+    monthStats(prevStart, start),
     rpc(env, "unanswered_questions", { p_tenant_id: t.id, p_days: 45 }),
   ]);
-  const q = users?.length || 0;
   return {
     monthName: start.toLocaleDateString("es-ES", { month: "long", year: "numeric" }),
-    convs: convs?.length || 0,
-    questions: q,
-    rate: q ? Math.max(0, Math.round((100 * (q - (unans?.length || 0))) / q)) : 0,
-    leads: leads?.length || 0,
+    convs: cur.convs,
+    questions: cur.questions,
+    rate: cur.rate,
+    leads: cur.leads,
     gaps: gaps || [],
+    prev, // mes anterior, para la comparativa del informe
   };
+}
+
+// delta legible para el informe ("↑ 12", "↓ 3", "=" ); null si no hay base previa
+function reportDelta(cur, prevVal, suffix) {
+  if (prevVal == null) return "";
+  const d = cur - prevVal;
+  const arrow = d > 0 ? "&#8593; +" : d < 0 ? "&#8595; " : "= ";
+  return ` <span style="color:${d >= 0 ? "#0a7a4b" : "#8a3222"};font-size:12px;white-space:nowrap">${d === 0 ? "igual que el mes anterior" : arrow + d + (suffix || "") + " vs mes anterior"}</span>`;
 }
 
 async function sendMonthlyReport(env, tenantId, toOverride) {
@@ -1318,6 +1340,13 @@ async function sendMonthlyReport(env, tenantId, toOverride) {
     <tr>${emailStat(convs?.length || 0, "conversaciones atendidas")}${emailStat(q, "preguntas respondidas")}</tr>
     <tr>${emailStat(rate + "%", "con información de tu contenido")}${emailStat(leads?.length || 0, "contactos captados (leads)")}</tr>
   </table>
+  <p style="margin:0 0 14px;color:#6b7590;font-size:13px">
+    Comparado con el mes anterior: conversaciones${reportDelta(rep.convs, rep.prev?.convs)},
+    preguntas${reportDelta(rep.questions, rep.prev?.questions)},
+    leads${reportDelta(rep.leads, rep.prev?.leads)},
+    tasa de resolución${reportDelta(rep.rate, rep.prev?.rate, " pt")}.
+    El asistente te ha ahorrado aproximadamente <b>${Math.round((q * 3) / 60)} horas</b> de atención este mes.
+  </p>
   ${
     gaps?.length
       ? `<p style="margin:14px 0 8px"><b>Lo que más preguntan y aún no está en el contenido:</b></p>
@@ -9301,7 +9330,8 @@ const PANEL_HTML = `<!doctype html>
   .period-control button.on{background:#111!important;color:#fff!important}
   .ghost,.mini{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:3px;padding:8px 12px;font-size:13px}
   .ghost:hover,.mini:hover{border-color:#111}
-  .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .kpi{background:#fff;border:1px solid var(--line);min-height:126px;padding:24px 26px;display:flex;flex-direction:column;
     align-items:flex-start;justify-content:space-between}
   .kpi.accent{background:var(--acc);border-color:var(--acc)}
@@ -9423,6 +9453,7 @@ const PANEL_HTML = `<!doctype html>
         <div class="kpi"><span class="kpi-label">Conversaciones</span><div class="kpi-line"><b id="s-convs">–</b><span class="trend" id="tr-convs"></span></div></div>
         <div class="kpi accent"><span class="kpi-label">Leads captados</span><div class="kpi-line"><b id="s-leads">–</b><span class="trend" id="tr-leads"></span></div></div>
         <div class="kpi"><span class="kpi-label">Tasa de resolución</span><div class="kpi-line"><b id="s-rate">–</b><span class="trend" id="tr-rate"></span></div></div>
+        <div class="kpi"><span class="kpi-label">Tiempo ahorrado</span><div class="kpi-line"><b id="s-roi">–</b><span class="trend" id="tr-roi"></span></div></div>
       </div>
 
       <section id="t-overview" class="on">
@@ -9626,6 +9657,19 @@ function periodSnapshot(fromMs, toMs) {
     rate: assistantMsgs ? Math.round((100 * answered) / assistantMsgs) : 0, assistantMsgs: assistantMsgs };
 }
 
+// ROI estimado: cada consulta resuelta por el bot son ~3 min de una persona.
+// Es una estimación honesta y conservadora para que el cliente VEA el retorno.
+var ROI_MIN_POR_CONSULTA = 3;
+var ROI_EUR_HORA = 15;
+function roiText(userMsgs) {
+  if (!userMsgs) return null;
+  var mins = userMsgs * ROI_MIN_POR_CONSULTA;
+  var horas = mins / 60;
+  var eur = Math.round(horas * ROI_EUR_HORA);
+  var h = horas >= 10 ? Math.round(horas) : Math.round(horas * 10) / 10;
+  return { label: h + " h", detail: "≈ " + eur + " €" };
+}
+
 function renderStats() {
   var now = Date.now();
   var span = PERIOD * 24 * 3600 * 1000;
@@ -9641,6 +9685,11 @@ function renderStats() {
   var rateEl = $("tr-rate");
   rateEl.className = "trend " + (rateDiff > 0 ? "up" : rateDiff < 0 ? "down" : "flat");
   rateEl.textContent = previous.assistantMsgs ? (rateDiff > 0 ? "↑ " : rateDiff < 0 ? "↓ " : "") + Math.abs(rateDiff) + " pt" : "periodo inicial";
+  var roi = roiText(current.userMsgs);
+  $("s-roi").textContent = roi ? roi.label : "–";
+  var roiEl = $("tr-roi");
+  roiEl.className = "trend flat";
+  roiEl.textContent = roi ? roi.detail + " · " + ROI_MIN_POR_CONSULTA + " min/consulta" : "sin consultas aún";
   renderTopics();
   renderRecentLeads();
 }
@@ -9978,13 +10027,18 @@ function refreshConvs(force) {
 
 function computeGaps() {
   GAPS = [];
+  var seen = {};
   CONVS.forEach(function (c) {
     var ms = c.messages || [];
     ms.forEach(function (m, i) {
-      if (m.role === "assistant" && m.was_answered === false) {
+      // hueco = el bot no encontró contexto O el visitante marcó 👎 la respuesta
+      if (m.role === "assistant" && (m.was_answered === false || m.rating === -1)) {
         var q = null;
         for (var j = i - 1; j >= 0; j--) if (ms[j].role === "user") { q = ms[j]; break; }
-        if (q) GAPS.push({ q: q.content, at: m.created_at });
+        if (q && !seen[q.content]) {
+          seen[q.content] = 1;
+          GAPS.push({ q: q.content, at: m.created_at, voted: m.rating === -1 });
+        }
       }
     });
   });
@@ -10003,7 +10057,7 @@ function renderGaps() {
     q.innerHTML = svgIco("question") + " " + esc(g.q);
     var when = document.createElement("div");
     when.className = "mut";
-    when.textContent = "Preguntado el " + fmt(g.at);
+    when.textContent = "Preguntado el " + fmt(g.at) + (g.voted ? " · el visitante marcó la respuesta como no útil 👎" : "");
     var ta = document.createElement("textarea");
     ta.rows = 2;
     ta.placeholder = "Escribe aquí la respuesta oficial (precios, horarios, condiciones…) y el asistente la aprenderá al momento.";
@@ -10189,6 +10243,27 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
           setTimeout(function () { lmsg.textContent = ""; }, 4000);
         }).catch(function () { lsave.disabled = false; lmsg.textContent = "No se pudo guardar"; });
       };
+    }
+    // primera visita: tarjeta de bienvenida con lo esencial del panel
+    if (!LAST_VISIT) {
+      var ov = document.getElementById("t-overview");
+      if (ov) {
+        var wc = document.createElement("div");
+        wc.className = "box";
+        wc.id = "welcome-card";
+        wc.style.cssText = "margin-bottom:16px;border-left:4px solid var(--acc,#f5be10)";
+        wc.innerHTML =
+          "<div style='display:flex;justify-content:space-between;gap:12px;align-items:flex-start'>" +
+          "<div><b>👋 Bienvenido a tu panel</b>" +
+          "<p style='color:var(--mut);font-size:13px;margin:6px 0 0;line-height:1.6'>" +
+          "· En <b>Leads</b> verás cada contacto que capte tu asistente, al momento.<br>" +
+          "· En <b>Conversaciones</b> puedes leer todo lo que le preguntan.<br>" +
+          "· En <b>Preguntas pendientes</b>, enséñale lo que aún no sabe: aprende al instante.<br>" +
+          "· En <b>Conocimiento</b> puedes subirle documentos (PDF, textos…).</p></div>" +
+          "<button class='mini' id='welcome-close' aria-label='Cerrar bienvenida'>Entendido</button></div>";
+        ov.insertBefore(wc, ov.firstChild);
+        document.getElementById("welcome-close").onclick = function () { wc.remove(); };
+      }
     }
     localStorage.setItem(SEEN_KEY, new Date().toISOString());
   })
@@ -11509,13 +11584,15 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         add("Informe mensual del asistente", 17, 2, 4);
         add(`${tenant.name} - ${rep.monthName}`, 12, 1, 14);
         add("Resumen de actividad", 13, 2, 6);
-        add(`Conversaciones atendidas: ${rep.convs}`, 11, 1, 3);
-        add(`Preguntas respondidas: ${rep.questions}`, 11, 1, 3);
-        add(`Respondidas con información del contenido: ${rep.rate}%`, 11, 1, 3);
+        const pdfDelta = (c, p) => (rep.prev == null || p == null ? "" : c - p === 0 ? " (igual que el mes anterior)" : ` (${c - p > 0 ? "+" : ""}${c - p} vs mes anterior)`);
+        add(`Conversaciones atendidas: ${rep.convs}${pdfDelta(rep.convs, rep.prev?.convs)}`, 11, 1, 3);
+        add(`Preguntas respondidas: ${rep.questions}${pdfDelta(rep.questions, rep.prev?.questions)}`, 11, 1, 3);
+        add(`Respondidas con información del contenido: ${rep.rate}%${pdfDelta(rep.rate, rep.prev?.rate)}`, 11, 1, 3);
+        add(`Tiempo de atención ahorrado (estimado): ${Math.round((rep.questions * 3) / 60)} horas`, 11, 1, 3);
         // las secciones desactivadas en el panel tampoco salen en el PDF
         const pf = tenant.panel_features || {};
         if (pf.leads !== false) {
-          add(`Contactos captados (leads): ${rep.leads}`, 11, 1, 12);
+          add(`Contactos captados (leads): ${rep.leads}${pdfDelta(rep.leads, rep.prev?.leads)}`, 11, 1, 12);
         }
         if (pf.gaps !== false && rep.gaps.length) {
           add("Lo que más preguntan y aún no está en el contenido:", 13, 2, 6);
@@ -11542,7 +11619,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           sb(
             env,
             `conversations?tenant_id=eq.${tenant.id}&hidden_client=is.false` +
-              `&select=id,page_url,session_id,human_handoff,created_at,last_message_at,messages(role,content,was_answered,created_at)` +
+              `&select=id,page_url,session_id,human_handoff,created_at,last_message_at,messages(role,content,was_answered,rating,created_at)` +
               `&order=last_message_at.desc&messages.order=created_at.asc&limit=100`
           ),
           sb(
