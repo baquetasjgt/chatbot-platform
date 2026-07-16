@@ -976,22 +976,57 @@ async function sendHumanReply(env, tenant, conv, text) {
 }
 
 // aviso al cliente/gestor de que un cliente pide atención humana en un canal
-// envía un mensaje al Telegram del dueño (puente de atención) y deja mapeado el
-// message_id a la conversación, para enrutar su respuesta de vuelta a WhatsApp.
+// crea un Tema (forum topic) en el grupo del dueño; devuelve su message_thread_id
+async function bridgeCreateTopic(cfg, name) {
+  const r = await fetch(`https://api.telegram.org/bot${cfg.bot_token}/createForumTopic`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: cfg.group_chat_id, name: String(name).slice(0, 120) }),
+  });
+  const j = await r.json();
+  return j.ok ? j.result.message_thread_id : null;
+}
+
+// envía un mensaje al Telegram del dueño (puente de atención). Dos modos:
+//  · grupo con Temas: un Tema por conversación (se escribe dentro del Tema)
+//  · chat privado: un mensaje por aviso, mapeado para responderlo (reply)
 // Devuelve true si el puente está configurado y se ha enviado.
 async function bridgeSend(env, tenant, conv, text) {
   const cfg = tenant.handoff || {};
-  if (!cfg.enabled || !cfg.bot_token || !cfg.chat_id) return false;
+  if (!cfg.enabled || !cfg.bot_token) return false;
   try {
-    const res = await tgSendText(cfg.bot_token, cfg.chat_id, text);
-    const mid = res?.result?.message_id;
-    if (mid && conv.id) {
-      await sb(env, "handoff_bridge", {
-        method: "POST", headers: { Prefer: "return=minimal" },
-        body: { tenant_id: tenant.id, conversation_id: conv.id, tg_message_id: mid },
+    if (cfg.group_chat_id) {
+      // asegurar el Tema de esta conversación
+      let topic = conv.handoff_topic, sid = conv.session_id;
+      if ((topic == null || sid == null) && conv.id) {
+        const [row] = await sb(env, `conversations?id=eq.${conv.id}&select=handoff_topic,session_id`);
+        if (topic == null) topic = row?.handoff_topic;
+        if (sid == null) sid = row?.session_id;
+      }
+      if (topic == null) {
+        const num = (sid || "").slice(3) || "cliente";
+        const chan = (sid || "").startsWith("wa:") ? "WhatsApp" : (sid || "").startsWith("tg:") ? "Telegram" : "";
+        topic = await bridgeCreateTopic(cfg, (chan ? chan + " · " : "") + num);
+        if (topic == null) return false;
+        if (conv.id) await sb(env, `conversations?id=eq.${conv.id}`, { method: "PATCH", body: { handoff_topic: topic } });
+      }
+      await fetch(`https://api.telegram.org/bot${cfg.bot_token}/sendMessage`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: cfg.group_chat_id, message_thread_id: topic, text: String(text).slice(0, 4000) }),
       });
+      return true;
     }
-    return true;
+    if (cfg.chat_id) {
+      const res = await tgSendText(cfg.bot_token, cfg.chat_id, text);
+      const mid = res?.result?.message_id;
+      if (mid && conv.id) {
+        await sb(env, "handoff_bridge", {
+          method: "POST", headers: { Prefer: "return=minimal" },
+          body: { tenant_id: tenant.id, conversation_id: conv.id, tg_message_id: mid },
+        });
+      }
+      return true;
+    }
+    return false;
   } catch (e) {
     await logError(env, "bridge-send/" + tenant.slug, e?.message || e).catch(() => {});
     return false;
@@ -1002,12 +1037,17 @@ async function bridgeSend(env, tenant, conv, text) {
 async function notifyHandoff(env, tenant, conv, customerMsg, motivo, channel) {
   const canal = channel === "whatsapp" ? "WhatsApp" : channel === "telegram" ? "Telegram" : "un canal";
   const from = (conv.session_id || "").slice(3);
+  const cfg = tenant.handoff || {};
+  // en modo grupo/Temas se escribe dentro del Tema (no hace falta «responder»)
+  const cierre = cfg.group_chat_id
+    ? "\nEscribe aquí en este Tema y le llegará por " + canal + "."
+    : "\n↩️ Responde a ESTE mensaje y se lo enviaré por " + canal + ".";
   const tgText =
     "🙋 Un cliente quiere hablar con una persona\n" +
     "Canal: " + canal + (from ? " · " + from : "") + "\n" +
     (motivo ? "Motivo: " + motivo + "\n" : "") +
     (customerMsg ? "\n« " + String(customerMsg).slice(0, 400) + " »\n" : "") +
-    "\n↩️ Responde a ESTE mensaje y se lo enviaré por " + canal + ".";
+    cierre;
   if (await bridgeSend(env, tenant, conv, tgText)) return;
   // sin Telegram configurado: aviso por email como antes
   try {
@@ -2272,7 +2312,11 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
   if (mHandoff && request.method === "GET") {
     const [t] = await sb(env, `tenants?id=eq.${mHandoff[1]}&select=handoff`);
     const c = t?.handoff || {};
-    return json({ enabled: !!c.enabled, bot_username: c.bot_username || "", linked: !!c.chat_id });
+    return json({
+      enabled: !!c.enabled, bot_username: c.bot_username || "",
+      linked: !!(c.chat_id || c.group_chat_id),
+      mode: c.group_chat_id ? "group" : (c.chat_id ? "private" : ""),
+    });
   }
   if (mHandoff && request.method === "DELETE") {
     const [t] = await sb(env, `tenants?id=eq.${mHandoff[1]}&select=handoff`);
@@ -3228,14 +3272,15 @@ const ADMIN_HTML = `<!doctype html>
             <div id="ho-setup">
               <ol style="margin:0 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:13.5px">
                 <li>En Telegram, crea un bot con <b>@BotFather</b> (/newbot) y copia su token.</li>
+                <li>En @BotFather, entra en tu bot → <b>Bot Settings → Group Privacy → Turn off</b> (para que vea lo que escribes en los Temas).</li>
                 <li>Pega el token aquí abajo y pulsa <b>Conectar</b>.</li>
-                <li>Te daremos un enlace: ábrelo y pulsa <b>Start</b> para vincular tu Telegram.</li>
               </ol>
               <div class="fieldset"><label>Token del bot de avisos</label><input id="ho-token" type="password" placeholder="1234567:ABC… (déjalo en blanco para conservar el guardado)"></div>
               <div class="actions" style="margin-top:8px"><button id="ho-connect" class="primary">Conectar</button><span id="ho-msg" class="mut"></span></div>
             </div>
             <div id="ho-linked" class="hide">
-              <div class="actions"><a id="ho-open" class="ghost small" target="_blank" rel="noopener">Abrir el bot y pulsar Start</a><button id="ho-disc" class="ghost small danger">Desconectar</button></div>
+              <div class="note" style="margin-bottom:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span><b>Recomendado (un Tema por cliente):</b> crea un <b>grupo</b> en Telegram, en sus ajustes activa <b>«Temas»</b>, añade tu bot como <b>administrador</b> y escribe cualquier cosa en el grupo para vincularlo. — <b>O más simple:</b> abre el bot y pulsa <b>Start</b> para recibir los avisos en un chat y responderlos.</span></div>
+              <div class="actions"><a id="ho-open" class="ghost small" target="_blank" rel="noopener">Abrir el bot</a><button id="ho-disc" class="ghost small danger">Desconectar</button></div>
             </div>
           </div>
         </details>
@@ -5644,11 +5689,13 @@ function loadHandoff() {
     var st = $("ho-status"), setup = $("ho-setup"), linked = $("ho-linked");
     if (r.enabled) {
       setup.classList.add("hide"); linked.classList.remove("hide");
-      if (r.bot_username) { $("ho-open").href = "https://t.me/" + r.bot_username; $("ho-open").textContent = r.linked ? "Abrir @" + r.bot_username : "Abrir @" + r.bot_username + " y pulsar Start"; }
+      if (r.bot_username) { $("ho-open").href = "https://t.me/" + r.bot_username; $("ho-open").textContent = "Abrir @" + r.bot_username; }
       st.className = "note " + (r.linked ? "ok" : "warn");
-      st.querySelector("span").textContent = r.linked
-        ? "Conectado y vinculado. Cuando alguien pida una persona, te llega a tu Telegram y respondes desde ahí."
-        : "Bot conectado, pero falta vincular tu chat: abre el bot y pulsa Start.";
+      st.querySelector("span").textContent = !r.linked
+        ? "Bot conectado, pero falta vincular tu Telegram: crea un grupo con Temas y añade el bot, o abre el bot y pulsa Start."
+        : (r.mode === "group"
+            ? "Conectado con grupo. Cuando alguien pida una persona, crearé un Tema para ese cliente; contesta dentro del Tema y le llega a su WhatsApp."
+            : "Conectado (chat privado). Cuando alguien pida una persona, te llega el aviso; respóndelo (reply) y le llega a su WhatsApp.");
     } else {
       setup.classList.remove("hide"); linked.classList.add("hide");
       st.className = "note";
@@ -9291,18 +9338,39 @@ ${inject}</body></html>`;
         ctx.waitUntil((async () => {
           try {
             const msg = update.message; if (!msg || !msg.chat) return;
+            if (msg.from && msg.from.is_bot) return; // ignorar los mensajes del propio bot
             const chatId = msg.chat.id;
+            const type = msg.chat.type;
             const text = String(msg.text || "").trim();
-            // vinculación: al pulsar Start (o /vincular) guardamos el chat del dueño
-            if (/^\/(start|vincular)\b/i.test(text) || !cfg.chat_id) {
+
+            // === MODO GRUPO (Temas): un Tema por cliente ===
+            if (type === "group" || type === "supergroup") {
+              // primer mensaje en el grupo → vincularlo a este asistente
+              if (String(cfg.group_chat_id || "") !== String(chatId)) {
+                const nh = Object.assign({}, cfg, { group_chat_id: chatId, chat_id: null });
+                await sb(env, `tenants?id=eq.${tenant.id}`, { method: "PATCH", body: { handoff: nh } });
+                await tgSendText(cfg.bot_token, chatId,
+                  "✅ Grupo vinculado. Crearé un Tema por cada cliente que pida atención; contesta dentro de cada Tema. (Necesito ser administrador con permiso para gestionar Temas.)");
+                return;
+              }
+              const thread = msg.message_thread_id;
+              if (!thread || !text) return; // solo mensajes dentro de un Tema
+              const [conv] = await sb(env, `conversations?tenant_id=eq.${tenant.id}&handoff_topic=eq.${thread}&select=id,session_id`);
+              if (!conv) return;
+              try { await sendHumanReply(env, tenant, conv, text); }
+              catch (e) { await logError(env, "tg-bridge-send/" + tenant.slug, e?.message || e).catch(() => {}); }
+              return;
+            }
+
+            // === MODO PRIVADO (responder al aviso) ===
+            if (/^\/(start|vincular)\b/i.test(text) || (!cfg.chat_id && !cfg.group_chat_id)) {
               const nh = Object.assign({}, cfg, { chat_id: chatId });
               await sb(env, `tenants?id=eq.${tenant.id}`, { method: "PATCH", body: { handoff: nh } });
               await tgSendText(cfg.bot_token, chatId,
-                "✅ Vinculado. Aquí te avisaré cuando alguien quiera hablar con una persona. Responde a cada aviso y el cliente lo recibirá en su chat.");
+                "✅ Vinculado. Aquí te avisaré cuando alguien quiera hablar con una persona. Responde (reply) a cada aviso y el cliente lo recibirá en su chat.");
               return;
             }
             if (String(chatId) !== String(cfg.chat_id)) return; // solo el chat vinculado
-            // respuesta del dueño: debe ir «respondiendo» a un aviso concreto
             const replyTo = msg.reply_to_message?.message_id;
             if (!replyTo) {
               await tgSendText(cfg.bot_token, chatId, "↩️ Para contestar a un cliente, responde (reply) al mensaje del aviso.");
@@ -9311,8 +9379,7 @@ ${inject}</body></html>`;
             const [map] = await sb(env, `handoff_bridge?tenant_id=eq.${tenant.id}&tg_message_id=eq.${replyTo}&select=conversation_id&limit=1`);
             if (!map) { await tgSendText(cfg.bot_token, chatId, "No encuentro a qué cliente corresponde ese aviso."); return; }
             const [conv] = await sb(env, `conversations?id=eq.${map.conversation_id}&select=id,session_id,tenant_id`);
-            if (!conv) return;
-            if (!text) return;
+            if (!conv || !text) return;
             try {
               await sendHumanReply(env, tenant, conv, text);
               await tgSendText(cfg.bot_token, chatId, "✓ Enviado al cliente.");
