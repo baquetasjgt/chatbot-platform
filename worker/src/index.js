@@ -8404,7 +8404,7 @@ const PANEL_HTML = `<!doctype html>
       <button data-tab="t-gaps" aria-label="Preguntas pendientes"><span class="nav-ico" aria-hidden="true">?</span><span class="nav-label">Preguntas pendientes</span></button>
       <button data-tab="t-add" aria-label="Conocimiento"><span class="nav-ico" aria-hidden="true">+</span><span class="nav-label">Conocimiento</span></button>
       <button data-tab="t-test" aria-label="Probar asistente"><span class="nav-ico" aria-hidden="true">▷</span><span class="nav-label">Probar asistente</span></button>
-      <button data-tab="t-channels" aria-label="Canales"><span class="nav-ico" aria-hidden="true">◈</span><span class="nav-label">Canales</span></button>
+      <button data-tab="t-config" aria-label="Configuración"><span class="nav-ico" aria-hidden="true">⚙</span><span class="nav-label">Configuración</span></button>
     </nav>
     <div class="side-bottom">
       <a class="side-link" href="/acceso" target="_blank" rel="noopener" aria-label="Facturación" title="Facturación">€</a>
@@ -8450,14 +8450,6 @@ const PANEL_HTML = `<!doctype html>
 
       <section id="t-leads">
         <div class="section-head"><div><h2>Leads</h2><p>Contactos captados y estado de seguimiento comercial.</p></div></div>
-        <div class="box" id="lead-retention" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-          <span style="font-weight:600">Borrar mis leads automáticamente pasados</span>
-          <input id="lret-days" type="number" min="0" step="1" style="max-width:110px;width:110px" placeholder="0">
-          <span style="color:var(--mut);font-size:13px">días (0 = no borrar nunca)</span>
-          <button id="lret-save" class="ghost">Guardar</button>
-          <span id="lret-msg" style="color:var(--mut);font-size:13px"></span>
-          <p style="flex-basis:100%;margin:2px 0 0;color:var(--mut);font-size:13px">Solo afecta a tu vista. El proveedor puede tener su propio plazo, independiente del tuyo.</p>
-        </div>
         <div class="filters"><input id="lf-q" type="search" placeholder="Buscar por nombre, email o empresa">
           <select id="lf-status"><option value="">Todos</option><option value="nuevo">Nuevos</option><option value="contactado">Contactados</option></select>
           <input id="lf-from" type="date" title="Desde"><input id="lf-to" type="date" title="Hasta"><span class="count" id="lf-count"></span><button id="csv" class="ghost">Descargar CSV</button></div>
@@ -8489,10 +8481,29 @@ const PANEL_HTML = `<!doctype html>
         <div class="box"><p><b>El botón del asistente está en la esquina inferior derecha.</b></p><p class="mut" style="margin-top:8px">Las conversaciones de prueba también quedan registradas. Si acabas de subir contenido, pregúntale sobre ello para comprobarlo.</p></div>
       </section>
 
-      <section id="t-channels">
-        <div class="section-head"><div><h2>Canales</h2><p>Enciende o apaga por dónde habla tu asistente. Solo aparecen los canales activados para ti.</p></div></div>
-        <div id="channels-list"></div>
-        <div id="channels-empty" class="empty hide"><b>Sin canales disponibles</b>Cuando se active un canal para tu asistente, aparecerá aquí para que lo enciendas o lo apagues.</div>
+      <section id="t-config">
+        <div class="section-head"><div><h2>Configuración</h2><p>Ajustes de tu asistente.</p></div></div>
+
+        <div id="cfg-channels-block" style="margin-bottom:26px">
+          <h3 style="font-size:16px;margin-bottom:4px">Canales</h3>
+          <p style="color:var(--mut);font-size:13px;margin-bottom:12px">Enciende o apaga por dónde habla tu asistente. Solo aparecen los canales activados para ti.</p>
+          <div id="channels-list"></div>
+          <div id="channels-empty" class="empty hide"><b>Sin canales disponibles</b>Cuando se active un canal para tu asistente, aparecerá aquí para que lo enciendas o lo apagues.</div>
+        </div>
+
+        <div id="cfg-retention-block">
+          <h3 style="font-size:16px;margin-bottom:4px">Borrado automático de leads</h3>
+          <p style="color:var(--mut);font-size:13px;margin-bottom:12px">Cada cuánto se borran solos tus leads. Solo afecta a tu vista; el proveedor puede tener su propio plazo, independiente del tuyo.</p>
+          <div class="box" id="lead-retention" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-weight:600">Borrar mis leads automáticamente pasados</span>
+            <input id="lret-days" type="number" min="0" step="1" style="max-width:110px;width:110px" placeholder="0">
+            <span style="color:var(--mut);font-size:13px">días (0 = no borrar nunca)</span>
+            <button id="lret-save" class="ghost">Guardar</button>
+            <span id="lret-msg" style="color:var(--mut);font-size:13px"></span>
+          </div>
+        </div>
+
+        <div id="cfg-empty" class="empty hide"><b>Sin ajustes disponibles</b>Cuando tu proveedor active canales o leads para ti, sus ajustes aparecerán aquí.</div>
       </section>
 
       <footer class="panel-footer">© 2026 · Panel privado del cliente.</footer>
@@ -9142,13 +9153,17 @@ fetch("/panel/data?token=" + encodeURIComponent(token))
     renderGaps();
     renderDocs();
     renderBadges();
+    // Configuración: agrupa Canales + Borrado automático de leads. Cada bloque se
+    // muestra solo si aplica; si no hay ninguno, se quita la pestaña entera.
     var CH = d.channels || [];
-    if (!CH.length) {
-      var cbtn = document.querySelector('nav button[data-tab="t-channels"]');
-      var csec = document.getElementById("t-channels");
-      if (cbtn) cbtn.remove(); if (csec) csec.remove();
-    } else {
-      renderChannels(CH);
+    var leadsOn = FEAT.leads !== false;
+    if (CH.length) renderChannels(CH);
+    else { var cfgCh = document.getElementById("cfg-channels-block"); if (cfgCh) cfgCh.style.display = "none"; }
+    if (!leadsOn) { var cfgRet = document.getElementById("cfg-retention-block"); if (cfgRet) cfgRet.style.display = "none"; }
+    if (!CH.length && !leadsOn) {
+      var xbtn = document.querySelector('nav button[data-tab="t-config"]');
+      var xsec = document.getElementById("t-config");
+      if (xbtn) xbtn.remove(); if (xsec) xsec.remove();
     }
     var lret = $("lret-days");
     if (lret) {
