@@ -5075,9 +5075,9 @@ function setBotTab(bt) {
   }
   var vt = document.getElementById("v-tenant");
   if (vt) vt.classList.toggle("dsn-only", bt === "diseno");
-  // el lienzo (vista en vivo) solo tiene sentido en Diseño y Objetivo;
-  // en Captación se oculta aunque comparta el formulario v-tenant
-  if (bt === "captacion") {
+  // el lienzo (vista en vivo) solo tiene sentido en Diseño;
+  // en Objetivo y Captación se oculta aunque compartan el formulario v-tenant
+  if (bt === "captacion" || bt === "cerebro") {
     $("canvas-panel").classList.add("hide");
     $("main").classList.remove("with-canvas");
   }
