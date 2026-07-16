@@ -2117,6 +2117,24 @@ const ADMIN_HTML = `<!doctype html>
   #ft-ap .switch input:checked ~ .knob{left:21px}
   /* chips de color un poco mas compactos, redondeados como la plantilla */
   #ft-ap input[type=color]{width:44px!important;height:34px!important;border-radius:8px!important}
+  #ft-ap .reveal{display:none;flex-direction:column;gap:11px;border-left:2px solid var(--acc);padding-left:12px;margin:2px 0 2px 2px}
+  #ft-ap .reveal.show{display:flex}
+  #ft-ap .qrow{display:flex;align-items:center;gap:8px}
+  #ft-ap .qrow .gp{color:var(--mut);flex:0 0 auto;display:grid;place-items:center;width:16px;cursor:grab}
+  #ft-ap .qrow input{flex:1}
+  #ft-ap .qdel{background:transparent;border:0;color:var(--mut);cursor:pointer;padding:4px;display:flex}
+  #ft-ap .qdel:hover{color:var(--err)}
+  #ft-ap .miniadd{align-self:flex-start;background:var(--soft);border:1px solid var(--acc);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+  #ft-ap .drop{border:1.5px dashed var(--line-strong,#d3d3cc);border-radius:9px;padding:16px;display:flex;align-items:center;gap:12px;color:var(--mut);font-size:12.5px;cursor:pointer;transition:border-color .15s}
+  #ft-ap .drop .ph{width:40px;height:40px;border-radius:8px;background:var(--soft);display:grid;place-items:center;flex:0 0 auto;color:var(--ink);overflow:hidden}
+  #ft-ap .drop .ph svg{width:20px;height:20px}
+  #ft-ap .drop .ph img{width:100%;height:100%;object-fit:contain}
+  #ft-ap .note{font-size:11.5px;color:var(--mut);display:flex;gap:8px;align-items:flex-start;background:var(--soft);border-radius:8px;padding:10px 12px}
+  #ft-ap .note svg{width:15px;height:15px;flex:0 0 auto;margin-top:1px}
+  #ft-ap .fontprev{font-size:14px;color:var(--ink)}
+  #ft-ap #pilllab{display:none}
+  details.cfg.devbrand{background:linear-gradient(180deg,var(--soft),#fff);border-color:var(--acc)}
+  details.cfg.devbrand>summary .ci{background:var(--acc);color:#0a0a0a}
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
     padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;
     z-index:60;pointer-events:none;max-width:90vw}
@@ -2685,7 +2703,7 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Identidad de marca</div><div class="cs">Color, logo y nombre</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <label>Color principal <span class="lh">cabecera, botón, mensajes del usuario</span></label>
+              <label>Color principal</label>
               <div class="swatches" id="prim-sw">
                 <button type="button" class="sw" data-c="#f5be10" style="background:#f5be10"></button>
                 <button type="button" class="sw" data-c="#1e9e5c" style="background:#1e9e5c"></button>
@@ -2696,14 +2714,17 @@ const ADMIN_HTML = `<!doctype html>
                 <input id="f-color" type="color">
                 <div class="hexbox"><span id="prim-hexdot"></span><input id="prim-hex" spellcheck="false" maxlength="7" placeholder="#000000"></div>
               </div>
-              <label>Logo del asistente <span class="lh">URL de una imagen cuadrada; vacío = inicial del nombre</span></label>
-              <input id="f-logo" type="url" placeholder="https://cliente.com/isotipo.svg">
-              <label>Logotipo de cabecera <span class="lh">opcional; sustituye el nombre escrito</span></label>
-              <input id="f-wordmark" type="url" placeholder="https://cliente.com/logotipo.svg">
+              <div class="hint">Elige de la paleta, escribe el HEX o abre el selector para ajustar tono y saturación.</div>
+              <label>Logo del asistente</label>
+              <div class="drop" id="logo-drop">
+                <span class="ph" id="logo-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                <div>Arrastra una imagen o <b>súbela</b>. <div class="hint">PNG/SVG · se muestra en la cabecera del chat</div></div>
+                <input type="file" id="logo-file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none">
+              </div>
               <label>Nombre visible</label>
               <input id="f-name2" type="text" placeholder="Asistente FISIOEXPO">
-              <label>Subtítulo de la cabecera</label>
-              <input id="f-subtitle" placeholder="Suele responder al instante">
+              <label>Subtítulo</label>
+              <input id="f-subtitle" placeholder="Responde al instante">
             </div>
           </details>
 
@@ -2712,23 +2733,17 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Botón flotante</div><div class="cs">Forma, icono, efecto, posición</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <label>Forma del botón</label>
+              <label>Forma</label>
               <select id="f-btnshape">
                 <option value="circulo">Círculo</option>
                 <option value="redondeado">Redondeado</option>
                 <option value="pastilla">Píldora</option>
               </select>
               <div id="pilllab"><label>Texto de la píldora</label><input id="f-btnlabel" placeholder="Chat"></div>
-              <label>Icono del botón del chat</label>
+              <label>Icono</label>
               <div class="icopick" id="pick-btn"></div>
-              <div class="cfgrow"><div class="cfgl">Tamaño del icono <small>dentro del botón</small></div>
+              <div class="cfgrow"><div class="cfgl">Tamaño del icono</div>
                 <input id="f-iconsize" type="range" min="28" max="72" step="2" value="46"><span class="cfgval"><span id="f-iconsize-v">46</span> %</span></div>
-              <label>Isotipo personalizado del botón <span class="lh">URL; sustituye el icono elegido</span></label>
-              <input id="f-btnicon" type="url" placeholder="https://cliente.com/isotipo.svg">
-              <div class="row">
-                <div><label>Fondo del botón</label><input id="f-btnbg" type="color" value="#111111"></div>
-                <div><label>Color del efecto</label><input id="f-radarcolor" type="color" value="#f5be10"></div>
-              </div>
               <label>Efecto de llamada de atención</label>
               <select id="f-effect">
                 <option value="ninguno">Ninguno</option>
@@ -2738,16 +2753,20 @@ const ADMIN_HTML = `<!doctype html>
                 <option value="brillo">Brillo</option>
                 <option value="sacudida">Sacudida</option>
               </select>
-              <div class="swrow"><span class="swlab">Mostrar borde en el botón</span><label class="switch"><input id="f-btnborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <div class="row">
-                <div><label>Color del borde</label><input id="f-btnborder" type="color" value="#f5be10"></div>
-                <div><label>Grosor: <span id="f-btnborderw-v">2</span> px</label><input id="f-btnborderw" type="range" min="1" max="8" value="2"></div>
-              </div>
-              <label>Posición en la web</label>
+              <label>Posición</label>
               <select id="f-side">
-                <option value="derecha">Abajo a la derecha</option>
-                <option value="izquierda">Abajo a la izquierda</option>
+                <option value="derecha">Abajo derecha</option>
+                <option value="izquierda">Abajo izquierda</option>
               </select>
+              <div class="cfgrow"><div class="cfgl">Separación del borde</div>
+                <input id="f-edge" type="range" min="10" max="48" value="24"><span class="cfgval"><span id="f-edge-v">24</span> px</span></div>
+              <div class="cfgrow"><div class="cfgl">Tamaño</div>
+                <input id="f-btnpx" type="range" min="46" max="74" value="56"><span class="cfgval"><span id="f-btnpx-v">56</span> px</span></div>
+              <div class="swrow"><span class="swlab">Borde del botón</span><label class="switch"><input id="f-btnborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="reveal" id="btnbordRev">
+                <div class="cfgrow"><div class="cfgl">Color del borde</div><input id="f-btnborder" type="color" value="#0a0a0a"></div>
+                <div class="cfgrow"><div class="cfgl">Grosor</div><input id="f-btnborderw" type="range" min="1" max="8" value="2"><span class="cfgval"><span id="f-btnborderw-v">2</span> px</span></div>
+              </div>
             </div>
           </details>
 
@@ -2758,64 +2777,49 @@ const ADMIN_HTML = `<!doctype html>
             <div class="cfgb">
               <label>Tipografía</label>
               <select id="f-font">
-                <option value="system">Sistema (por defecto)</option>
+                <option value="system">Sistema (Segoe UI)</option>
                 <option value="Inter">Inter</option>
                 <option value="Poppins">Poppins</option>
                 <option value="Roboto">Roboto</option>
                 <option value="Montserrat">Montserrat</option>
                 <option value="Lato">Lato</option>
-                <option value="georgia">Georgia (serif clásica)</option>
+                <option value="georgia">Georgia (serif)</option>
               </select>
-              <div class="cfgrow"><div class="cfgl">Redondez de bordes</div>
+              <div class="hint" id="fontprev">Fisioterapia y salud</div>
+              <div class="cfgrow"><div class="cfgl">Radio de esquinas</div>
                 <input id="f-radius" type="range" min="0" max="24" step="2" value="14"><span class="cfgval"><span id="f-radius-v">14</span> px</span></div>
               <label>Sombra de la ventana</label>
               <select id="f-shadow">
                 <option value="ninguna">Ninguna</option>
                 <option value="suave">Suave</option>
-                <option value="fuerte">Marcada</option>
+                <option value="media" selected>Media</option>
+                <option value="fuerte">Fuerte</option>
               </select>
+              <div class="swrow"><span class="swlab">Borde de la ventana</span><label class="switch"><input id="f-winborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="reveal" id="winbordRev">
+                <div class="cfgrow"><div class="cfgl">Color del borde</div><input id="f-winborder" type="color" value="#d9d9d4"></div>
+                <div class="cfgrow"><div class="cfgl">Grosor</div><input id="f-winborderw" type="range" min="1" max="6" value="1"><span class="cfgval"><span id="f-winborderw-v">1</span> px</span></div>
+              </div>
               <label>Modo de color</label>
               <select id="f-dark">
                 <option value="off">Claro</option>
-                <option value="auto">Automático (según el visitante)</option>
+                <option value="dark">Oscuro</option>
+                <option value="auto">Automático</option>
               </select>
-              <div class="row">
-                <div><label>Color de la cabecera</label><input id="f-colorhead" type="color" value="#111111"></div>
-                <div><label>Bordes y controles</label><input id="f-controlborder" type="color" value="#d9d9d4"></div>
-              </div>
-              <div class="swrow"><span class="swlab">Borde en la ventana de chat</span><label class="switch"><input id="f-winborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <div class="row">
-                <div><label>Color del borde</label><input id="f-winborder" type="color" value="#d9d9d4"></div>
-                <div><label>Grosor: <span id="f-winborderw-v">1</span> px</label><input id="f-winborderw" type="range" min="1" max="6" value="1"></div>
-              </div>
-              <div class="divide"></div>
-              <label>Tamaño del widget</label>
-              <select id="f-size">
-                <option value="compacto">Compacto</option>
-                <option value="estandar" selected>Estándar</option>
-                <option value="amplio">Amplio</option>
-              </select>
-              <label style="margin-top:8px">Fondo del área de mensajes</label>
+              <label>Fondo de la ventana</label>
               <div class="seg" id="bg-seg">
                 <button type="button" data-m="solid" class="on">Sólido</button>
                 <button type="button" data-m="grad">Degradado</button>
-                <button type="button" data-m="img">Imagen</button>
               </div>
-              <div id="bg-solid" style="margin-top:8px">
-                <label style="margin-top:0">Color de fondo</label><input id="f-colorbg" type="color" value="#ffffff">
+              <div id="bg-solid" style="margin-top:10px">
+                <div class="cfgrow"><div class="cfgl">Color de fondo</div><input id="f-colorbg" type="color" value="#ffffff"></div>
               </div>
-              <div id="bg-grad" class="hide" style="margin-top:8px">
-                <label style="margin-top:0">Colores del degradado</label>
-                <div style="display:flex;gap:8px">
-                  <input id="g-c1" type="color" value="#6d8bf1" style="width:58px">
-                  <input id="g-c2" type="color" value="#c9f0ff" style="width:58px">
-                </div>
-                <label>Estilo</label>
-                <div class="gradrow" id="g-styles"></div>
+              <div id="bg-grad" class="hide" style="margin-top:10px">
+                <div class="cfgrow"><div class="cfgl">Color inicial</div><input id="g-c1" type="color" value="#ffffff"></div>
+                <div class="cfgrow"><div class="cfgl">Color final</div><input id="g-c2" type="color" value="#f6efd9"></div>
+                <div class="gradrow" id="g-styles" style="margin-top:8px"></div>
               </div>
-              <div id="bg-img" class="hide" style="margin-top:8px">
-                <input id="f-bgimg" placeholder="Pega la URL de una imagen (https://…)">
-              </div>
+              <div id="bg-img" class="hide"><input id="f-bgimg" placeholder="URL de imagen"></div>
             </div>
           </details>
 
@@ -2824,8 +2828,10 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Burbujas de mensaje</div><div class="cs">Color del bot y del visitante</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="cfgrow"><div class="cfgl">Mensaje del visitante <small>vacío = tu color principal</small></div><input id="f-userbubble" type="color" value="#f5be10"></div>
-              <div class="cfgrow"><div class="cfgl">Mensaje del bot</div><input id="f-color2" type="color" value="#f2f2f0"></div>
+              <div class="cfgrow"><div class="cfgl">Mensaje del visitante<small>El texto se ajusta solo para que se lea</small></div><input id="f-userbubble" type="color" value="#f5be10"></div>
+              <div class="cfgrow"><div class="cfgl">Mensaje del bot<small>Burbuja del asistente</small></div><input id="f-color2" type="color" value="#f2f2f0"></div>
+              <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                Por defecto la burbuja del visitante usa tu color principal. Cámbiala aquí si quieres contraste.</div>
             </div>
           </details>
 
@@ -2835,15 +2841,9 @@ const ADMIN_HTML = `<!doctype html>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
               <label>Saludo de bienvenida</label>
-              <input id="f-welcome" placeholder="¡Hola! ¿En qué puedo ayudarte?">
+              <textarea id="f-welcome" rows="2">¡Hola! ¿En qué puedo ayudarte?</textarea>
               <label>Texto del campo de escritura</label>
-              <input id="f-tplaceholder" placeholder="Escribe tu pregunta…">
-              <div class="row">
-                <div><label>Botón de enviar (texto)</label><input id="f-tsend" placeholder="→"></div>
-                <div><label>Mensaje de error de conexión</label><input id="f-terror" placeholder="No he podido conectar…"></div>
-              </div>
-              <label>Icono del botón de enviar <span class="lh">«Abc» = usa el texto de arriba</span></label>
-              <div class="icopick" id="pick-send"></div>
+              <input id="f-tplaceholder" placeholder="Escribe tu mensaje…">
             </div>
           </details>
 
@@ -2852,18 +2852,30 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Comportamiento</div><div class="cs">Aviso, apertura, sugerencias</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="swrow"><span class="swlab">Burbuja de invitación automática</span><label class="switch"><input id="f-teaser" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
-              <div class="row">
-                <div><label>Segundos hasta la invitación</label><input id="f-tdelay" type="number" min="1" max="60" value="4"></div>
-                <div><label>Texto de la invitación <span class="lh">vacío = la bienvenida</span></label><input id="f-tteaser"></div>
+              <div class="swrow"><span class="swlab">Mostrar globo llamativo (teaser)</span><label class="switch"><input id="f-teaser" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+              <div class="reveal" id="teaserRev">
+                <label style="margin-top:0">Texto del globo</label>
+                <input id="f-tteaser" placeholder="¿Tienes dudas? Pregúntame 👋">
+                <input id="f-tdelay" type="hidden" value="4">
+                <div class="swrow"><span class="swlab">El visitante puede cerrarlo</span><label class="switch"><input id="f-teaserclose" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
               </div>
-              <label>Preguntas sugeridas <span class="lh">una por línea; aparecen como botones</span></label>
-              <textarea id="f-sugg" rows="3"></textarea>
-              <label>Pregunta de clasificación al abrir <span class="lh">opcional</span></label>
-              <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
-              <label>Opciones de respuesta <span class="lh">una por línea, máx. 4; clasifica el lead</span></label>
-              <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
-              <div class="swrow"><span class="swlab">Sonido al aparecer la invitación</span><label class="switch"><input id="f-sound" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><span class="swlab">Preguntas sugeridas al abrir</span><label class="switch"><input id="f-sugSw" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+              <div class="reveal show" id="sugRev">
+                <div class="hint">Escribe las preguntas que quieres forzar. Aparecen como botones bajo el saludo.</div>
+                <div id="sug-list"></div>
+                <button type="button" class="miniadd" id="sug-add"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Añadir pregunta</button>
+                <textarea id="f-sugg" style="display:none"></textarea>
+              </div>
+              <div class="swrow"><span class="swlab">Pregunta de clasificación (expositor/visitante)</span><label class="switch"><input id="f-qualSw" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="reveal" id="qualRev">
+                <label style="margin-top:0">Pregunta de clasificación</label>
+                <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
+                <label>Opciones de respuesta <span class="lh">una por línea, máx. 4</span></label>
+                <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
+              </div>
+              <div class="swrow"><span class="swlab">Abrir automáticamente tras unos segundos</span><label class="switch"><input id="f-autoopen" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><span class="swlab">Indicador de «escribiendo…»</span><label class="switch"><input id="f-typing" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><span class="swlab">Sonido al recibir respuesta</span><label class="switch"><input id="f-sound" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
             </div>
           </details>
 
@@ -2877,20 +2889,12 @@ const ADMIN_HTML = `<!doctype html>
               <div class="swrow"><span class="swlab">Mostrar la hora en los mensajes</span><label class="switch"><input id="f-timestamps" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="swrow"><span class="swlab">Avatar junto a los mensajes del bot</span><label class="switch"><input id="f-avatars" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="swrow"><span class="swlab">Botón de reiniciar conversación</span><label class="switch"><input id="f-reset" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <label>Botón de acción destacado (CTA) <span class="lh">vacío = oculto; aparece sobre el campo de escritura</span></label>
-              <input id="f-cta" type="text" placeholder="Ej.: Pedir cita">
+              <div class="swrow"><span class="swlab">Permitir adjuntar archivos</span><label class="switch"><input id="f-attach" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <label>Botón de acción destacado (CTA)</label>
+              <input id="f-cta" type="text" placeholder="Ej: Pedir cita — déjalo vacío para ocultarlo">
+              <div class="hint">Aparece como un botón grande sobre el campo de escritura.</div>
               <label>Idioma de la interfaz</label>
               <select id="f-lang"><option>Español</option><option>English</option><option>Português</option><option>Français</option><option>Detectar automáticamente</option></select>
-              <div class="divide"></div>
-              <label>Marca propia en el pie <span class="lh">«Impulsado por…» — vacío = sin pie propio</span></label>
-              <div class="row">
-                <div><label>Nombre de tu marca</label><input id="f-brand" placeholder="Tu Agencia"></div>
-                <div><label>Enlace de la marca</label><input id="f-brandurl" type="url" placeholder="https://tuagencia.com"></div>
-              </div>
-              <label>Logotipo del pie <span class="lh">opcional; sustituye el nombre</span></label>
-              <input id="f-brandlogo" type="url" placeholder="https://tuagencia.com/logotipo.svg">
-              <label>CSS personalizado <span class="lh">avanzado; se inyecta tal cual</span></label>
-              <textarea id="f-css" rows="3" placeholder=".cb-btn{ } .cb-panel{ } .cb-msg.bot{ } …"></textarea>
             </div>
           </details>
 
@@ -2899,11 +2903,21 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Marca de ExpoBot</div><div class="cs">Tu firma como desarrollador</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="swrow"><span class="swlab">Mostrar «Con tecnología de ExpoBot» <small>+ enlace a expobot.es; solo si no defines una marca propia arriba</small></span><label class="switch"><input id="f-expobot" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><span class="swlab">Mostrar «Con tecnología de ExpoBot» + enlace a expobot.es en el pie del chat</span><label class="switch"><input id="f-expobot" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
               <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
                 Actívalo para dejar tu firma en los bots de los clientes, o desactívalo cuando el cliente prefiera marca blanca.</div>
             </div>
           </details>
+
+          <div style="display:none" id="ap-hidden">
+            <input id="f-logo" type="hidden">
+            <input id="f-wordmark" type="url"><input id="f-colorhead" type="color" value="#111111"><input id="f-controlborder" type="color" value="#d9d9d4">
+            <select id="f-size"><option value="estandar" selected>Estándar</option><option value="compacto">Compacto</option><option value="amplio">Amplio</option></select>
+            <input id="f-tsend"><input id="f-terror"><input id="f-btnbg" type="color" value="#111111"><input id="f-btnicon" type="url">
+            <input id="f-radarcolor" type="color" value="#f5be10"><textarea id="f-css"></textarea>
+            <input id="f-brand"><input id="f-brandurl" type="url"><input id="f-brandlogo" type="url">
+            <div class="icopick" id="pick-send"></div>
+          </div>
 
           <p class="mut" style="margin-top:14px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Todos los cambios se ven al momento en la <b>vista en vivo</b> de la izquierda.</p>
         </div>
@@ -4433,6 +4447,16 @@ function selTenant(id, projectId) {
   $("f-reset").checked = !!th.reset_btn;
   $("f-cta").value = th.cta_text || "";
   $("f-lang").value = th.lang || "Español";
+  $("f-edge").value = th.edge || 24;
+  $("f-edge-v").textContent = $("f-edge").value;
+  $("f-btnpx").value = th.btn_px || 56;
+  $("f-btnpx-v").textContent = $("f-btnpx").value;
+  $("f-teaserclose").checked = th.teaser_close !== false;
+  $("f-autoopen").checked = !!th.auto_open;
+  $("f-typing").checked = th.typing !== false;
+  $("f-attach").checked = !!th.attach;
+  $("f-sugSw").checked = isNew ? true : ((t.suggested_questions || []).length > 0);
+  $("f-qualSw").checked = !!(th.qualify_opts && th.qualify_opts.length);
   $("f-colorhead").value = th.header_color || (t && t.primary_color) || "#111111";
   $("f-controlborder").value = th.control_border_color || "#d9d9d4";
   $("f-colorbg").value = th.bg_color || "#ffffff";
@@ -4493,6 +4517,7 @@ function selTenant(id, projectId) {
   $("f-btnshape").value = th.btn_shape || "circulo";
   $("f-btnlabel").value = th.btn_label || "";
   renderIconPicks();
+  if (typeof renderSugList === "function") renderSugList();
   $("save-msg").textContent = "";
   $("a-brief").value = ""; $("a-msg").textContent = "";
   $("ds-brief").value = ""; $("ds-msg").textContent = ""; $("ds-options").innerHTML = "";
@@ -5002,6 +5027,7 @@ function updPrev() {
   var head = $("f-colorhead").value || c;
   var headText = contrastFor(head);
   var controlBorder = $("f-controlborder").value || "#d9d9d4";
+  var cvDark = window.cvDark || $("f-dark").value === "dark";
   var c2 = cvDark ? "#2a2a2e" : ($("f-color2").value || "#f2f2f0");
   var c2t = cvDark ? "#ececec" : contrastFor(c2);
   var cbg = cvDark ? "#17171a" : ($("f-colorbg").value || "#ffffff");
@@ -5011,13 +5037,14 @@ function updPrev() {
   var font = $("f-font").value;
   loadFont(font);
   $("f-radius-v").textContent = rad;
+  var fp = document.getElementById("fontprev"); if (fp) fp.style.fontFamily = fontStack(font);
 
   var w = $("cv-widget");
   w.style.fontFamily = fontStack(font);
   w.style.background = cbg;
   w.style.borderRadius = Math.min(rad + 4, 28) + "px";
-  w.style.boxShadow = sh === "ninguna" ? "none" :
-    sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.4)" : "0 12px 40px rgba(20,20,60,.18)";
+  w.style.boxShadow = sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.4)"
+    : sh === "media" ? "0 14px 44px rgba(0,0,0,.2)" : "0 8px 24px rgba(0,0,0,.12)";
   $("f-winborderw-v").textContent = $("f-winborderw").value;
   w.style.border = $("f-winborderon").checked
     ? (($("f-winborderw").value || 1) + "px solid " + $("f-winborder").value)
@@ -5118,20 +5145,28 @@ function updPrev() {
 
   var shape = $("f-btnshape").value;
   var pb = $("cv-btn");
-  var btnBg = $("f-btnbg").value || c;
-  var btnText = contrastFor(btnBg);
+  var btnBg = c;
+  var btnText = t;
   pb.style.background = btnBg;
+  var bpx = parseInt($("f-btnpx").value, 10) || 56;
+  $("f-btnpx-v").textContent = bpx;
+  pb.style.width = shape === "pastilla" ? "auto" : bpx + "px";
+  pb.style.minWidth = bpx + "px";
+  pb.style.height = bpx + "px";
+  var edge = parseInt($("f-edge").value, 10) || 24;
+  $("f-edge-v").textContent = edge;
+  $("cv-frame").style.padding = Math.max(edge, 16) + "px";
   $("f-btnborderw-v").textContent = $("f-btnborderw").value;
   pb.style.border = $("f-btnborderon").checked ? (($("f-btnborderw").value || 2) + "px solid " + $("f-btnborder").value) : "0";
   var fx = $("f-effect").value;
   ["radar", "beat", "bounce", "glow", "shake"].forEach(function (k) { pb.classList.remove(k); });
   var fxMap = { radar: "radar", latido: "beat", rebote: "bounce", brillo: "glow", sacudida: "shake" };
   if (fxMap[fx]) pb.classList.add(fxMap[fx]);
-  pb.style.setProperty("--preview-radar", $("f-radarcolor").value);
-  pb.style.borderRadius = shape === "redondeado" ? Math.min(rad + 4, 18) + "px" : "26px";
+  pb.style.setProperty("--preview-radar", c);
+  pb.style.borderRadius = shape === "redondeado" ? Math.min(rad + 6, 18) + "px" : shape === "pastilla" ? "99px" : "50%";
   var isz = parseInt($("f-iconsize").value, 10) || 46;
   $("f-iconsize-v").textContent = isz;
-  var svgPx = Math.round(52 * isz / 100), imgPx = Math.round(52 * Math.min(isz + 24, 95) / 100);
+  var svgPx = Math.round(bpx * isz / 100), imgPx = Math.round(bpx * Math.min(isz + 24, 95) / 100);
   var btnIconUrl = $("f-btnicon").value.trim();
   pb.innerHTML = btnIconUrl
     ? '<img src="' + btnIconUrl.replace(/"/g, "") + '" alt="" style="width:' + imgPx + 'px;height:' + imgPx + 'px;object-fit:contain">'
@@ -5147,13 +5182,22 @@ function updPrev() {
   syncSwatches();
   if (typeof syncPrimary === "function") syncPrimary();
   if (typeof syncSegs === "function") syncSegs();
+  [["f-btnborderon", "btnbordRev"], ["f-winborderon", "winbordRev"], ["f-teaser", "teaserRev"], ["f-sugSw", "sugRev"], ["f-qualSw", "qualRev"]].forEach(function (p) {
+    var b = document.getElementById(p[1]), s = document.getElementById(p[0]);
+    if (b && s) b.classList.toggle("show", s.checked);
+  });
+  var lph = document.getElementById("logo-ph"), lv = ($("f-logo").value || "").trim();
+  if (lph) lph.innerHTML = lv ? '<img src="' + lv.replace(/"/g, "") + '" alt="">' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
 }
 ["f-color", "f-colorhead", "f-color2", "f-colorbg", "f-controlborder", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
  "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg",
- "f-iconsize", "f-btnborderw", "f-winborder", "f-winborderw"].forEach(function (id) {
+ "f-iconsize", "f-btnborderw", "f-winborder", "f-winborderw",
+ "f-edge", "f-btnpx", "f-userbubble", "f-cta", "f-tteaser", "f-name2", "f-btnlabel"].forEach(function (id) {
   $(id).oninput = updPrev;
 });
-["f-font", "f-shadow", "f-btnshape", "f-btnborderon", "f-effect", "f-winborderon", "f-expobot"].forEach(function (id) {
+["f-font", "f-shadow", "f-btnshape", "f-btnborderon", "f-effect", "f-winborderon", "f-expobot",
+ "f-side", "f-dark", "f-density", "f-size", "f-teaserclose", "f-autoopen", "f-typing", "f-attach",
+ "f-timestamps", "f-avatars", "f-reset", "f-lang", "f-qualSw", "f-sugSw"].forEach(function (id) {
   $(id).onchange = updPrev;
 });
 ["g-c1", "g-c2"].forEach(function (id) {
@@ -5328,7 +5372,7 @@ function collect() {
     name: $("f-name").value.trim(),
     system_prompt: $("f-prompt").value,
     welcome_message: $("f-welcome").value.trim(),
-    suggested_questions: lines($("f-sugg").value),
+    suggested_questions: $("f-sugSw").checked ? lines($("f-sugg").value) : [],
     provider: $("f-provider").value,
     model: $("f-model").value.trim(),
     primary_color: $("f-color").value,
@@ -5349,6 +5393,12 @@ function collect() {
       header_color: $("f-colorhead").value,
       secondary_color: $("f-color2").value,
       user_bubble: $("f-userbubble").value,
+      edge: parseInt($("f-edge").value, 10) || 24,
+      btn_px: parseInt($("f-btnpx").value, 10) || 56,
+      teaser_close: $("f-teaserclose").checked,
+      auto_open: $("f-autoopen").checked,
+      typing: $("f-typing").checked,
+      attach: $("f-attach").checked,
       density: $("f-density").value,
       timestamps: $("f-timestamps").checked,
       msg_avatars: $("f-avatars").checked,
@@ -5379,13 +5429,13 @@ function collect() {
       brand_url: $("f-brandurl").value.trim(),
       brand_logo_url: $("f-brandlogo").value.trim(),
       btn_icon_url: $("f-btnicon").value.trim(),
-      btn_bg: $("f-btnbg").value,
+      btn_bg: "",
       btn_border_color: $("f-btnborderon").checked ? $("f-btnborder").value : "",
       btn_border_width: parseInt($("f-btnborderw").value, 10) || 2,
       icon_size: parseInt($("f-iconsize").value, 10) || 46,
       effect: $("f-effect").value === "ninguno" ? "" : $("f-effect").value,
       radar: $("f-effect").value === "radar",
-      radar_color: $("f-radarcolor").value,
+      radar_color: "",
       expobot_branding: $("f-expobot").checked,
       sound: $("f-sound").checked,
       custom_css: $("f-css").value.slice(0, 5000),
@@ -5393,8 +5443,8 @@ function collect() {
       icon_send: iconSendSel,
       btn_shape: $("f-btnshape").value,
       btn_label: $("f-btnlabel").value.trim(),
-      qualify_q: $("f-qualq").value.trim(),
-      qualify_opts: lines($("f-qualopts").value).slice(0, 4),
+      qualify_q: $("f-qualSw").checked ? $("f-qualq").value.trim() : "",
+      qualify_opts: $("f-qualSw").checked ? lines($("f-qualopts").value).slice(0, 4) : [],
     },
   };
   var lim = parseInt($("f-limit").value, 10);
@@ -5972,11 +6022,44 @@ function segify(id, labels) {
 }
 function syncSegs() { SEGS.forEach(function (f) { f(); }); }
 segify("f-btnshape", { circulo: "Círculo", redondeado: "Redondeado", pastilla: "Píldora" });
-segify("f-side", { derecha: "Derecha", izquierda: "Izquierda" });
-segify("f-dark", { off: "Claro", auto: "Automático" });
-segify("f-size", { compacto: "Compacto", estandar: "Estándar", amplio: "Amplio" });
-segify("f-shadow", { ninguna: "Ninguna", suave: "Suave", fuerte: "Marcada" });
+segify("f-side", { derecha: "Abajo derecha", izquierda: "Abajo izquierda" });
+segify("f-dark", { off: "Claro", dark: "Oscuro", auto: "Automático" });
+segify("f-shadow", { ninguna: "Ninguna", suave: "Suave", media: "Media", fuerte: "Fuerte" });
 segify("f-density", { cozy: "Cómoda", dense: "Compacta" });
+// reveals + dropzone + lista editable de sugeridas
+(function () {
+  function rev(sw, box) { var s = document.getElementById(sw), b = document.getElementById(box); if (!s || !b) return; function u() { b.classList.toggle("show", s.checked); } s.addEventListener("change", function () { u(); if (typeof updPrev === "function") updPrev(); }); u(); }
+  rev("f-btnborderon", "btnbordRev"); rev("f-winborderon", "winbordRev");
+  rev("f-teaser", "teaserRev"); rev("f-sugSw", "sugRev"); rev("f-qualSw", "qualRev");
+  // dropzone de logo -> data URL en f-logo
+  var drop = document.getElementById("logo-drop"), file = document.getElementById("logo-file");
+  function readLogo(f) { if (!f) return; var r = new FileReader(); r.onload = function () { document.getElementById("f-logo").value = r.result; markDirty(); updPrev(); }; r.readAsDataURL(f); }
+  if (drop && file) {
+    drop.addEventListener("click", function () { file.click(); });
+    file.addEventListener("change", function () { readLogo(this.files[0]); });
+    drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.style.borderColor = "var(--acc)"; });
+    drop.addEventListener("dragleave", function () { drop.style.borderColor = ""; });
+    drop.addEventListener("drop", function (e) { e.preventDefault(); drop.style.borderColor = ""; readLogo(e.dataTransfer.files[0]); });
+  }
+  // lista editable de preguntas sugeridas <-> f-sugg
+  var sl = document.getElementById("sug-list"), add = document.getElementById("sug-add");
+  window.renderSugList = function () {
+    if (!sl) return;
+    var arr = ($("f-sugg").value || "").split("\\n").filter(function (x) { return x.trim() !== "" || false; });
+    sl.innerHTML = "";
+    arr.forEach(function (q, i) {
+      var row = document.createElement("div"); row.className = "qrow";
+      row.innerHTML = '<span class="gp"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="17" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="17" r="1"/></svg></span>';
+      var inp = document.createElement("input"); inp.type = "text"; inp.value = q;
+      inp.addEventListener("input", function () { arr[i] = this.value; $("f-sugg").value = arr.join("\\n"); updPrev(); markDirty(); });
+      var del = document.createElement("button"); del.type = "button"; del.className = "qdel";
+      del.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
+      del.onclick = function () { arr.splice(i, 1); $("f-sugg").value = arr.join("\\n"); renderSugList(); updPrev(); markDirty(); };
+      row.appendChild(inp); row.appendChild(del); sl.appendChild(row);
+    });
+  };
+  if (add) add.onclick = function () { var v = $("f-sugg").value; $("f-sugg").value = (v ? v + "\\n" : "") + "Nueva pregunta"; renderSugList(); updPrev(); markDirty(); };
+})();
 (function () {
   var n2 = document.getElementById("f-name2"), n = document.getElementById("f-name");
   if (n2 && n) n2.addEventListener("input", function () { n.value = this.value; updPrev(); });
