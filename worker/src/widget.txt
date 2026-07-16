@@ -147,6 +147,7 @@
   .cb-brand{flex:0 0 auto;text-align:center;font-size:11px;color:#999;padding:0 0 7px}
   .cb-brand a{color:#999;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
   .cb-brand-logo{display:inline-block;width:68px;height:16px;object-fit:fill;vertical-align:middle}
+  .cb-eblogo{display:inline-block;height:14px;width:auto;vertical-align:middle;margin-left:4px}
   .cb-brand a:hover{text-decoration:underline}
   .cb-qual{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start;max-width:85%}
   .cb-qual button{background:var(--cbg,#fff);border:1px solid var(--cb);color:inherit;
@@ -287,12 +288,16 @@
 
   function applyTheme() {
     TH = cfg.theme || {};
+    var L = ({
+      "English": { placeholder: "Type your question…", error: "Couldn't connect. Please try again or email us.", subtitle: "Usually replies right away" },
+      "Português": { placeholder: "Escreva a sua pergunta…", error: "Não consegui ligar. Tente novamente ou escreva-nos por email.", subtitle: "Costuma responder de imediato" },
+    })[TH.lang] || {};
     TXT = {
-      placeholder: TH.t_placeholder || "Escribe tu pregunta…",
+      placeholder: TH.t_placeholder || L.placeholder || "Escribe tu pregunta…",
       send: TH.t_send || "→",
-      error: TH.t_error || "No he podido conectar. Vuelve a intentarlo o escríbenos por email.",
+      error: TH.t_error || L.error || "No he podido conectar. Vuelve a intentarlo o escríbenos por email.",
       teaser: TH.t_teaser || cfg.welcome_message,
-      subtitle: TH.subtitle || "Suele responder al instante",
+      subtitle: TH.subtitle || L.subtitle || "Suele responder al instante",
     };
     var r = document.documentElement.style;
     r.setProperty("--cb", cfg.primary_color);
@@ -327,11 +332,10 @@
     r.setProperty("--cbsh", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.35)" : sh === "suave" ? "0 8px 28px rgba(0,0,0,.14)" : "0 12px 48px rgba(0,0,0,.2)");
     r.setProperty("--cbshb", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 6px 22px rgba(0,0,0,.32)" : sh === "suave" ? "0 4px 14px rgba(0,0,0,.14)" : "0 4px 16px rgba(0,0,0,.18)");
     r.setProperty("--cbedge", (TH.edge || 24) + "px");
-    if (TH.btn_px) r.setProperty("--cbbtn", TH.btn_px + "px");
     var sz = SIZES[TH.size] || SIZES.estandar;
     r.setProperty("--cbw", sz.w + "px");
     r.setProperty("--cbh", sz.h + "px");
-    r.setProperty("--cbbtn", sz.b + "px");
+    r.setProperty("--cbbtn", (TH.btn_px || sz.b) + "px");
     var bg = (TH.bg_image || "").trim();
     if (bg) {
       r.setProperty("--cbbg", bg.indexOf("gradient") >= 0 ? bg : 'url("' + bg.replace(/"/g, "") + '")');
@@ -398,7 +402,8 @@
           : brandBody) +
         "</div>";
     } else if (TH.expobot_branding !== false) {
-      brand = '<div class="cb-brand"><a href="https://expobot.es" target="_blank" rel="noopener">Con tecnología de ExpoBot</a></div>';
+      var ebLogo = API + "/assets/expobot-wordmark-" + (isDark() ? "light" : "dark") + ".svg";
+      brand = '<div class="cb-brand"><a href="https://expobot.es" target="_blank" rel="noopener">Con tecnología de <img class="cb-eblogo" src="' + ebLogo + '" alt="ExpoBot"></a></div>';
     }
     panel.innerHTML =
       '<div class="cb-head"><div class="cb-av">' + avatar + '</div>' +
@@ -633,9 +638,14 @@
     panel.querySelector("#cb-send").disabled = true;
     add("me", text);
 
+    var typingOn = TH.typing !== false;
     var wait = add("bot", "");
-    wait.className = "cb-msg bot cb-dots";
-    wait.innerHTML = "<span></span><span></span><span></span>";
+    if (typingOn) {
+      wait.className = "cb-msg bot cb-dots";
+      wait.innerHTML = "<span></span><span></span><span></span>";
+    } else {
+      wait.style.display = "none";
+    }
 
     fetch(API + "/api/chat", {
       method: "POST",
@@ -652,7 +662,8 @@
       .then(function (d) {
         wait.remove();
         if (d.error) throw new Error(d.error);
-        add("bot", d.reply, d.sources, true);
+        add("bot", d.reply, d.sources, typingOn);
+        if (TH.sound) playPing();
         history.push({ role: "user", content: text });
         history.push({ role: "assistant", content: d.reply });
         if (d.lead_form) {
@@ -774,8 +785,9 @@
       if (d.error) return;
       cfg = d;
       applyTheme();
-      if (AUTO > 0) {
-        setTimeout(openChat, AUTO);
+      var autoMs = AUTO > 0 ? AUTO : (TH && TH.auto_open ? Math.max(1, (TH.teaser_delay || 3)) * 1000 : 0);
+      if (autoMs > 0) {
+        setTimeout(openChat, autoMs);
       } else if (!TH || TH.teaser !== false) {
         setTimeout(showTeaser, Math.max(1, (TH && TH.teaser_delay) || 4) * 1000);
       }
