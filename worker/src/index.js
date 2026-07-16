@@ -3013,20 +3013,32 @@ const ADMIN_HTML = `<!doctype html>
           puedes reenviarlo a email, hoja de cálculo o CRM sin programar.</p>
         </div>
         <div class="ft" id="ft-seg">
-          <label>Dominios permitidos (uno por línea; el widget solo funciona desde estos)</label>
-          <textarea id="f-domains" rows="2"></textarea>
-          <label>Límite de mensajes al mes (al alcanzarlo, el bot responde un aviso fijo sin gastar IA)</label>
-          <input id="f-limit" type="number" min="0" style="max-width:200px">
-          <div class="check"><input id="f-active" type="checkbox"><label for="f-active" style="margin:0">Activo (desmárcalo para apagar este chatbot)</label></div>
-          <div class="check"><input id="f-featleads" type="checkbox"><label for="f-featleads" style="margin:0">Captura de leads (si lo desactivas, el bot solo responde preguntas, sin pedir datos de contacto)</label></div>
-          <label style="margin-top:18px">Panel del cliente de este chatbot</label>
-          <div class="check"><input id="f-panelon" type="checkbox"><label for="f-panelon" style="margin:0">Panel del cliente accesible (si lo desactivas, su enlace deja de funcionar)</label></div>
-          <p class="mut" style="margin:8px 0 4px">Qué puede ver y hacer el cliente en su panel:</p>
-          <div class="check"><input id="f-pfleads" type="checkbox"><label for="f-pfleads" style="margin:0">Leads</label></div>
-          <div class="check"><input id="f-pfconvs" type="checkbox"><label for="f-pfconvs" style="margin:0">Conversaciones</label></div>
-          <div class="check"><input id="f-pfgaps" type="checkbox"><label for="f-pfgaps" style="margin:0">Preguntas sin respuesta</label></div>
-          <div class="check"><input id="f-pfuploads" type="checkbox"><label for="f-pfuploads" style="margin:0">Subir contenido</label></div>
-          <div class="check"><input id="f-pftest" type="checkbox"><label for="f-pftest" style="margin:0">Probar el bot</label></div>
+          <details class="cfg" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+              <div><div class="ct">Seguridad y límites</div><div class="cs">Dominios, estado y límite</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <label>Dominios permitidos (uno por línea; el widget solo funciona desde estos)</label>
+              <textarea id="f-domains" rows="2"></textarea>
+              <label style="margin-top:12px">Límite de mensajes al mes</label>
+              <input id="f-limit" type="number" min="0" style="max-width:200px">
+              <div class="note" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Al alcanzar el límite, el bot responde un aviso fijo sin gastar IA.</div>
+              <div class="swrow" style="margin-top:14px"><div class="swlab">Bot activo<small>Desactívalo para apagar el chatbot por completo</small></div><label class="switch"><input id="f-active" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><div class="swlab">Captura de leads<small>Si lo desactivas, el bot solo responde, sin pedir datos de contacto</small></div><label class="switch"><input id="f-featleads" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            </div>
+          </details>
+          <details class="cfg">
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg></span>
+              <div><div class="ct">Panel del cliente</div><div class="cs">Qué puede ver y hacer el cliente</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <div class="swrow"><div class="swlab">Panel del cliente accesible<small>Si lo desactivas, su enlace deja de funcionar</small></div><label class="switch"><input id="f-panelon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Estas secciones solo aplican si el panel del cliente está accesible.</div>
+              <div class="swrow"><div class="swlab">Leads</div><label class="switch"><input id="f-pfleads" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><div class="swlab">Conversaciones</div><label class="switch"><input id="f-pfconvs" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><div class="swlab">Preguntas sin respuesta</div><label class="switch"><input id="f-pfgaps" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><div class="swlab">Subir contenido</div><label class="switch"><input id="f-pfuploads" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div class="swrow"><div class="swlab">Probar el bot</div><label class="switch"><input id="f-pftest" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            </div>
+          </details>
         </div>
         <div class="actions">
           <button id="save" class="primary">Guardar</button>
@@ -4822,9 +4834,10 @@ function setBotTab(bt) {
     ftbar.classList.add("hide");
     ftShow("ft-leads");
   } else if (bt === "cerebro") {
-    ftbar.classList.remove("hide");
-    apBtn.classList.add("hide");
+    ftbar.classList.add("hide");
     ftShow("ft-comp");
+    var seg = document.getElementById("ft-seg");
+    if (seg) seg.classList.add("on");
   }
   var vt = document.getElementById("v-tenant");
   if (vt) vt.classList.toggle("dsn-only", bt === "diseno");
