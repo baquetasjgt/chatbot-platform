@@ -2079,6 +2079,22 @@ const ADMIN_HTML = `<!doctype html>
   .cfg-ai{background:linear-gradient(180deg,var(--soft,#f7f1dd),#fff);border:1px solid var(--acc);border-radius:13px;padding:14px 16px;margin:4px 0 14px}
   .cfg-ai-h{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink)}
   .cfg-ai .actions{margin-top:8px}
+  /* color: popover-btn como chip (igual que la plantilla) */
+  .cp-btn{width:54px!important;height:36px!important;border-radius:9px!important;padding:0!important;flex:0 0 auto}
+  .cp-btn.mini{width:46px!important}
+  /* fila de swatches + hex del color principal (plantilla) */
+  #ft-ap .swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  #ft-ap .swatches .sw{width:30px;height:30px;border-radius:8px;border:2px solid transparent;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);cursor:pointer;padding:0}
+  #ft-ap .swatches .sw.on{border-color:var(--ink)}
+  #ft-ap .hexbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;width:132px;background:#fff}
+  #ft-ap .hexbox span{width:16px;height:16px;border-radius:4px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+  #ft-ap .hexbox input{border:0!important;outline:0;font-family:ui-monospace,monospace;font-size:12.5px;
+    width:100%;background:transparent!important;padding:0!important;text-transform:uppercase;box-shadow:none!important}
+  /* galería de iconos estilo plantilla */
+  #ft-ap .icopick{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+  #ft-ap .icopick button{width:auto;height:auto;aspect-ratio:1;border-radius:8px}
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
     padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;
     z-index:60;pointer-events:none;max-width:90vw}
@@ -2630,18 +2646,25 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Identidad y colores</div><div class="cs">Colores, tipografía, logo, cabecera</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
+              <label>Color principal <span class="lh">cabecera, botón, mensajes del usuario</span></label>
+              <div class="swatches" id="prim-sw">
+                <button type="button" class="sw" data-c="#f5be10" style="background:#f5be10"></button>
+                <button type="button" class="sw" data-c="#1e9e5c" style="background:#1e9e5c"></button>
+                <button type="button" class="sw" data-c="#2e8fe6" style="background:#2e8fe6"></button>
+                <button type="button" class="sw" data-c="#e0533d" style="background:#e0533d"></button>
+                <button type="button" class="sw" data-c="#6b4eff" style="background:#6b4eff"></button>
+                <button type="button" class="sw" data-c="#0a0a0a" style="background:#0a0a0a"></button>
+                <input id="f-color" type="color">
+                <div class="hexbox"><span id="prim-hexdot"></span><input id="prim-hex" spellcheck="false" maxlength="7" placeholder="#000000"></div>
+              </div>
               <div class="row">
-                <div><label>Color principal <span class="lh">cabecera, botón, mensajes del usuario</span></label>
-                  <input id="f-color" type="color"></div>
                 <div><label>Color de las respuestas del bot</label>
                   <input id="f-color2" type="color" value="#f2f2f0"></div>
-              </div>
-              <div class="row">
                 <div><label>Color de la cabecera</label>
                   <input id="f-colorhead" type="color" value="#111111"></div>
-                <div><label>Color de bordes y controles</label>
-                  <input id="f-controlborder" type="color" value="#d9d9d4"></div>
               </div>
+              <div><label>Color de bordes y controles</label>
+                <input id="f-controlborder" type="color" value="#d9d9d4"></div>
               <div><label>Tipografía</label>
                 <select id="f-font">
                   <option value="system">Sistema (por defecto)</option>
@@ -5017,6 +5040,7 @@ function updPrev() {
     pb.appendChild(lbl);
   }
   syncSwatches();
+  if (typeof syncPrimary === "function") syncPrimary();
 }
 ["f-color", "f-colorhead", "f-color2", "f-colorbg", "f-controlborder", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
  "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg",
@@ -5776,6 +5800,34 @@ function syncSwatches() {
 }
 
 initColorPickers();
+
+function setPrimaryColor(hex) {
+  var f = $("f-color");
+  f.value = hex;
+  f.dispatchEvent(new Event("input", { bubbles: true }));
+  syncPrimary();
+}
+function syncPrimary() {
+  var f = $("f-color");
+  if (!f) return;
+  var hex = f.value || "#000000";
+  var dot = $("prim-hexdot"); if (dot) dot.style.background = hex;
+  var hx = $("prim-hex"); if (hx && document.activeElement !== hx) hx.value = hex.toUpperCase();
+  [].forEach.call(document.querySelectorAll("#prim-sw .sw"), function (b) {
+    b.classList.toggle("on", b.dataset.c.toLowerCase() === hex.toLowerCase());
+  });
+}
+function initPrimarySwatches() {
+  [].forEach.call(document.querySelectorAll("#prim-sw .sw"), function (b) {
+    b.onclick = function () { setPrimaryColor(b.dataset.c); };
+  });
+  var hx = $("prim-hex");
+  if (hx) hx.addEventListener("input", function () {
+    var v = this.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) setPrimaryColor(v);
+  });
+}
+initPrimarySwatches();
 
 if (TOKEN) load(); else showLogin();
 </script>
