@@ -2190,6 +2190,18 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
       return json({ error: "No se ha podido conectar ahora mismo. Inténtalo de nuevo." }, 502);
     }
   }
+  // --- bandeja: conversaciones de un asistente (para atender desde el admin) ---
+  const mConvList = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/conversations$/);
+  if (mConvList && request.method === "GET") {
+    const rows = await sb(
+      env,
+      `conversations?tenant_id=eq.${mConvList[1]}` +
+        `&select=id,session_id,page_url,human_handoff,last_message_at,messages(role,content,created_at)` +
+        `&order=last_message_at.desc&messages.order=created_at.asc&limit=100`
+    );
+    return json(rows || []);
+  }
+
   // --- relevo humano desde el admin (mismas acciones que el panel del cliente) ---
   const mConvHand = url.pathname.match(/^\/admin\/api\/conversations\/([0-9a-f-]{36})\/handoff$/);
   if (mConvHand && request.method === "POST") {
@@ -2523,6 +2535,25 @@ const ADMIN_HTML = `<!doctype html>
   .studio .drop:hover{border-color:var(--acc)}
   .studio .drop .ph{width:40px;height:40px;border-radius:8px;background:var(--soft);display:grid;place-items:center;flex:0 0 auto;color:var(--ink)}
   .studio .drop .ph svg{width:20px;height:20px}
+  .studio .ibx{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;overflow:hidden}
+  .studio .ibx-h{width:100%;text-align:left;background:none;border:0;padding:13px 15px;display:flex;justify-content:space-between;gap:12px;align-items:center;cursor:pointer;color:var(--ink);font:inherit}
+  .studio .ibx-h:hover{background:#faf9f5}
+  .studio .ibx-meta{color:var(--mut);font-size:12px;white-space:nowrap}
+  .studio .ibx-b{display:none;border-top:1px solid var(--line);padding:14px}
+  .studio .ibx.open .ibx-b{display:block}
+  .studio .ibx-m{width:fit-content;max-width:80%;padding:8px 11px;margin-bottom:7px;white-space:pre-wrap;font-size:13.5px;border-radius:9px}
+  .studio .ibx-m.u{background:var(--soft);margin-left:auto}
+  .studio .ibx-m.a{background:#f3f3ef}
+  .studio .chtag{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;background:#111;color:#fff;border-radius:4px;padding:1px 6px;margin-right:4px}
+  .studio .hotag{color:#8a3222}
+  .studio .convho{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px dashed var(--line);margin-top:10px;padding-top:12px}
+  .studio .hostate{font-size:12.5px;font-weight:600;color:var(--mut);display:inline-flex;align-items:center;gap:6px}
+  .studio .hostate:before{content:"";width:8px;height:8px;border-radius:50%;background:#c9c9c4}
+  .studio .hostate.on{color:#8a3222}
+  .studio .hostate.on:before{background:#e0574a}
+  .studio .convreply{display:flex;gap:8px;margin-top:10px}
+  .studio .convreply input{flex:1;border:1px solid var(--line-strong);border-radius:8px;padding:9px 11px;font:inherit;font-size:14px;outline:0}
+  .studio .convreply input:focus{border-color:#111}
   details.cfg.danger-card{border-color:#e4b8ae}
   details.cfg.danger-card>summary .ci{background:#fbe9e5;color:var(--err,#a53222)}
   details.cfg.devbrand{background:linear-gradient(180deg,var(--soft),#fff);border-color:var(--acc)}
@@ -2801,6 +2832,7 @@ const ADMIN_HTML = `<!doctype html>
         <button data-bt="diseno">Diseño</button>
         <button data-bt="captacion">Captación</button>
         <button data-bt="canales">Canales</button>
+        <button data-bt="bandeja">Bandeja</button>
         <button data-bt="calidad">Pruebas</button>
         <button data-bt="publicar">Publicar</button>
       </div>
@@ -3112,6 +3144,13 @@ const ADMIN_HTML = `<!doctype html>
           </div>
         </details>
       </section>
+
+      <section class="workspace-view studio hide" id="v-inbox">
+        <div class="page-heading"><div><p class="section-kicker">ATENCIÓN HUMANA</p><h1>Bandeja</h1><p>Conversaciones de WhatsApp y Telegram. Toma el control para responder tú; el bot se calla en esa conversación hasta que lo devuelvas.</p></div><button id="inbox-refresh" class="ghost">Actualizar</button></div>
+        <div class="note" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Aquí solo aparecen los canales de mensajería (el chat de la web no se puede intervenir). Se actualiza sola cada 12 s.</span></div>
+        <div id="inbox-list" class="mut">Cargando…</div>
+      </section>
+
       <div class="card hide" id="v-assist">
         <div id="bot-creation-progress" class="creation-progress hide" aria-label="Proceso de creacion">
           <span class="on"><b>1</b> Objetivo</span><span><b>2</b> Configuracion</span><span><b>3</b> Revisar y guardar</span>
@@ -4235,7 +4274,7 @@ var ALL_VIEWS = [
   "v-templates", "v-settings", "v-client-nav", "v-client", "v-client-projects",
   "v-client-portal", "v-client-inv", "v-project-nav", "v-project-overview",
   "v-project-integrations", "v-project-knowledge", "v-project", "v-project-tools",
-  "v-bot-overview", "v-bot-channels", "v-assist", "v-tenant", "v-exam", "integ", "ingest"
+  "v-bot-overview", "v-bot-channels", "v-inbox", "v-assist", "v-tenant", "v-exam", "integ", "ingest"
 ];
 function showCards(ids, keepTabs) {
   ALL_VIEWS.forEach(function (v) { $(v).classList.toggle("hide", ids.indexOf(v) < 0); });
@@ -5393,6 +5432,7 @@ var BT_CARDS = {
   diseno: ["v-tenant"],
   captacion: ["v-tenant"],
   canales: ["v-bot-channels"],
+  bandeja: ["v-inbox"],
   calidad: ["v-exam"],
   publicar: ["v-check", "integ"],
 };
@@ -5500,6 +5540,79 @@ $("f-chweb").addEventListener("change", function () {
     if (ok) toast($("f-chweb").checked ? "Canal web encendido ✓" : "Canal web apagado");
   });
 });
+
+// ---------- bandeja de atención humana (admin) ----------
+var INBOX_OPEN = {};
+function inboxChannel(sid) { return /^wa:/.test(sid || "") ? "WhatsApp" : /^tg:/.test(sid || "") ? "Telegram" : ""; }
+
+function renderInbox() {
+  var box = $("inbox-list"); if (!box) return;
+  api("/admin/api/tenants/" + sel.id + "/conversations").then(function (rows) {
+    if (!Array.isArray(rows)) { box.className = "mut"; box.textContent = "No se han podido cargar las conversaciones."; return; }
+    var chans = rows.filter(function (c) { return inboxChannel(c.session_id); });
+    box.className = "";
+    box.innerHTML = "";
+    if (!chans.length) {
+      box.className = "empty-state";
+      box.textContent = "Aún no hay conversaciones de WhatsApp ni Telegram. Aparecerán aquí en cuanto alguien escriba.";
+      return;
+    }
+    chans.forEach(function (c) { box.appendChild(inboxCard(c)); });
+  }).catch(function () { box.className = "mut"; box.textContent = "No se han podido cargar las conversaciones."; });
+}
+
+function inboxCard(c) {
+  var chan = inboxChannel(c.session_id);
+  var ms = c.messages || [];
+  var first = ""; for (var i = 0; i < ms.length; i++) if (ms[i].role === "user") { first = ms[i].content; break; }
+  var box = document.createElement("div"); box.className = "ibx"; box.dataset.cid = c.id;
+  var head = document.createElement("button"); head.className = "ibx-h";
+  head.innerHTML = "<span><b class='chtag'>" + chan + "</b> " + escA(first.slice(0, 80) || "(sin mensajes)") + "</span>" +
+    "<span class='ibx-meta'>" + (c.human_handoff ? "<b class='hotag'>Atendiendo tú</b> · " : "") + ms.length + " msg</span>";
+  head.onclick = function () { box.classList.toggle("open"); INBOX_OPEN[c.id] = box.classList.contains("open"); };
+  var body = document.createElement("div"); body.className = "ibx-b";
+  body.innerHTML = ms.map(function (m) {
+    return "<div class='ibx-m " + (m.role === "user" ? "u" : "a") + "'>" + escA(m.content) + "</div>";
+  }).join("");
+  var bar = document.createElement("div"); bar.className = "convho";
+  var state = document.createElement("span"); state.className = "hostate" + (c.human_handoff ? " on" : "");
+  state.textContent = c.human_handoff ? "En manos de una persona" : "Responde el bot";
+  var tgl = document.createElement("button"); tgl.className = "ghost small";
+  tgl.textContent = c.human_handoff ? "Devolver al bot" : "Tomar el control";
+  tgl.onclick = function () {
+    tgl.disabled = true;
+    api("/admin/api/conversations/" + c.id + "/handoff", { method: "POST", body: JSON.stringify({ on: !c.human_handoff }) })
+      .then(function (r) { tgl.disabled = false; if (r && r.ok !== false && !r.error) { c.human_handoff = r.human_handoff; INBOX_OPEN[c.id] = true; renderInbox(); } else toast((r && r.error) || "No se pudo", true); })
+      .catch(function () { tgl.disabled = false; });
+  };
+  bar.appendChild(state); bar.appendChild(tgl); body.appendChild(bar);
+  if (c.human_handoff) {
+    var rrow = document.createElement("div"); rrow.className = "convreply";
+    var inp = document.createElement("input"); inp.placeholder = "Escribe y responde por " + chan + "…";
+    var snd = document.createElement("button"); snd.className = "primary small"; snd.textContent = "Enviar";
+    var send = function () {
+      var t = inp.value.trim(); if (!t) return; snd.disabled = true; inp.disabled = true;
+      api("/admin/api/conversations/" + c.id + "/reply", { method: "POST", body: JSON.stringify({ text: t }) })
+        .then(function (r) { snd.disabled = false; inp.disabled = false; if (r && !r.error) { inp.value = ""; INBOX_OPEN[c.id] = true; renderInbox(); } else toast((r && r.error) || "No se pudo enviar", true); })
+        .catch(function () { snd.disabled = false; inp.disabled = false; toast("No se pudo enviar", true); });
+    };
+    snd.onclick = send;
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
+    rrow.appendChild(inp); rrow.appendChild(snd); body.appendChild(rrow);
+  }
+  box.appendChild(head); box.appendChild(body);
+  if (INBOX_OPEN[c.id] || c.human_handoff) box.classList.add("open");
+  return box;
+}
+function escA(t) { var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; }
+$("inbox-refresh").onclick = function () { renderInbox(); };
+// sondeo en vivo mientras estás en la bandeja (no interrumpe si escribes)
+setInterval(function () {
+  if (curBT !== "bandeja" || !sel || sel.type !== "tenant") return;
+  if (document.activeElement && $("inbox-list") && $("inbox-list").contains(document.activeElement)) return;
+  renderInbox();
+}, 12000);
+
 function ftShow(id) {
   [].forEach.call(document.querySelectorAll(".ftabs button"), function (x) {
     x.classList.toggle("on", x.dataset.ft === id);
@@ -5540,11 +5653,12 @@ function setBotTab(bt) {
   }
   if (bt === "resumen") renderBotOverview();
   if (bt === "canales") renderBotChannels();
+  if (bt === "bandeja") renderInbox();
   if (bt === "publicar") loadChecklist();
   // migas de pan: ruta completa clicable + pestaña actual
   var bf = sel && sel.id ? findTenant(sel.id) : null;
   if (bf) {
-    var btLbl = { resumen: "Resumen", cerebro: "Objetivo y comportamiento", contenido: "Conocimiento", diseno: "Diseño", captacion: "Captación", canales: "Canales", calidad: "Pruebas", publicar: "Publicar" }[bt] || "";
+    var btLbl = { resumen: "Resumen", cerebro: "Objetivo y comportamiento", contenido: "Conocimiento", diseno: "Diseño", captacion: "Captación", canales: "Canales", bandeja: "Bandeja", calidad: "Pruebas", publicar: "Publicar" }[bt] || "";
     crumb([
       { t: "Clientes", go: goClients },
       { t: bf.client.name, go: function () { selClient(bf.client.id); } },
