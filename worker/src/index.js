@@ -7057,7 +7057,7 @@ function updPrev() {
       var parsed = new URL(String(value || "").trim(), location.origin);
       if (parsed.origin === location.origin || parsed.protocol === "https:") return parsed.href;
     } catch (_) {}
-    return /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(String(value || "")) ? String(value) : "";
+    return /^data:image\\/(?:png|jpe?g|webp|gif);base64,/i.test(String(value || "")) ? String(value) : "";
   }
   var logo = previewImageUrl($("f-logo").value);
   var av = $("cv-av"); av.replaceChildren();

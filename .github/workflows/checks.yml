@@ -1,0 +1,36 @@
+# Comprobaciones previas al despliegue. El deploy real lo hace Workers Builds
+# en cada push; este workflow es la red de seguridad que avisa si algo se rompe.
+name: checks
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sintaxis del Worker y del widget
+        run: |
+          node --check worker/src/index.js
+          cp worker/src/widget.txt /tmp/widget-check.js && node --check /tmp/widget-check.js
+
+      - name: Extraer páginas embebidas (ADMIN/PANEL/PORTAL/FAQ)
+        run: node tests/extract-pages.js
+
+      - name: Instalar Playwright (Chromium)
+        run: |
+          npm init -y >/dev/null
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium
+
+      - name: Renderizar páginas y verificar que no hay errores JS
+        run: node tests/render-pages.js
