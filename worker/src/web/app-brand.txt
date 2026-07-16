@@ -30,11 +30,8 @@ nav button.on .badge{background:#111!important;color:#f9be00!important}
 th{background:#111!important;color:#fff!important;letter-spacing:0!important}
 tbody tr:hover td{background:#fff8df!important}
 #chart div{background:#f9be00!important;border-radius:1px 1px 0 0!important}
-#cv-frame{background:#e8e8e3!important;border-radius:4px!important}
-#cv-widget{border-radius:4px!important;box-shadow:8px 8px 0 rgba(17,17,17,.16)!important}
-#cv-h,#pv-head{background:#111!important}
-#cv-btn,#pv-btn{background:#f9be00!important;border:1px solid #111!important}
-#cv-m,.cv-m{background:#f9be00!important;color:#111!important}
+#pv-head{background:#111!important}
+#pv-btn{background:#f9be00!important;border:1px solid #111!important}
 #toast{border-radius:3px!important}
 footer b{color:#8b6900!important}
 @media(max-width:760px){.wrap{grid-template-columns:1fr!important}.wrap aside{min-height:auto;padding:12px!important}#main{padding:14px 10px!important}.login .card{box-shadow:8px 8px 0 #111!important}header .brandimg{width:120px!important;height:auto!important}}
