@@ -1,6 +1,7 @@
 name = "chatbot-engine"
 main = "src/index.js"
-compatibility_date = "2026-07-01"
+compatibility_date = "2026-07-16"
+compatibility_flags = ["nodejs_compat"]
 
 # El widget se importa como texto (src/widget.txt) y se sirve en /widget.js
 rules = [
@@ -17,9 +18,16 @@ crons = ["0 7 1 * *", "0 7 * * *"]
 binding = "AI"
 
 # Secretos (con `wrangler secret put`, nunca aquí):
-#   SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, ADMIN_TOKEN
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, ADMIN_TOKEN (mín. 32 caracteres)
 #   GEMINI_API_KEY (solo si algún tenant usa provider = 'google')
 #   RESEND_API_KEY + EMAIL_FROM (emails: informes y alertas; cuenta gratis en resend.com)
 #   ADMIN_ALERT_EMAIL (tu email para avisos de error, máx. 1/hora)
-#   PORTAL_SECRET (opcional pero recomendado): clave propia para firmar las sesiones
+#   PORTAL_SECRET (mín. 32 caracteres, opcional pero recomendado): firma las sesiones
 #     del portal de clientes, separada de ADMIN_TOKEN. Si no está, se usa ADMIN_TOKEN.
+
+#   INVOICE_ISSUER_NAME, INVOICE_ISSUER_NIF, INVOICE_ISSUER_ADDRESS, INVOICE_ISSUER_EMAIL
+#   INVOICE_IVA_RATE (opcional, por defecto 0.21)
+#   REQUIRE_WHATSAPP_SIGNATURE=true (activar tras completar App Secret en conexiones heredadas)
+[observability]
+enabled = true
+head_sampling_rate = 0.1

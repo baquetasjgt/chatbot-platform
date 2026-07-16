@@ -21,12 +21,34 @@ wrangler login
 wrangler secret put SUPABASE_URL           # https://xgkmddmnxikgeonbfxch.supabase.co
 wrangler secret put SUPABASE_SERVICE_KEY   # Supabase > Settings > API > service_role
 wrangler secret put ANTHROPIC_API_KEY      # console.anthropic.com
-wrangler secret put ADMIN_TOKEN            # inventa una cadena larga y aleatoria
+wrangler secret put ADMIN_TOKEN            # mínimo 32 caracteres aleatorios
 wrangler secret put GEMINI_API_KEY         # aistudio.google.com — solo si algún tenant usa Gemini
+wrangler secret put PORTAL_SECRET          # mínimo 32 caracteres; firma sesiones del portal
+wrangler secret put RESEND_API_KEY         # envío de correos
+wrangler secret put EMAIL_FROM             # remitente verificado
+
+# Obligatorios para generar facturas PDF (no se usan valores ficticios):
+wrangler secret put INVOICE_ISSUER_NAME
+wrangler secret put INVOICE_ISSUER_NIF
+wrangler secret put INVOICE_ISSUER_ADDRESS
+wrangler secret put INVOICE_ISSUER_EMAIL
+# Opcional: INVOICE_IVA_RATE (por defecto 0.21)
 
 wrangler deploy
 ```
 
+
+### WhatsApp heredado
+
+Las conexiones nuevas requieren el `App Secret` de Meta y validan `X-Hub-Signature-256`.
+Después de completar ese dato en todas las conexiones existentes, configura
+`REQUIRE_WHATSAPP_SIGNATURE=true` para rechazar cualquier webhook no firmado.
+
+### Migraciones
+
+La migración `current_repo_security_hardening` revoca privilegios directos de los roles
+`anon` y `authenticated`. Debe aplicarse de forma controlada después de confirmar que
+ningún cliente accede a Supabase directamente; el Worker utiliza `service_role`.
 Te devuelve una URL tipo `https://chatbot-engine.<tu-cuenta>.workers.dev`.
 
 La service_role key da acceso total a la base de datos. Vive solo como secreto del Worker.
