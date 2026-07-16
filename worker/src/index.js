@@ -2095,6 +2095,13 @@ const ADMIN_HTML = `<!doctype html>
   /* galería de iconos estilo plantilla */
   #ft-ap .icopick{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
   #ft-ap .icopick button{width:auto;height:auto;aspect-ratio:1;border-radius:8px}
+  /* segmentados (Forma/Modo/Posición/Tamaño) como la plantilla */
+  #ft-ap .segfull{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);
+    border-radius:8px;overflow:hidden;margin-top:2px}
+  #ft-ap .segfull button{border:0;background:#fff;padding:9px 6px;font-size:12.5px;font-weight:600;
+    color:var(--mut);border-right:1px solid var(--line);cursor:pointer}
+  #ft-ap .segfull button:last-child{border-right:0}
+  #ft-ap .segfull button.on{background:var(--ink);color:#fff}
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
     padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;
     z-index:60;pointer-events:none;max-width:90vw}
@@ -5046,6 +5053,7 @@ function updPrev() {
   }
   syncSwatches();
   if (typeof syncPrimary === "function") syncPrimary();
+  if (typeof syncSegs === "function") syncSegs();
 }
 ["f-color", "f-colorhead", "f-color2", "f-colorbg", "f-controlborder", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
  "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg",
@@ -5833,6 +5841,40 @@ function initPrimarySwatches() {
   });
 }
 initPrimarySwatches();
+
+var SEGS = [];
+function segify(id, labels) {
+  var sel = $(id);
+  if (!sel || sel.dataset.segified) return;
+  sel.dataset.segified = "1";
+  var box = document.createElement("div");
+  box.className = "segfull";
+  [].forEach.call(sel.options, function (o) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.dataset.v = o.value;
+    b.textContent = (labels && labels[o.value]) || o.textContent;
+    b.onclick = function () {
+      sel.value = o.value;
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+      sync();
+    };
+    box.appendChild(b);
+  });
+  sel.style.display = "none";
+  sel.parentNode.insertBefore(box, sel.nextSibling);
+  function sync() {
+    [].forEach.call(box.children, function (b) { b.classList.toggle("on", b.dataset.v === sel.value); });
+  }
+  sel.addEventListener("change", sync);
+  SEGS.push(sync);
+  sync();
+}
+function syncSegs() { SEGS.forEach(function (f) { f(); }); }
+segify("f-btnshape", { circulo: "Círculo", redondeado: "Redondeado", pastilla: "Píldora" });
+segify("f-side", { derecha: "Derecha", izquierda: "Izquierda" });
+segify("f-dark", { off: "Claro", auto: "Automático" });
+segify("f-size", { compacto: "Compacto", estandar: "Estándar", amplio: "Amplio" });
 
 if (TOKEN) load(); else showLogin();
 </script>
