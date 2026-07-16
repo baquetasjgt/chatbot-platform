@@ -2182,8 +2182,8 @@ const ADMIN_HTML = `<!doctype html>
   #main.with-canvas>#canvas-panel{order:3}
   #main.with-canvas>#edit-col{order:4}
   @media(max-width:1100px){#main.with-canvas>#canvas-panel{order:5}}
-  #canvas-panel{min-width:0}
-  #cv-sticky{position:sticky;top:74px}
+  #canvas-panel{min-width:0;position:sticky;top:74px;align-self:start}
+  #cv-sticky{position:relative}
   #cv-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap}
   .cv-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
   .cv-tools{display:flex;align-items:center;gap:8px}
@@ -2254,7 +2254,7 @@ const ADMIN_HTML = `<!doctype html>
   #cv-teaser .cv-tx{position:absolute;top:3px;right:7px;background:0;border:0;color:#999;font-size:16px;line-height:1;cursor:pointer;padding:2px}
   #cv-frame.cv-left #cv-teaser{border-bottom-right-radius:14px;border-bottom-left-radius:4px}
   #cv-frame.cv-dark #cv-teaser{background:#232327;color:#ececec;border-color:#3a3a40}
-  @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px}}
+  @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px;position:static}}
   #bot-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   #bot-tabs button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 16px;
     font-size:14px;font-weight:600;color:#555;cursor:pointer}
@@ -3076,7 +3076,7 @@ const ADMIN_HTML = `<!doctype html>
 
       </div>
 
-      <aside id="canvas-panel" class="hide">
+      <div id="canvas-panel" class="hide">
         <div id="cv-sticky">
           <div id="cv-bar"><span class="cv-eyebrow">Vista en vivo · así lo verá el visitante</span>
             <div class="cv-tools">
@@ -3105,7 +3105,7 @@ const ADMIN_HTML = `<!doctype html>
           escribe abajo y el bot responde de verdad con su contenido. Responde con la última versión
           guardada — pulsa Guardar antes de probar cambios de instrucciones.</p>
         </div>
-      </aside>
+      </div>
 
     </main>
   </div>
