@@ -2138,8 +2138,12 @@ const ADMIN_HTML = `<!doctype html>
   #pv-mine{border-radius:12px;border-bottom-right-radius:4px;padding:8px 12px;font-size:13px;max-width:85%;align-self:flex-end;background:#111;color:#fff}
   #pv-btnrow{display:flex;justify-content:flex-end}
   #pv-btn{width:44px;height:44px;border-radius:22px;background:#111}
-  #main.with-canvas{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:20px;align-items:start}
-  #main.with-canvas #crumb{grid-column:1 / -1;margin-bottom:0}
+  #main.with-canvas{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:22px;align-items:start}
+  #main.with-canvas>#crumb{grid-column:1 / -1;margin-bottom:0;order:1}
+  #main.with-canvas>#bot-tabs{grid-column:1 / -1;order:2}
+  #main.with-canvas>#canvas-panel{order:3}
+  #main.with-canvas>#edit-col{order:4}
+  @media(max-width:1100px){#main.with-canvas>#canvas-panel{order:5}}
   #canvas-panel{min-width:0}
   #cv-sticky{position:sticky;top:74px}
   #cv-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
@@ -2307,8 +2311,6 @@ const ADMIN_HTML = `<!doctype html>
 
       <p id="crumb" class="mut"></p>
 
-      <div id="edit-col">
-
       <div id="bot-tabs" class="hide context-tabs" aria-label="Secciones del asistente">
         <button data-bt="resumen" class="on">Resumen</button>
         <button data-bt="cerebro">Objetivo y comportamiento</button>
@@ -2319,6 +2321,8 @@ const ADMIN_HTML = `<!doctype html>
         <button data-bt="calidad">Pruebas</button>
         <button data-bt="publicar">Publicar</button>
       </div>
+
+      <div id="edit-col">
 
       <div class="card hide" id="v-wizard">
         <h2><svg class="ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16l-1.7-4.8L5.5 9.5l4.8-1.7z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg> Nuevo cliente en un paso</h2>
