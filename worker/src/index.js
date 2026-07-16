@@ -702,6 +702,86 @@ async function callClaude(env, tenant, messages, contextBlock, allowEscalate) {
   return responseJsonLimited(res, 2 * 1024 * 1024);
 }
 
+// Variante en streaming: misma petición con stream:true, acumula los eventos SSE
+// hasta reconstruir EXACTAMENTE la forma de respuesta de callClaude ({content,
+// usage}), emitiendo cada trozo de texto por onDelta según llega. Así el resto
+// del pipeline (tools, persistencia) no cambia: solo la latencia percibida.
+async function callClaudeStream(env, tenant, messages, contextBlock, allowEscalate, onDelta) {
+  const system = [
+    { type: "text", text: systemBase(tenant) },
+    {
+      type: "text",
+      text:
+        "CONTEXTO (única fuente de verdad; si la respuesta no está aquí, dilo y ofrece el contacto):\n\n" +
+        (contextBlock || "[No se ha encontrado información relevante para esta pregunta.]"),
+    },
+  ];
+  const res = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: tenant.model,
+      max_tokens: 800,
+      system,
+      messages,
+      tools: toolsFor(tenant, allowEscalate),
+      stream: true,
+    }),
+  }, 120000);
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await responseTextLimited(res, 65536)}`);
+
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  const content = [];
+  const usage = { input_tokens: null, output_tokens: null };
+  let cur = null;
+  let curJson = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      let ev;
+      try { ev = JSON.parse(line.slice(5).trim()); } catch { continue; }
+      if (ev.type === "message_start") {
+        usage.input_tokens = ev.message?.usage?.input_tokens ?? null;
+      } else if (ev.type === "content_block_start") {
+        cur = ev.content_block?.type === "tool_use"
+          ? { type: "tool_use", id: ev.content_block.id, name: ev.content_block.name, input: {} }
+          : { type: "text", text: "" };
+        curJson = "";
+      } else if (ev.type === "content_block_delta") {
+        if (ev.delta?.type === "text_delta" && cur && cur.type === "text") {
+          cur.text += ev.delta.text;
+          if (onDelta) await onDelta(ev.delta.text);
+        } else if (ev.delta?.type === "input_json_delta") {
+          curJson += ev.delta.partial_json || "";
+        }
+      } else if (ev.type === "content_block_stop") {
+        if (cur) {
+          if (cur.type === "tool_use") { try { cur.input = curJson ? JSON.parse(curJson) : {}; } catch (e) {} }
+          content.push(cur);
+          cur = null;
+        }
+      } else if (ev.type === "message_delta") {
+        if (ev.usage?.output_tokens != null) usage.output_tokens = ev.usage.output_tokens;
+      } else if (ev.type === "error") {
+        throw new Error("Anthropic stream: " + (ev.error?.message || "error"));
+      }
+    }
+  }
+  return { content, usage };
+}
+
 function leadCaptureEnabled(tenant) {
   return !(tenant.features && tenant.features.leads === false);
 }
@@ -727,7 +807,11 @@ function pickRunner(tenant) {
 async function runClaude(env, tenant, history, message, contextBlock, saveLead, opts) {
   opts = opts || {};
   const msgs = [...history, { role: "user", content: message }];
-  let reply = await callClaude(env, tenant, msgs, contextBlock, opts.allowEscalate);
+  // con onDelta se usa la variante en streaming; sin él, la clásica (idéntico resultado)
+  const call = (m) => opts.onDelta
+    ? callClaudeStream(env, tenant, m, contextBlock, opts.allowEscalate, opts.onDelta)
+    : callClaude(env, tenant, m, contextBlock, opts.allowEscalate);
+  let reply = await call(msgs);
   let leadForm = null;
   let escalated = false;
 
@@ -752,7 +836,10 @@ async function runClaude(env, tenant, history, message, contextBlock, saveLead, 
         },
       ],
     });
-    reply = await callClaude(env, tenant, msgs, contextBlock, opts.allowEscalate);
+    // la respuesta definitiva es la de esta segunda llamada: si ya se emitió texto
+    // de la primera, se pide al cliente que lo descarte antes de seguir emitiendo
+    if (opts.onRestart) await opts.onRestart();
+    reply = await call(msgs);
   }
 
   let text = reply.content
@@ -814,6 +901,77 @@ async function callGemini(env, tenant, contents, contextBlock, allowEscalate) {
   return responseJsonLimited(res, 2 * 1024 * 1024);
 }
 
+// Variante en streaming (streamGenerateContent?alt=sse): acumula los trozos hasta
+// reconstruir la MISMA forma que callGemini ({candidates:[{content:{parts}}],
+// usageMetadata}), conservando functionCall y thoughtSignature tal cual llegan
+// (Gemini 3 exige devolverlos íntegros en el turno de tools). El texto visible
+// (sin p.thought) se emite por onDelta según llega.
+async function callGeminiStream(env, tenant, contents, contextBlock, allowEscalate, onDelta) {
+  if (!env.GEMINI_API_KEY) throw new Error("Falta el secreto GEMINI_API_KEY");
+  const system =
+    systemBase(tenant) +
+    "\n\nCONTEXTO (única fuente de verdad; si la respuesta no está aquí, dilo y ofrece el contacto):\n\n" +
+    (contextBlock || "[No se ha encontrado información relevante para esta pregunta.]");
+  const decls = toolsFor(tenant, allowEscalate).map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.input_schema,
+  }));
+  const res = await fetchWithTimeout(
+    `https://generativelanguage.googleapis.com/v1beta/models/${tenant.model}:streamGenerateContent?alt=sse`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents,
+        tools: decls.length ? [{ functionDeclarations: decls }] : [],
+        generationConfig: {
+          maxOutputTokens: 2000,
+          thinkingConfig: { thinkingLevel: "low" },
+        },
+      }),
+    },
+    120000
+  );
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await responseTextLimited(res, 65536)}`);
+
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  const parts = [];
+  let usageMetadata = null;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      let ev;
+      try { ev = JSON.parse(line.slice(5).trim()); } catch { continue; }
+      if (ev.usageMetadata) usageMetadata = ev.usageMetadata;
+      const chunkParts = ev.candidates?.[0]?.content?.parts || [];
+      for (const p of chunkParts) {
+        if (p.text && !p.thought && onDelta) await onDelta(p.text);
+        // fusionar texto plano consecutivo mantiene la estructura compacta;
+        // cualquier parte con functionCall/thought/firma se conserva aparte
+        const last = parts[parts.length - 1];
+        const plain = p.text != null && !p.thought && !p.functionCall && !p.thoughtSignature;
+        const lastPlain = last && last.text != null && !last.thought && !last.functionCall && !last.thoughtSignature;
+        if (plain && lastPlain) last.text += p.text;
+        else parts.push({ ...p });
+      }
+    }
+  }
+  return { candidates: [{ content: { role: "model", parts } }], usageMetadata };
+}
+
 async function runGemini(env, tenant, history, message, contextBlock, saveLead, opts) {
   opts = opts || {};
   const contents = [
@@ -823,7 +981,11 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead, 
     })),
     { role: "user", parts: [{ text: message }] },
   ];
-  let reply = await callGemini(env, tenant, contents, contextBlock, opts.allowEscalate);
+  // con onDelta se usa la variante en streaming; sin él, la clásica (idéntico resultado)
+  const callG = (c) => opts.onDelta
+    ? callGeminiStream(env, tenant, c, contextBlock, opts.allowEscalate, opts.onDelta)
+    : callGemini(env, tenant, c, contextBlock, opts.allowEscalate);
+  let reply = await callG(contents);
   let cand = reply.candidates?.[0];
   let leadForm = null;
   let escalated = false;
@@ -850,7 +1012,10 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead, 
         },
       ],
     });
-    reply = await callGemini(env, tenant, contents, contextBlock, opts.allowEscalate);
+    // la respuesta definitiva es la de esta segunda llamada: si ya se emitió texto
+    // de la primera, se pide al cliente que lo descarte antes de seguir emitiendo
+    if (opts.onRestart) await opts.onRestart();
+    reply = await callG(contents);
     cand = reply.candidates?.[0];
   }
 
@@ -1233,7 +1398,7 @@ async function postLeadWebhook(env, tenant, lead) {
 // ---------- núcleo de respuesta del bot (compartido por web y canales) ----------
 // Recuperación + generación + persistencia. Lo usan el widget web (/api/chat) y
 // los canales de mensajería (WhatsApp, Telegram). Devuelve { reply, sources }.
-async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history) {
+async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history, streamCbs) {
   // límite mensual del tenant: al alcanzarlo, respuesta fija sin gastar modelo
   if (tenant.monthly_message_limit) {
     const used = await rpc(env, "monthly_messages", { p_tenant_id: tenant.id });
@@ -1298,13 +1463,14 @@ async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history) {
   };
 
   const run = pickRunner(tenant);
-  const { text, usage, leadForm } = await run(
-    env, tenant, hist, message, contextBlock, saveLead,
-    isChannel ? { allowEscalate: true, onEscalate: doEscalate } : {}
+  const runOpts = Object.assign(
+    isChannel ? { allowEscalate: true, onEscalate: doEscalate } : {},
+    streamCbs || {} // onDelta/onRestart: solo el canal web en modo streaming los pasa
   );
+  const { text, usage, leadForm } = await run(env, tenant, hist, message, contextBlock, saveLead, runOpts);
   const sources = [...new Set((hits || []).map((hh) => hh.source_url).filter(Boolean))].slice(0, 3);
 
-  await sb(env, "messages", {
+  const saved = await sb(env, "messages", {
     method: "POST",
     body: [
       { tenant_id: tenant.id, conversation_id: conv.id, role: "user", content: message, sources: [], input_tokens: null, output_tokens: null, was_answered: null },
@@ -1313,7 +1479,9 @@ async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history) {
   });
   await sb(env, `conversations?id=eq.${conv.id}`, { method: "PATCH", body: { last_message_at: new Date().toISOString() } });
 
-  return { reply: text, sources, leadForm };
+  // id del mensaje del asistente: el widget lo usa para anclar el feedback 👍/👎
+  const assistantMsg = Array.isArray(saved) ? saved.find((r) => r && r.role === "assistant") : null;
+  return { reply: text, sources, leadForm, message_id: assistantMsg?.id || null };
 }
 
 // ---------- envío por canales de mensajería ----------
@@ -10538,10 +10706,37 @@ ${inject}</body></html>`;
 
       // --- config del widget ---
       if (url.pathname === "/api/config") {
-        const tenant = await getTenant(env, url.searchParams.get("key"));
-        if (!tenant) return json({ error: "clave no válida" }, 401);
+        // caché de 60 s: cada carga de página con el widget pedía el tenant a
+        // Supabase. Se cachea el SNAPSHOT (payload + dominios + canal web), nunca
+        // las cabeceras CORS: esas se calculan por petición según el Origin.
+        const cfgKey = url.searchParams.get("key") || "";
+        const cache = caches.default;
+        const cacheKey = new Request("https://config-cache.internal/v1?key=" + encodeURIComponent(cfgKey));
+        let snap = null;
+        try {
+          const hit = await cache.match(cacheKey);
+          if (hit) snap = await hit.json();
+        } catch (e) {}
+        if (!snap) {
+          const tenant = await getTenant(env, cfgKey);
+          if (!tenant) return json({ error: "clave no válida" }, 401); // los fallos no se cachean
+          snap = {
+            allowed: [...(tenant.allowed_domains || [])],
+            webOn: channelOn(tenant, "web"),
+            payload: {
+              name: tenant.name,
+              welcome_message: tenant.welcome_message,
+              suggested_questions: tenant.suggested_questions,
+              primary_color: tenant.primary_color,
+              theme: tenant.theme || {},
+            },
+          };
+          ctx.waitUntil(cache.put(cacheKey, new Response(JSON.stringify(snap), {
+            headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" },
+          })).catch(() => {}));
+        }
         // el host propio se permite siempre: las páginas /demo viven en él
-        const cc = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
+        const cc = cors(origin, [...snap.allowed, url.hostname]);
         // solo bloqueamos un Origin PRESENTE y no autorizado (iframe aislado envía
         // "null"). Una petición mismo-origen (demo, «probar el bot») no lleva Origin
         // y no debe bloquearse: el navegador ni siquiera aplica CORS ahí.
@@ -10549,25 +10744,15 @@ ${inject}</body></html>`;
           return json({ error: "dominio no autorizado" }, 403, cc);
         }
         // canal web apagado (admin o cliente, en Canales): el widget no se renderiza
-        if (!channelOn(tenant, "web")) {
+        if (!snap.webOn) {
           return json({ error: "canal web desactivado" }, 403, cc);
         }
-        return json(
-          {
-            name: tenant.name,
-            welcome_message: tenant.welcome_message,
-            suggested_questions: tenant.suggested_questions,
-            primary_color: tenant.primary_color,
-            theme: tenant.theme || {},
-          },
-          200,
-          cc
-        );
+        return json(snap.payload, 200, cc);
       }
 
       // --- chat ---
       if (url.pathname === "/api/chat" && request.method === "POST") {
-        const { key, session_id, message, page_url, history = [] } = await readJsonBody(request);
+        const { key, session_id, message, page_url, history = [], stream } = await readJsonBody(request);
         const tenant = await getTenant(env, key);
         if (!tenant) return json({ error: "clave no válida" }, 401);
 
@@ -10613,9 +10798,73 @@ ${inject}</body></html>`;
           }
         }
 
+        // --- modo streaming (SSE, opt-in con body.stream): el texto llega palabra
+        // a palabra. Si algo falla a mitad, el widget descarta y reintenta por el
+        // camino clásico de abajo, que no cambia.
+        if (stream === true) {
+          const { readable, writable } = new TransformStream();
+          const writer = writable.getWriter();
+          const enc = new TextEncoder();
+          const send = (obj) => writer.write(enc.encode("data: " + JSON.stringify(obj) + "\n\n"));
+          ctx.waitUntil((async () => {
+            try {
+              const out = await answerTenant(env, ctx, tenant, sid, chatMessage, safePageUrl, safeHistory, {
+                onDelta: (t) => send({ t }),
+                onRestart: () => send({ restart: true }),
+              });
+              await send({
+                done: true,
+                reply: out.reply,
+                sources: out.sources,
+                lead_form: out.leadForm || null,
+                message_id: out.message_id || null,
+              });
+            } catch (err) {
+              await send({ error: "error interno" }).catch(() => {});
+              await logError(env, "/api/chat(stream)", err?.message || err).catch(() => {});
+            } finally {
+              await writer.close().catch(() => {});
+            }
+          })());
+          return new Response(readable, {
+            status: 200,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-store",
+              "X-Content-Type-Options": "nosniff",
+              ...ch,
+            },
+          });
+        }
+
         // núcleo compartido: recuperación + generación + persistencia
         const out = await answerTenant(env, ctx, tenant, sid, chatMessage, safePageUrl, safeHistory);
-        return json({ reply: out.reply, sources: out.sources, lead_form: out.leadForm || undefined }, 200, ch);
+        return json({ reply: out.reply, sources: out.sources, lead_form: out.leadForm || undefined, message_id: out.message_id || undefined }, 200, ch);
+      }
+
+      // --- feedback 👍/👎 del visitante sobre una respuesta del bot ---
+      if (url.pathname === "/api/feedback" && request.method === "POST") {
+        const { key, message_id, rating } = await readJsonBody(request);
+        const tenant = await getTenant(env, key);
+        if (!tenant) return json({ error: "clave no válida" }, 401);
+        const ch = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
+        if (origin && ch["Access-Control-Allow-Origin"] === "null") {
+          return json({ error: "dominio no autorizado" }, 403, ch);
+        }
+        const r = rating === 1 || rating === -1 ? rating : null;
+        if (r === null || !isUuid(String(message_id || ""))) {
+          return json({ error: "petición no válida" }, 400, ch);
+        }
+        const fbIp = request.headers.get("CF-Connecting-IP") || "";
+        if (fbIp && (await rpc(env, "check_rate", { p_ip: "fb:" + fbIp, p_limit: 30 })) === false) {
+          return json({ error: "demasiadas valoraciones; espera un momento" }, 429, ch);
+        }
+        // solo mensajes del asistente de ESTE tenant: nadie valora datos ajenos
+        await sb(env, `messages?id=eq.${message_id}&tenant_id=eq.${tenant.id}&role=eq.assistant`, {
+          method: "PATCH",
+          body: { rating: r },
+        });
+        return json({ ok: true }, 200, ch);
       }
 
       // --- lead enviado desde el formulario del widget ---
