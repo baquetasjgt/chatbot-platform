@@ -776,6 +776,111 @@ async function notifyLeadInstant(env, tenant, l) {
   }
 }
 
+// ---------- núcleo de respuesta del bot (compartido por web y canales) ----------
+// Recuperación + generación + persistencia. Lo usan el widget web (/api/chat) y
+// los canales de mensajería (WhatsApp, Telegram). Devuelve { reply, sources }.
+async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history) {
+  // límite mensual del tenant: al alcanzarlo, respuesta fija sin gastar modelo
+  if (tenant.monthly_message_limit) {
+    const used = await rpc(env, "monthly_messages", { p_tenant_id: tenant.id });
+    if (used >= tenant.monthly_message_limit) {
+      return {
+        reply: "Hemos alcanzado el máximo de consultas de este mes. Escríbenos directamente y te atenderemos encantados.",
+        sources: [],
+        limit_reached: true,
+      };
+    }
+  }
+
+  // conversación (se crea en el primer mensaje de la sesión)
+  let conv = (
+    await sb(env, `conversations?tenant_id=eq.${tenant.id}&session_id=eq.${encodeURIComponent(sid)}&select=id&limit=1`)
+  )[0];
+  if (!conv) {
+    conv = (await sb(env, "conversations", { method: "POST", body: { tenant_id: tenant.id, session_id: sid, page_url: pageUrl } }))[0];
+  }
+
+  // historial: el web lo manda el cliente; los canales lo reconstruyen de la BD
+  let hist = Array.isArray(history) ? history : null;
+  if (!hist) {
+    const prev = await sb(env, `messages?conversation_id=eq.${conv.id}&order=created_at.desc&limit=8&select=role,content`);
+    hist = (prev || []).reverse().filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 2000) }));
+  }
+
+  // recuperación
+  const [vec] = await embed(env, [message]);
+  const hits = await rpc(env, "match_chunks", { p_tenant_id: tenant.id, p_embedding: vec, p_match_count: 6 });
+  const contextBlock = (hits || [])
+    .map((hh, i) => `[${i + 1}] ${hh.title || ""} (${hh.source_url || ""})\n${hh.content}`)
+    .join("\n\n---\n\n");
+
+  const saveLead = async (raw) => {
+    const l = {
+      kind: ["expositor", "visitante", "prensa", "general"].includes(raw.kind) ? raw.kind : "general",
+      name: String(raw.name || "").trim().slice(0, 120),
+      email: String(raw.email || "").trim().slice(0, 160),
+      phone: String(raw.phone || "").trim().slice(0, 60) || null,
+      company: String(raw.company || "").trim().slice(0, 160) || null,
+      message: String(raw.message || "").trim().slice(0, 500) || null,
+    };
+    await sb(env, "leads", { method: "POST", body: { tenant_id: tenant.id, conversation_id: conv.id, ...l } });
+    if (tenant.lead_webhook_url) {
+      await fetch(tenant.lead_webhook_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant: tenant.slug, ...l }),
+      }).catch(() => {});
+    }
+    if (ctx && ctx.waitUntil) ctx.waitUntil(notifyLeadInstant(env, tenant, l));
+    else await notifyLeadInstant(env, tenant, l).catch(() => {});
+  };
+
+  const run = pickRunner(tenant);
+  const { text, usage, leadForm } = await run(env, tenant, hist, message, contextBlock, saveLead);
+  const sources = [...new Set((hits || []).map((hh) => hh.source_url).filter(Boolean))].slice(0, 3);
+
+  await sb(env, "messages", {
+    method: "POST",
+    body: [
+      { tenant_id: tenant.id, conversation_id: conv.id, role: "user", content: message, sources: [], input_tokens: null, output_tokens: null, was_answered: null },
+      { tenant_id: tenant.id, conversation_id: conv.id, role: "assistant", content: text, sources, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, was_answered: (hits || []).length > 0 },
+    ],
+  });
+  await sb(env, `conversations?id=eq.${conv.id}`, { method: "PATCH", body: { last_message_at: new Date().toISOString() } });
+
+  return { reply: text, sources, leadForm };
+}
+
+// ---------- envío por canales de mensajería ----------
+// WhatsApp Cloud API (Meta): POST al phone_number_id del cliente con su token.
+async function waSendText(token, phoneNumberId, to, body) {
+  const r = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: String(body).slice(0, 4000) } }),
+  });
+  if (!r.ok) throw new Error("WhatsApp " + r.status + ": " + (await r.text()).slice(0, 200));
+  return r.json();
+}
+// Telegram Bot API: sendMessage al chat con el token del bot del cliente.
+async function tgSendText(token, chatId, body) {
+  const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text: String(body).slice(0, 4000) }),
+  });
+  if (!r.ok) throw new Error("Telegram " + r.status + ": " + (await r.text()).slice(0, 200));
+  return r.json();
+}
+// resuelve el tenant activo asignado a una integración de canal
+async function tenantForIntegration(env, integration) {
+  const ids = integration.assigned_tenant_ids || [];
+  if (!ids.length) return null;
+  const rows = await sb(env, `tenants?id=in.(${ids.map((x) => `"${x}"`).join(",")})&active=is.true&select=*&limit=1`);
+  return rows?.[0] || null;
+}
+
 async function runDailyLeadDigests(env) {
   const tenants = await sb(
     env,
@@ -966,6 +1071,27 @@ const INTEGRATION_CATEGORIES = {
 function pick(obj, keys) {
   const out = {};
   for (const k of keys) if (obj[k] !== undefined) out[k] = obj[k];
+  return out;
+}
+
+// credenciales de canal que NUNCA se devuelven al navegador
+const CHANNEL_SECRETS = ["access_token", "bot_token", "webhook_secret"];
+// oculta los secretos de una integración antes de mandarla al panel; deja una
+// marca «__set__» para que la UI sepa que hay algo guardado sin revelarlo
+function redactIntegration(row) {
+  if (!row || !row.settings || typeof row.settings !== "object") return row;
+  const s = { ...row.settings };
+  for (const k of CHANNEL_SECRETS) if (s[k]) s[k] = "__set__";
+  return { ...row, settings: s };
+}
+// fusiona settings entrantes con los guardados; un secreto vacío o con la marca
+// «__set__» se conserva (no se pisa el valor real que no viajó al navegador)
+function mergeSettings(current, incoming) {
+  const out = { ...(current || {}) };
+  for (const [k, v] of Object.entries(incoming || {})) {
+    if (CHANNEL_SECRETS.includes(k) && (v === "" || v === "__set__" || v == null)) continue;
+    out[k] = v;
+  }
   return out;
 }
 
@@ -1829,10 +1955,11 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
   // --- integraciones del proyecto ---
   const mProjectIntegrations = url.pathname.match(/^\/admin\/api\/projects\/([0-9a-f-]{36})\/integrations$/);
   if (mProjectIntegrations && request.method === "GET") {
-    return json(await sb(
+    const rows = await sb(
       env,
       `project_integrations?project_id=eq.${mProjectIntegrations[1]}&order=category.asc,created_at.asc`
-    ));
+    );
+    return json((rows || []).map(redactIntegration));
   }
   if (mProjectIntegrations && request.method === "POST") {
     const input = pick(await request.json(), INTEGRATION_FIELDS);
@@ -1852,11 +1979,11 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
         category: INTEGRATION_CATEGORIES[input.provider],
         name: input.name.trim().slice(0, 100),
         status: ["pending", "connected", "paused", "error"].includes(input.status) ? input.status : "pending",
-        settings: input.settings && typeof input.settings === "object" ? input.settings : {},
+        settings: mergeSettings({}, input.settings && typeof input.settings === "object" ? input.settings : {}),
         assigned_tenant_ids: assigned,
       },
     });
-    return json(row);
+    return json(redactIntegration(row));
   }
 
   const mIntegration = url.pathname.match(/^\/admin\/api\/integrations\/([0-9a-f-]{36})$/);
@@ -1872,18 +1999,22 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
     if (input.settings !== undefined && (!input.settings || typeof input.settings !== "object" || Array.isArray(input.settings))) {
       return json({ error: "configuracion no valida" }, 400);
     }
-    if (input.assigned_tenant_ids !== undefined) {
-      const [current] = await sb(env, "project_integrations?id=eq." + mIntegration[1] + "&select=project_id");
+    // los secretos y otros ajustes se fusionan con lo guardado (ver mergeSettings)
+    if (input.settings !== undefined || input.assigned_tenant_ids !== undefined) {
+      const [current] = await sb(env, "project_integrations?id=eq." + mIntegration[1] + "&select=project_id,settings");
       if (!current) return json({ error: "integracion no encontrada" }, 404);
-      const tenants = await sb(env, "tenants?project_id=eq." + current.project_id + "&select=id");
-      const allowed = new Set((tenants || []).map((t) => t.id));
-      input.assigned_tenant_ids = (Array.isArray(input.assigned_tenant_ids) ? input.assigned_tenant_ids : [])
-        .filter((id) => allowed.has(id));
+      if (input.settings !== undefined) input.settings = mergeSettings(current.settings, input.settings);
+      if (input.assigned_tenant_ids !== undefined) {
+        const tenants = await sb(env, "tenants?project_id=eq." + current.project_id + "&select=id");
+        const allowed = new Set((tenants || []).map((t) => t.id));
+        input.assigned_tenant_ids = (Array.isArray(input.assigned_tenant_ids) ? input.assigned_tenant_ids : [])
+          .filter((id) => allowed.has(id));
+      }
     }
     input.updated_at = new Date().toISOString();
     const rows = await sb(env, `project_integrations?id=eq.${mIntegration[1]}`, { method: "PATCH", body: input });
     if (!rows?.length) return json({ error: "integración no encontrada" }, 404);
-    return json(rows[0]);
+    return json(redactIntegration(rows[0]));
   }
   if (mIntegration && request.method === "DELETE") {
     await sb(env, `project_integrations?id=eq.${mIntegration[1]}`, { method: "DELETE" });
@@ -1907,7 +2038,61 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
       method: "PATCH",
       body: { status, error_message: errorMessage, last_checked_at: now, updated_at: now },
     });
-    return json(row);
+    return json(redactIntegration(row));
+  }
+
+  // --- conectar un canal de mensajería (WhatsApp / Telegram) ---
+  // valida credenciales con el proveedor, registra el webhook (Telegram) y
+  // devuelve la URL del webhook + token de verificación (WhatsApp) para pegar
+  const mConnect = url.pathname.match(/^\/admin\/api\/integrations\/([0-9a-f-]{36})\/connect$/);
+  if (mConnect && request.method === "POST") {
+    const [integ] = await sb(env, `project_integrations?id=eq.${mConnect[1]}`);
+    if (!integ) return json({ error: "integración no encontrada" }, 404);
+    const s = integ.settings || {};
+    const base = url.origin;
+    const now = new Date().toISOString();
+    try {
+      if (integ.provider === "telegram") {
+        if (!s.bot_token) return json({ error: "Falta el token del bot (te lo da @BotFather)." }, 400);
+        const me = await (await fetch(`https://api.telegram.org/bot${s.bot_token}/getMe`)).json();
+        if (!me.ok) return json({ error: "El token del bot no es válido. Cópialo de nuevo de @BotFather." }, 400);
+        const secret = s.webhook_secret || randomHex(16);
+        const hook = `${base}/webhooks/telegram/${integ.id}`;
+        const set = await (await fetch(`https://api.telegram.org/bot${s.bot_token}/setWebhook`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: hook, secret_token: secret, allowed_updates: ["message"], drop_pending_updates: true }),
+        })).json();
+        if (!set.ok) return json({ error: "Telegram rechazó el webhook: " + (set.description || "") }, 400);
+        const settings = { ...s, webhook_secret: secret, bot_username: me.result.username || s.bot_username };
+        const [row] = await sb(env, `project_integrations?id=eq.${integ.id}`, {
+          method: "PATCH",
+          body: { settings, status: "connected", error_message: null, last_checked_at: now, last_synced_at: now, updated_at: now },
+        });
+        return json({ ok: true, provider: "telegram", bot_username: me.result.username, webhook_url: hook, integration: redactIntegration(row) });
+      }
+      if (integ.provider === "whatsapp") {
+        if (!s.access_token || !s.phone_number_id) {
+          return json({ error: "Faltan el token de acceso y el ID del número (los da Meta en tu app)." }, 400);
+        }
+        const info = await (await fetch(
+          `https://graph.facebook.com/v21.0/${encodeURIComponent(s.phone_number_id)}?fields=display_phone_number,verified_name`,
+          { headers: { Authorization: "Bearer " + s.access_token } }
+        )).json();
+        if (info.error) return json({ error: "Meta rechazó las credenciales: " + (info.error.message || "revisa el token y el ID") }, 400);
+        const verify = s.verify_token || randomHex(12);
+        const hook = `${base}/webhooks/whatsapp/${integ.id}`;
+        const settings = { ...s, verify_token: verify, phone_number: info.display_phone_number || s.phone_number || "", verified_name: info.verified_name || "" };
+        const [row] = await sb(env, `project_integrations?id=eq.${integ.id}`, {
+          method: "PATCH",
+          body: { settings, status: "connected", error_message: null, last_checked_at: now, last_synced_at: now, updated_at: now },
+        });
+        return json({ ok: true, provider: "whatsapp", phone_number: info.display_phone_number, webhook_url: hook, verify_token: verify, integration: redactIntegration(row) });
+      }
+      return json({ error: "Este canal todavía no tiene asistente de conexión." }, 400);
+    } catch (err) {
+      await logError(env, "integration-connect", err?.message || err).catch(() => {});
+      return json({ error: "No se ha podido conectar ahora mismo. Inténtalo de nuevo." }, 502);
+    }
   }
   // --- asistente de configuración con IA ---
   if (url.pathname === "/admin/api/assist" && request.method === "POST") {
@@ -2736,6 +2921,30 @@ const ADMIN_HTML = `<!doctype html>
           <div id="pi-settings"></div>
           <label>Asistentes que utilizan esta conexión</label><div id="pi-bots" class="assignment-list"></div>
           <div class="actions"><button id="pi-save" class="primary">Guardar conexión</button><button id="pi-check" class="ghost">Comprobar</button><button id="pi-delete" class="ghost danger">Eliminar</button><span id="pi-msg" class="mut"></span></div>
+        </div>
+
+        <div id="chan-wizard" class="integration-editor studio hide">
+          <div class="surface-head"><div><p class="section-kicker" id="cw-kicker">CONECTAR CANAL</p><h2 id="cw-title">Conectar canal</h2></div><button id="cw-close" class="icon-close" aria-label="Cerrar">×</button></div>
+          <details class="cfg" open><summary><span class="ci" id="cw-ic"></span><div><div class="ct">Guía paso a paso</div><div class="cs" id="cw-sub">Sigue estos pasos para conectar el canal</div></div><span class="cv">›</span></summary>
+            <div class="cfgb"><ol id="cw-guide" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13.5px"></ol><div class="note" id="cw-guidenote"></div></div>
+          </details>
+          <details class="cfg" open><summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 2l-2 2m-7.6 7.6a5 5 0 1 1-7.1 7.1 5 5 0 0 1 7.1-7.1zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg></span><div><div class="ct">Credenciales del cliente</div><div class="cs">Pega aquí lo que te da el proveedor</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <div class="fieldset"><label>Nombre de la conexión</label><input id="cw-name" type="text"></div>
+              <div id="cw-wa" class="hide" style="display:flex;flex-direction:column;gap:12px">
+                <div class="fieldset"><label>ID del número de teléfono <small>· Phone number ID</small></label><input id="cw-wa-phoneid" type="text" placeholder="102938475612345"></div>
+                <div class="fieldset"><label>Token de acceso permanente</label><input id="cw-wa-token" type="password" placeholder="EAAG… (déjalo en blanco para conservar el guardado)"></div>
+              </div>
+              <div id="cw-tg" class="hide" style="display:flex;flex-direction:column;gap:12px">
+                <div class="fieldset"><label>Token del bot <small>· te lo da @BotFather</small></label><input id="cw-tg-token" type="password" placeholder="1234567:ABC… (déjalo en blanco para conservar el guardado)"></div>
+              </div>
+              <div class="fieldset"><label>¿Qué asistente responde en este canal?</label><div id="cw-bots" class="assignment-list"></div></div>
+            </div>
+          </details>
+          <div class="actions"><button id="cw-connect" class="primary">Conectar canal</button><button id="cw-delete" class="ghost danger hide">Eliminar</button><span id="cw-msg" class="mut"></span></div>
+          <details class="cfg hide" id="cw-resultcard"><summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 6 9 17l-5-5"/></svg></span><div><div class="ct">Últimos pasos en el proveedor</div><div class="cs">Copia estos datos donde te indica la guía</div></div><span class="cv">›</span></summary>
+            <div class="cfgb" id="cw-result"></div>
+          </details>
         </div>
       </section>
 
@@ -4499,7 +4708,10 @@ function renderProjectIntegrations(projectId) {
 
 function openIntegrationEditor(provider, row) {
   var f = findProject(sel.id); if (!f) return;
+  // WhatsApp y Telegram usan el asistente de conexión guiado
+  if (provider === "whatsapp" || provider === "telegram") { openChannelWizard(provider, row); return; }
   var meta = INTEGRATION_META[provider]; if (!meta) return;
+  $("chan-wizard").classList.add("hide");
   $("integration-editor").classList.remove("hide");
   $("pi-id").value = row ? row.id : "";
   $("pi-provider").value = provider;
@@ -4576,6 +4788,142 @@ $("pi-delete").onclick = function () {
   api("/admin/api/integrations/" + id, { method: "DELETE" }).then(function (r) {
     if (r.error) { toast(r.error, true); return; }
     closeIntegrationEditor(); toast("Integracion eliminada"); loadProjectIntegrations(sel.id);
+  });
+};
+
+// ---------- asistente de conexión de canales (WhatsApp / Telegram) ----------
+var CHAN_GUIDES = {
+  whatsapp: {
+    kicker: "CONECTAR WHATSAPP", title: "Conectar WhatsApp",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l2-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+    sub: "Vía Meta Cloud API · el número y el token son del cliente",
+    steps: [
+      "Entra en developers.facebook.com con la cuenta de empresa del cliente y crea una app de tipo «Empresa».",
+      "Añade el producto «WhatsApp» a la app. Meta te da un número de prueba y un «ID del número de teléfono» (Phone number ID).",
+      "En «WhatsApp → Configuración de la API» copia el «ID del número de teléfono» y genera un «Token de acceso» (para producción, uno permanente desde un usuario del sistema).",
+      "Pega abajo el ID del número y el token, elige el asistente y pulsa «Conectar canal».",
+      "Al conectar te daremos una URL de webhook y un token de verificación: pégalos en «WhatsApp → Configuración → Webhooks» (Callback URL + Verify token) y suscríbete al campo «messages»."
+    ],
+    note: "El número y el token son del cliente; se guardan cifrados en el servidor y nunca se muestran de nuevo."
+  },
+  telegram: {
+    kicker: "CONECTAR TELEGRAM", title: "Conectar Telegram",
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21.5 4.5 2.5 11.8l5.5 1.7M21.5 4.5 18 20l-6-5.5M21.5 4.5 8 13.5M8 13.5V19l3-3.2"/></svg>',
+    sub: "Vía Bot API · configuramos el webhook automáticamente",
+    steps: [
+      "En Telegram, abre un chat con @BotFather.",
+      "Envía /newbot y sigue las instrucciones: nombre del bot y usuario (debe terminar en «bot»).",
+      "BotFather te dará un «token» del bot. Cópialo.",
+      "Pega el token abajo, elige el asistente y pulsa «Conectar canal». Nosotros dejamos el webhook listo."
+    ],
+    note: "Guarda el token en secreto: con él se controla el bot. Se guarda cifrado y no se vuelve a mostrar."
+  }
+};
+
+function openChannelWizard(provider, row) {
+  var f = findProject(sel.id); if (!f) return;
+  var g = CHAN_GUIDES[provider]; if (!g) return;
+  $("integration-editor").classList.add("hide");
+  var w = $("chan-wizard"); w.classList.remove("hide");
+  w.dataset.provider = provider;
+  w.dataset.id = row ? row.id : "";
+  $("cw-kicker").textContent = g.kicker;
+  $("cw-title").textContent = row ? row.name : g.title;
+  $("cw-ic").innerHTML = g.icon;
+  $("cw-sub").textContent = g.sub;
+  var ol = $("cw-guide"); ol.innerHTML = "";
+  g.steps.forEach(function (s) { var li = document.createElement("li"); li.textContent = s; ol.appendChild(li); });
+  $("cw-guidenote").innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg><span>" + esc(g.note) + "</span>";
+  $("cw-name").value = row ? row.name : (provider === "whatsapp" ? "WhatsApp" : "Telegram");
+  $("cw-wa").classList.toggle("hide", provider !== "whatsapp");
+  $("cw-tg").classList.toggle("hide", provider !== "telegram");
+  var settings = (row && row.settings) || {};
+  // los secretos llegan como «__set__»: dejamos el campo vacío (placeholder avisa)
+  $("cw-wa-phoneid").value = settings.phone_number_id || "";
+  $("cw-wa-token").value = "";
+  $("cw-tg-token").value = "";
+  var bots = $("cw-bots"); bots.innerHTML = "";
+  (f.project.tenants || []).forEach(function (t) {
+    var label = document.createElement("label"); label.className = "assignment-item";
+    var checked = row && (row.assigned_tenant_ids || []).indexOf(t.id) >= 0;
+    label.innerHTML = "<input type='checkbox' value='" + t.id + "'" + (checked ? " checked" : "") + "><span></span>";
+    label.querySelector("span").textContent = t.name + (t.active ? "" : " · apagado");
+    bots.appendChild(label);
+  });
+  if (!(f.project.tenants || []).length) bots.innerHTML = "<p class='mut'>Crea un asistente para poder asignarle este canal.</p>";
+  $("cw-delete").classList.toggle("hide", !row);
+  $("cw-msg").textContent = "";
+  $("cw-resultcard").classList.add("hide");
+  $("cw-result").innerHTML = "";
+  // si ya está conectado, muestra los datos del webhook de nuevo
+  if (row && row.status === "connected") renderChannelResult(provider, settings, row.id);
+  w.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function channelSettings(provider) {
+  var s = {};
+  if (provider === "whatsapp") {
+    s.phone_number_id = $("cw-wa-phoneid").value.trim();
+    var tok = $("cw-wa-token").value.trim(); if (tok) s.access_token = tok;
+  } else {
+    var bt = $("cw-tg-token").value.trim(); if (bt) s.bot_token = bt;
+  }
+  return s;
+}
+
+function renderChannelResult(provider, settings, id) {
+  var origin = location.origin;
+  var box = $("cw-result"); $("cw-resultcard").classList.remove("hide");
+  if (provider === "telegram") {
+    var uname = settings.bot_username ? "@" + settings.bot_username : "tu bot";
+    box.innerHTML = "<div class='note ok'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20 6 9 17l-5-5'/></svg><span>" + esc(uname) + " está conectado. Ya responde a quien le escriba en Telegram.</span></div>";
+    return;
+  }
+  var hook = origin + "/webhooks/whatsapp/" + id;
+  box.innerHTML =
+    "<div class='note'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/></svg><span>En Meta, ve a <b>WhatsApp → Configuración → Webhooks</b>, pega estos dos valores y suscríbete al campo <b>messages</b>.</span></div>" +
+    "<div class='fieldset'><label>Callback URL</label><div class='copyrow'><input id='cw-hook' readonly><button class='ghost small' data-copyval='cw-hook'>Copiar</button></div></div>" +
+    "<div class='fieldset'><label>Verify token</label><div class='copyrow'><input id='cw-verify' readonly><button class='ghost small' data-copyval='cw-verify'>Copiar</button></div></div>";
+  $("cw-hook").value = hook;
+  $("cw-verify").value = settings.verify_token || "";
+  box.querySelectorAll("[data-copyval]").forEach(function (b) {
+    b.onclick = function () { navigator.clipboard.writeText($(b.dataset.copyval).value).then(function () { b.textContent = "Copiado"; setTimeout(function () { b.textContent = "Copiar"; }, 1500); }); };
+  });
+}
+
+$("cw-close").onclick = function () { $("chan-wizard").classList.add("hide"); };
+
+$("cw-connect").onclick = function () {
+  var w = $("chan-wizard"), provider = w.dataset.provider, id = w.dataset.id;
+  var name = $("cw-name").value.trim();
+  if (!name) { $("cw-msg").textContent = "Pon un nombre a la conexión."; $("cw-msg").className = "err"; return; }
+  var assigned = [].map.call(document.querySelectorAll("#cw-bots input:checked"), function (x) { return x.value; });
+  if (!assigned.length) { $("cw-msg").textContent = "Elige el asistente que responderá en este canal."; $("cw-msg").className = "err"; return; }
+  var payload = { provider: provider, name: name, settings: channelSettings(provider), assigned_tenant_ids: assigned };
+  $("cw-msg").textContent = "Guardando…"; $("cw-msg").className = "mut";
+  var path = id ? "/admin/api/integrations/" + id : "/admin/api/projects/" + sel.id + "/integrations";
+  api(path, { method: id ? "PATCH" : "POST", body: JSON.stringify(payload) }).then(function (r) {
+    if (r.error) { $("cw-msg").textContent = r.error; $("cw-msg").className = "err"; return; }
+    var newId = r.id || id; w.dataset.id = newId; $("cw-delete").classList.remove("hide");
+    $("cw-msg").textContent = "Conectando con el proveedor…"; $("cw-msg").className = "mut";
+    api("/admin/api/integrations/" + newId + "/connect", { method: "POST", body: "{}" }).then(function (c) {
+      if (c.error) { $("cw-msg").textContent = c.error; $("cw-msg").className = "err"; loadProjectIntegrations(sel.id); return; }
+      $("cw-msg").textContent = "Canal conectado ✓"; $("cw-msg").className = "ok";
+      toast("Canal conectado ✓");
+      var settings = (c.integration && c.integration.settings) || {};
+      if (provider === "telegram" && c.bot_username) settings.bot_username = c.bot_username;
+      if (provider === "whatsapp") { settings.verify_token = c.verify_token; }
+      renderChannelResult(provider, settings, newId);
+      loadProjectIntegrations(sel.id);
+    }).catch(function () { $("cw-msg").textContent = "No se ha podido conectar ahora mismo."; $("cw-msg").className = "err"; });
+  }).catch(function () { $("cw-msg").textContent = "No se ha podido guardar."; $("cw-msg").className = "err"; });
+};
+
+$("cw-delete").onclick = function () {
+  var id = $("chan-wizard").dataset.id; if (!id || !confirm("¿Eliminar este canal del proyecto?")) return;
+  api("/admin/api/integrations/" + id, { method: "DELETE" }).then(function (r) {
+    if (r.error) { toast(r.error, true); return; }
+    $("chan-wizard").classList.add("hide"); toast("Canal eliminado"); loadProjectIntegrations(sel.id);
   });
 };
 
@@ -8413,6 +8761,74 @@ ${inject}</body></html>`;
         });
       }
 
+      // --- webhook de WhatsApp (Meta Cloud API), uno por integración ---
+      const mWa = url.pathname.match(/^\/webhooks\/whatsapp\/([0-9a-f-]{36})$/);
+      if (mWa) {
+        const [integ] = await sb(env, `project_integrations?id=eq.${mWa[1]}&provider=eq.whatsapp&limit=1`);
+        // verificación del webhook que hace Meta al configurarlo (GET)
+        if (request.method === "GET") {
+          const mode = url.searchParams.get("hub.mode");
+          const tok = url.searchParams.get("hub.verify_token");
+          const challenge = url.searchParams.get("hub.challenge") || "";
+          if (integ && mode === "subscribe" && tok && tok === integ.settings?.verify_token) {
+            return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
+          }
+          return new Response("forbidden", { status: 403 });
+        }
+        if (request.method === "POST") {
+          let body = {};
+          try { body = await request.json(); } catch (e) {}
+          // Meta exige un 200 rápido (si no, reintenta): procesamos en segundo plano
+          ctx.waitUntil((async () => {
+            try {
+              if (!integ || integ.status !== "connected" || !integ.settings?.access_token) return;
+              const tenant = await tenantForIntegration(env, integ);
+              if (!tenant) return;
+              for (const e of body.entry || []) {
+                for (const c of e.changes || []) {
+                  const val = c.value || {};
+                  const phoneId = val.metadata?.phone_number_id || integ.settings.phone_number_id;
+                  for (const m of val.messages || []) {
+                    if (m.type !== "text" || !m.text?.body || !m.from) continue;
+                    if ((await rpc(env, "check_rate", { p_ip: "wa:" + m.from, p_limit: 20 })) === false) continue;
+                    const out = await answerTenant(env, ctx, tenant, "wa:" + m.from, m.text.body.slice(0, 2000), "whatsapp");
+                    await waSendText(integ.settings.access_token, phoneId, m.from, out.reply);
+                  }
+                }
+              }
+            } catch (err) { await logError(env, "wa-webhook", err?.message || err).catch(() => {}); }
+          })());
+          return new Response("ok", { status: 200 });
+        }
+      }
+
+      // --- webhook de Telegram (Bot API), uno por integración ---
+      const mTg = url.pathname.match(/^\/webhooks\/telegram\/([0-9a-f-]{36})$/);
+      if (mTg && request.method === "POST") {
+        const [integ] = await sb(env, `project_integrations?id=eq.${mTg[1]}&provider=eq.telegram&limit=1`);
+        // secreto que Telegram reenvía en cada actualización (lo fijamos al conectar)
+        const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
+        if (!integ || !integ.settings?.webhook_secret || secret !== integ.settings.webhook_secret) {
+          return new Response("forbidden", { status: 403 });
+        }
+        let update = {};
+        try { update = await request.json(); } catch (e) {}
+        ctx.waitUntil((async () => {
+          try {
+            const token = integ.settings?.bot_token;
+            const msg = update.message || update.edited_message;
+            if (!token || !msg || !msg.text || !msg.chat) return;
+            const tenant = await tenantForIntegration(env, integ);
+            if (!tenant) return;
+            const chatId = msg.chat.id;
+            if ((await rpc(env, "check_rate", { p_ip: "tg:" + chatId, p_limit: 20 })) === false) return;
+            const out = await answerTenant(env, ctx, tenant, "tg:" + chatId, String(msg.text).slice(0, 2000), "telegram");
+            await tgSendText(token, chatId, out.reply);
+          } catch (err) { await logError(env, "tg-webhook", err?.message || err).catch(() => {}); }
+        })());
+        return new Response("ok", { status: 200 });
+      }
+
       // --- config del widget ---
       if (url.pathname === "/api/config") {
         const tenant = await getTenant(env, url.searchParams.get("key"));
@@ -8486,129 +8902,9 @@ ${inject}</body></html>`;
           }
         }
 
-        // límite mensual del tenant: al alcanzarlo, respuesta fija sin gastar modelo
-        if (tenant.monthly_message_limit) {
-          const used = await rpc(env, "monthly_messages", { p_tenant_id: tenant.id });
-          if (used >= tenant.monthly_message_limit) {
-            return json(
-              {
-                reply:
-                  "Hemos alcanzado el máximo de consultas de este mes. Escríbenos directamente y te atenderemos encantados.",
-                sources: [],
-                limit_reached: true,
-              },
-              200,
-              ch
-            );
-          }
-        }
-
-        // conversación (se crea en el primer mensaje de la sesión)
-        let conv = (
-          await sb(
-            env,
-            `conversations?tenant_id=eq.${tenant.id}&session_id=eq.${encodeURIComponent(sid)}&select=id&limit=1`
-          )
-        )[0];
-        if (!conv) {
-          conv = (
-            await sb(env, "conversations", {
-              method: "POST",
-              body: { tenant_id: tenant.id, session_id: sid, page_url },
-            })
-          )[0];
-        }
-
-        // recuperación
-        const [vec] = await embed(env, [message]);
-        const hits = await rpc(env, "match_chunks", {
-          p_tenant_id: tenant.id,
-          p_embedding: vec,
-          p_match_count: 6,
-        });
-
-        const contextBlock = (hits || [])
-          .map((h, i) => `[${i + 1}] ${h.title || ""} (${h.source_url || ""})\n${h.content}`)
-          .join("\n\n---\n\n");
-
-        // si el modelo decide guardar un lead, lo persistimos y le devolvemos el resultado
-        const saveLead = async (raw) => {
-          // mismas cotas que /api/lead: un modelo desbocado no debe guardar filas gigantes
-          const l = {
-            kind: ["expositor", "visitante", "prensa", "general"].includes(raw.kind) ? raw.kind : "general",
-            name: String(raw.name || "").trim().slice(0, 120),
-            email: String(raw.email || "").trim().slice(0, 160),
-            phone: String(raw.phone || "").trim().slice(0, 60) || null,
-            company: String(raw.company || "").trim().slice(0, 160) || null,
-            message: String(raw.message || "").trim().slice(0, 500) || null,
-          };
-          await sb(env, "leads", {
-            method: "POST",
-            body: { tenant_id: tenant.id, conversation_id: conv.id, ...l },
-          });
-
-          if (tenant.lead_webhook_url) {
-            await fetch(tenant.lead_webhook_url, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ tenant: tenant.slug, ...l }),
-            }).catch(() => {});
-          }
-
-          // aviso por email al cliente sin retrasar la respuesta del chat
-          ctx.waitUntil(notifyLeadInstant(env, tenant, l));
-        };
-
-        // generación (proveedor y modelo configurables por tenant)
-        const run = pickRunner(tenant);
-        const { text, usage, leadForm } = await run(
-          env,
-          tenant,
-          safeHistory,
-          message,
-          contextBlock,
-          saveLead
-        );
-
-        const sources = [
-          ...new Set((hits || []).map((h) => h.source_url).filter(Boolean)),
-        ].slice(0, 3);
-
-        await sb(env, "messages", {
-          method: "POST",
-          body: [
-            // ambas filas con las mismas claves: PostgREST lo exige en inserts múltiples
-            {
-              tenant_id: tenant.id,
-              conversation_id: conv.id,
-              role: "user",
-              content: message,
-              sources: [],
-              input_tokens: null,
-              output_tokens: null,
-              was_answered: null,
-            },
-            {
-              tenant_id: tenant.id,
-              conversation_id: conv.id,
-              role: "assistant",
-              content: text,
-              sources,
-              // ?? null: si el proveedor no devuelve uso (p. ej. bloqueo de Gemini),
-              // JSON.stringify omitiría la clave y PostgREST rechazaría el insert múltiple
-              input_tokens: usage.input_tokens ?? null,
-              output_tokens: usage.output_tokens ?? null,
-              was_answered: (hits || []).length > 0,
-            },
-          ],
-        });
-
-        await sb(env, `conversations?id=eq.${conv.id}`, {
-          method: "PATCH",
-          body: { last_message_at: new Date().toISOString() },
-        });
-
-        return json({ reply: text, sources, lead_form: leadForm || undefined }, 200, ch);
+        // núcleo compartido: recuperación + generación + persistencia
+        const out = await answerTenant(env, ctx, tenant, sid, message, page_url, safeHistory);
+        return json({ reply: out.reply, sources: out.sources, lead_form: out.leadForm || undefined }, 200, ch);
       }
 
       // --- lead enviado desde el formulario del widget ---
