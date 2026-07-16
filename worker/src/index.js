@@ -2270,6 +2270,36 @@ const ADMIN_HTML = `<!doctype html>
   #crumb a{text-decoration:none;font-weight:600;color:var(--acc)}
   #crumb a:hover{text-decoration:underline}
   #crumb .crumb-cur{color:var(--ink);font-weight:700;background:var(--soft,#f7f1dd);border-radius:6px;padding:1px 8px;text-transform:none;letter-spacing:0}
+  .botcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;margin-bottom:10px}
+  .botcard-av{width:44px;height:44px;border-radius:11px;background:#111;color:var(--acc);display:grid;place-items:center;font-weight:800;font-size:15px}
+  .botcard-name{font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .botcard-meta{color:var(--mut);font-size:12px;margin-top:3px}
+  .botcard-acts{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+  #bot-list .bcbtn{border:1px solid var(--line-strong,#d3d3cc);background:#fff;color:#111;border-radius:8px;height:34px;padding:0 13px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;width:auto;margin:0;display:inline-flex;align-items:center;text-align:center}
+  #bot-list .bcbtn:hover{background:#faf7ee}
+  #bot-list .bcbtn.danger{color:#a53222;border-color:#e4b8ae}
+  #bot-list .bcbtn.danger:hover{background:#fdf3f1}
+  .botpill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;border-radius:99px;padding:2px 9px;border:1px solid var(--line)}
+  .botpill.on{background:#eaf6ed;color:#23733a;border-color:#b9dfc3}
+  .botpill.off{background:#f3f3ef;color:#777}
+  #delmodal{position:fixed;inset:0;background:rgba(10,10,10,.5);z-index:95;display:none;align-items:center;justify-content:center;padding:20px}
+  #delmodal.show{display:flex}
+  #delmodal .dm{background:#fff;border-radius:16px;max-width:440px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.3);overflow:hidden}
+  #delmodal .dm-h{padding:20px 22px 0;display:flex;gap:13px;align-items:flex-start}
+  #delmodal .dm-warn{width:42px;height:42px;border-radius:11px;background:#fbe9e5;color:#a53222;display:grid;place-items:center;flex:0 0 auto;font-size:20px}
+  #delmodal h3{margin:0;font-size:17px}
+  #delmodal .dm-b{padding:10px 22px 20px}
+  #delmodal p{color:var(--mut);font-size:13.5px;margin:6px 0 0}
+  #delmodal .dm-s2{display:none;margin-top:14px}
+  #delmodal .dm-s2.show{display:block}
+  #delmodal .dm-b label{font-size:12px;font-weight:700;display:block;margin:0 0 6px}
+  #delmodal .dm-b input{width:100%;border:1px solid var(--line-strong,#d3d3cc);border-radius:8px;padding:10px 12px;font:inherit;font-size:14px;outline:0}
+  #delmodal .dm-f{display:flex;justify-content:flex-end;gap:9px;padding:14px 22px;background:#faf9f6;border-top:1px solid var(--line)}
+  #delmodal .kbd{font-family:ui-monospace,monospace;background:#f3f3ef;border:1px solid var(--line-strong,#d3d3cc);border-radius:5px;padding:1px 6px;font-size:12px;color:#111}
+  .dm-btn{border:0;border-radius:8px;padding:0 14px;height:38px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+  .dm-cancel{background:#fff;border:1px solid var(--line-strong,#d3d3cc);color:#111}
+  .dm-del{background:#a53222;color:#fff}
+  .dm-del:disabled{opacity:.4;cursor:not-allowed}
   #ck{position:fixed;inset:0;background:rgba(16,24,43,.45);z-index:90;display:flex;
     align-items:flex-start;justify-content:center;padding-top:12vh}
   #ck-box{background:#fff;border-radius:14px;width:540px;max-width:92vw;
@@ -2982,8 +3012,6 @@ const ADMIN_HTML = `<!doctype html>
         </div>
         <div class="actions">
           <button id="save" class="primary">Guardar</button>
-          <button id="f-dup" class="ghost small">Duplicar chatbot</button>
-          <button id="f-del" class="ghost small">Eliminar chatbot</button>
           <span id="save-msg"></span>
         </div>
       </div>
@@ -3125,6 +3153,23 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="toast"></div>
 
+<div id="delmodal">
+  <div class="dm">
+    <div class="dm-h"><div class="dm-warn">⚠</div>
+      <div><h3>Eliminar «<span id="dm-name">bot</span>»</h3>
+        <p>Se borrará el asistente y TODOS sus datos: conversaciones, leads, claves y contenido indexado. El widget dejará de funcionar al momento. Esta acción <b>no se puede deshacer</b>.</p></div></div>
+    <div class="dm-b">
+      <div class="dm-s2" id="dm-s2">
+        <label>Para confirmar, escribe <span class="kbd">eliminar bot</span></label>
+        <input id="dm-input" placeholder="eliminar bot" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="dm-f">
+      <button class="dm-btn dm-cancel" id="dm-cancel">Cancelar</button>
+      <button class="dm-btn dm-del" id="dm-next">Continuar</button>
+    </div>
+  </div>
+</div>
 <div id="ck" class="hide">
   <div id="ck-box">
     <input id="ck-in" placeholder="Busca un cliente, proyecto o chatbot…">
@@ -4369,9 +4414,91 @@ function renderBots(p) {
     return;
   }
   p.tenants.forEach(function (t) {
-    box.appendChild(treeBtn(t.name + (t.active ? "" : " (apagado)"), t.active ? "" : "off", false, function () { selTenant(t.id); }));
+    var card = document.createElement("div");
+    card.className = "botcard";
+    var av = document.createElement("div");
+    av.className = "botcard-av";
+    av.textContent = (t.name || "B").trim().slice(0, 1).toUpperCase();
+    var body = document.createElement("div");
+    var nm = document.createElement("div");
+    nm.className = "botcard-name";
+    nm.textContent = t.name;
+    var pill = document.createElement("span");
+    pill.className = "botpill " + (t.active ? "on" : "off");
+    pill.textContent = t.active ? "Activo" : "Borrador";
+    nm.appendChild(pill);
+    var meta = document.createElement("div");
+    meta.className = "botcard-meta";
+    meta.textContent = "Web";
+    body.appendChild(nm);
+    body.appendChild(meta);
+    var acts = document.createElement("div");
+    acts.className = "botcard-acts";
+    acts.appendChild(botAct("Abrir", "", function () { selTenant(t.id); }));
+    acts.appendChild(botAct("Duplicar", "", function () { dupBotById(t.id, t.name); }));
+    acts.appendChild(botAct("Eliminar", "danger", function () { openDelBot(t.id, t.name); }));
+    card.appendChild(av);
+    card.appendChild(body);
+    card.appendChild(acts);
+    box.appendChild(card);
   });
 }
+function botAct(label, cls, fn) {
+  var b = document.createElement("button");
+  b.className = "bcbtn" + (cls ? " " + cls : "");
+  b.textContent = label;
+  b.onclick = fn;
+  return b;
+}
+function dupBotById(id, name) {
+  if (!confirm("Se creará una copia de «" + name + "» en el mismo proyecto, apagada y con claves nuevas. Se copia la configuración y el diseño, no el contenido ni las conversaciones. ¿Duplicar?")) return;
+  api("/admin/api/tenants/" + id + "/duplicate", { method: "POST" }).then(function (r) {
+    if (r.error) { toast(r.error, true); return; }
+    dirty = false;
+    sel = { type: "tenant", id: r.id, isNew: false };
+    toast("Chatbot duplicado ✓ Estás viendo la copia.");
+    load();
+  });
+}
+var delBotId = null;
+function openDelBot(id, name) {
+  delBotId = id;
+  $("dm-name").textContent = name;
+  $("dm-s2").classList.remove("show");
+  $("dm-input").value = "";
+  var b = $("dm-next");
+  b.textContent = "Continuar";
+  b.disabled = false;
+  $("delmodal").classList.add("show");
+}
+function closeDelBot() { $("delmodal").classList.remove("show"); delBotId = null; }
+(function () {
+  var stage = 1;
+  $("dm-cancel").onclick = closeDelBot;
+  $("delmodal").addEventListener("click", function (e) { if (e.target === this) closeDelBot(); });
+  $("dm-input").addEventListener("input", function () {
+    $("dm-next").disabled = this.value.trim().toLowerCase() !== "eliminar bot";
+  });
+  $("dm-next").onclick = function () {
+    if (!$("dm-s2").classList.contains("show")) {
+      $("dm-s2").classList.add("show");
+      $("dm-next").textContent = "Eliminar definitivamente";
+      $("dm-next").disabled = true;
+      $("dm-input").focus();
+      return;
+    }
+    if ($("dm-input").value.trim().toLowerCase() !== "eliminar bot") return;
+    var id = delBotId;
+    if (!id) return;
+    api("/admin/api/tenants/" + id, { method: "DELETE" }).then(function (r) {
+      closeDelBot();
+      if (r.error) { toast(r.error, true); return; }
+      dirty = false;
+      toast("Chatbot eliminado");
+      load();
+    });
+  };
+})();
 
 $("p-save").onclick = function () {
   var d = { name: $("p-name").value.trim(), description: $("p-desc").value.trim() };
@@ -5567,38 +5694,8 @@ $("save").onclick = function () {
   });
 };
 
-$("f-del").onclick = function () {
-  if (sel.isNew) return;
-  var f = findTenant(sel.id);
-  var w = prompt(
-    "Vas a eliminar el chatbot «" + (f ? f.tenant.name : "") + "» y TODOS sus datos: " +
-    "conversaciones, leads, claves y contenido indexado. El widget dejará de funcionar al momento. " +
-    "No se puede deshacer.\\n\\nEscribe ELIMINAR para confirmar:"
-  );
-  if (w !== "ELIMINAR") return;
-  api("/admin/api/tenants/" + sel.id, { method: "DELETE" }).then(function (r) {
-    if (r.error) { $("save-msg").textContent = r.error; $("save-msg").className = "err"; toast(r.error, true); return; }
-    sel = f ? { type: "project", id: f.project.id } : { type: null };
-    dirty = false;
-    toast("Chatbot eliminado");
-    load();
-  });
-};
-
-$("f-dup").onclick = function () {
-  if (sel.isNew) return;
-  var f = findTenant(sel.id);
-  if (!confirm("Se creará una copia de «" + (f ? f.tenant.name : "este chatbot") +
-    "» en el mismo proyecto, apagada y con claves nuevas. Se copia la configuración y el diseño, " +
-    "no el contenido indexado ni las conversaciones. ¿Duplicar?")) return;
-  api("/admin/api/tenants/" + sel.id + "/duplicate", { method: "POST" }).then(function (r) {
-    if (r.error) { toast(r.error, true); return; }
-    dirty = false;
-    sel = { type: "tenant", id: r.id, isNew: false };
-    toast("Chatbot duplicado ✓ Estás viendo la copia.");
-    load();
-  });
-};
+// Duplicar / Eliminar del bot viven ahora en la lista de asistentes del proyecto
+// (dupBotById / openDelBot), no en el editor del bot.
 
 $("rot-key").onclick = function () {
   if (!confirm("La clave actual dejará de funcionar y habrá que actualizar el snippet en la web del cliente. ¿Seguir?")) return;

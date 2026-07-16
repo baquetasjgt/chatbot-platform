@@ -18,8 +18,8 @@ input:focus,textarea:focus,select:focus{border-color:#111!important;box-shadow:0
 aside{background:#111!important;color:#fff!important;min-height:calc(100vh - 65px);padding:20px 16px!important}
 aside .mut,aside label{color:#aaa!important}
 aside .primary,aside .btn{border:.75px solid #f9be00!important}
-#tree button,#proj-list button,#bot-list button{background:transparent!important;color:#ddd!important;border:0!important;border-radius:3px!important}
-#tree button:hover,#proj-list button:hover,#bot-list button:hover{background:#242424!important;color:#fff!important}
+#tree button,#proj-list button{background:transparent!important;color:#ddd!important;border:0!important;border-radius:3px!important}
+#tree button:hover,#proj-list button:hover{background:#242424!important;color:#fff!important}
 #tree button.on{background:#f9be00!important;color:#111!important;box-shadow:none!important}
 #main{padding:24px!important}
 #crumb a{color:#8b6900!important}
