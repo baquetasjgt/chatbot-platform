@@ -2409,8 +2409,8 @@ Requisitos del system_prompt (400-700 palabras, listo para producción):
 - Identidad, tono y ámbito del asistente, adaptados al negocio del encargo.
 - Regla innegociable: nunca inventar datos (fechas, precios, condiciones, disponibilidad); si no está en el contexto proporcionado, decirlo con naturalidad y derivar al canal de contacto.
 - Prohibir consejo profesional sensible cuando aplique (médico, legal, financiero).
-- Cuándo y cómo capturar leads con la herramienta guardar_lead: solo cuando el usuario haya dado como mínimo nombre y email, pidiendo con naturalidad lo que falte si muestra interés comercial.
 - Cómo manejar preguntas fuera de ámbito y usuarios difíciles, sin discutir.
+- NO incluyas instrucciones sobre captar leads ni sobre la herramienta guardar_lead: eso lo gestiona la plataforma automáticamente según la configuración del bot. No lo menciones en el system_prompt.
 
 welcome_message: 1-2 frases cercanas y útiles. suggested_questions: las 4 preguntas que más hará un visitante real.
 
