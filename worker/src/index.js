@@ -1584,29 +1584,8 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
         : ""
     }`;
 
-    const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: instructions }] }],
-          generationConfig: { maxOutputTokens: 2000, responseMimeType: "application/json" },
-        }),
-      }
-    );
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-    const out = await res.json();
-    const text = (out.candidates?.[0]?.content?.parts || [])
-      .filter((p) => p.text && !p.thought)
-      .map((p) => p.text)
-      .join("");
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return json({ error: "la IA no devolvió preguntas válidas; vuelve a intentarlo" }, 502);
-    }
+    const parsed = await geminiJson(env, instructions, 4000);
+    if (!parsed) return json({ error: "la IA no devolvió preguntas válidas; vuelve a intentarlo" }, 502);
     const questions = (parsed.questions || []).slice(0, 20).map((q) => ({ q: String(q), a: "" }));
     if (!questions.length) return json({ error: "la IA no devolvió preguntas; vuelve a intentarlo" }, 502);
 
@@ -2115,28 +2094,11 @@ welcome_message: 1-2 frases cercanas y útiles. suggested_questions: las 4 pregu
 
 Encargo del dueño de la plataforma:
 ${brief}`;
-    const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: instructions }] }],
-          generationConfig: { maxOutputTokens: 4000, responseMimeType: "application/json" },
-        }),
-      }
-    );
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-    const out = await res.json();
-    const text = (out.candidates?.[0]?.content?.parts || [])
-      .filter((p) => p.text && !p.thought)
-      .map((p) => p.text)
-      .join("");
-    try {
-      return json(JSON.parse(text));
-    } catch {
-      return json({ error: "la IA no devolvió una configuración válida; vuelve a intentarlo" }, 502);
-    }
+    // reutiliza el ayudante robusto (thinkingLevel bajo + parseo tolerante):
+    // así el «pensamiento» del modelo no agota los tokens y trunca el JSON
+    const cfg = await geminiJson(env, instructions, 8000);
+    if (cfg && (cfg.system_prompt || cfg.welcome_message)) return json(cfg);
+    return json({ error: "la IA no devolvió una configuración válida; vuelve a intentarlo" }, 502);
   }
 
   return json({ error: "no encontrado" }, 404);
