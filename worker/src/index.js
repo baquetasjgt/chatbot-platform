@@ -2941,13 +2941,6 @@ const ADMIN_HTML = `<!doctype html>
                 <button type="button" class="miniadd" id="sug-add"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Añadir pregunta</button>
                 <textarea id="f-sugg" style="display:none"></textarea>
               </div>
-              <div class="swrow"><span class="swlab">Pregunta de clasificación (expositor/visitante)</span><label class="switch"><input id="f-qualSw" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <div class="reveal" id="qualRev">
-                <label style="margin-top:0">Pregunta de clasificación</label>
-                <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
-                <label>Opciones de respuesta <span class="lh">una por línea, máx. 4</span></label>
-                <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
-              </div>
               <div class="swrow"><span class="swlab">Abrir automáticamente tras unos segundos</span><label class="switch"><input id="f-autoopen" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="swrow"><span class="swlab">Indicador de «escribiendo…»</span><label class="switch"><input id="f-typing" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
               <div class="swrow"><span class="swlab">Sonido al recibir respuesta</span><label class="switch"><input id="f-sound" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
@@ -2997,20 +2990,43 @@ const ADMIN_HTML = `<!doctype html>
           <p class="mut" style="margin-top:14px"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Todos los cambios se ven al momento en la <b>vista en vivo</b> de la izquierda.</p>
         </div>
         <div class="ft" id="ft-leads">
-          <div class="row">
-            <div><label>Email para leads / handoff</label><input id="f-email" type="email"></div>
-            <div><label>Webhook de leads (Zapier, Make, CRM…)</label><input id="f-webhook" type="url"></div>
-          </div>
-          <label>Aviso al cliente por email cuando el bot capte un lead</label>
-          <select id="f-leadnotify" style="max-width:340px">
-            <option value="off">Sin aviso (solo panel y webhook)</option>
-            <option value="instant">Al momento — un email por cada lead</option>
-            <option value="daily">Resumen diario — un email a las 07:00 con los del día</option>
-          </select>
-          <p class="mut" style="margin-top:4px">Se envía al email de la ficha del cliente (o al de leads
-          si no tiene). Necesita Resend configurado.</p>
-          <p class="mut" style="margin-top:10px">El webhook recibe cada lead al momento; con Zapier o Make
-          puedes reenviarlo a email, hoja de cálculo o CRM sin programar.</p>
+          <details class="cfg" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg></span>
+              <div><div class="ct">Captura de leads</div><div class="cs">Activar / desactivar</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <div class="swrow"><div class="swlab">Capturar leads<small>Si lo desactivas, el bot solo responde y nunca pide datos de contacto</small></div><label class="switch"><input id="f-featleads" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+            </div>
+          </details>
+          <details class="cfg" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+              <div><div class="ct">Cualificación</div><div class="cs">Preguntar quién es antes de captar</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <div class="swrow"><div class="swlab">Preguntar el perfil al abrir<small>Ej.: expositor / visitante</small></div><label class="switch"><input id="f-qualSw" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
+              <div id="qualRev">
+                <label style="margin-top:4px">Pregunta de clasificación</label>
+                <input id="f-qualq" placeholder="Para ayudarte mejor, cuéntame quién eres:">
+                <label>Opciones de respuesta <span class="lh">una por línea, máx. 4</span></label>
+                <textarea id="f-qualopts" rows="2" placeholder="Soy expositor&#10;Soy visitante"></textarea>
+              </div>
+            </div>
+          </details>
+          <details class="cfg" open>
+            <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6 12 13 2 6"/></svg></span>
+              <div><div class="ct">Dónde llegan los leads</div><div class="cs">Email, webhook y avisos</div></div><span class="cv">›</span></summary>
+            <div class="cfgb">
+              <label>Email para leads / handoff</label>
+              <input id="f-email" type="email" placeholder="leads@cliente.es">
+              <label style="margin-top:12px">Webhook de leads (Zapier, Make, CRM…)</label>
+              <input id="f-webhook" type="url" placeholder="https://…">
+              <label style="margin-top:12px">Aviso al cliente por email cuando el bot capte un lead</label>
+              <select id="f-leadnotify">
+                <option value="off">Sin aviso (solo panel y webhook)</option>
+                <option value="instant">Al momento — un email por cada lead</option>
+                <option value="daily">Resumen diario — un email a las 07:00 con los del día</option>
+              </select>
+              <div class="note" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>El aviso por email necesita Resend configurado. El webhook recibe cada lead al momento; con Zapier o Make lo reenvías a hoja de cálculo o CRM sin programar.</div>
+            </div>
+          </details>
         </div>
         <div class="ft" id="ft-seg">
           <details class="cfg" open>
@@ -3023,7 +3039,6 @@ const ADMIN_HTML = `<!doctype html>
               <input id="f-limit" type="number" min="0" style="max-width:200px">
               <div class="note" style="margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Al alcanzar el límite, el bot responde un aviso fijo sin gastar IA.</div>
               <div class="swrow" style="margin-top:14px"><div class="swlab">Bot activo<small>Desactívalo para apagar el chatbot por completo</small></div><label class="switch"><input id="f-active" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
-              <div class="swrow"><div class="swlab">Captura de leads<small>Si lo desactivas, el bot solo responde, sin pedir datos de contacto</small></div><label class="switch"><input id="f-featleads" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
             </div>
           </details>
           <details class="cfg">
@@ -6235,6 +6250,7 @@ segify("f-dark", { off: "Claro", dark: "Oscuro", auto: "Automático" });
 segify("f-shadow", { ninguna: "Ninguna", suave: "Suave", media: "Media", fuerte: "Fuerte" });
 segify("f-density", { cozy: "Cómoda", dense: "Compacta" });
 segify("f-provider", { anthropic: "Anthropic (Claude)", google: "Google (Gemini)" });
+segify("f-leadnotify", { off: "Sin aviso", instant: "Al momento", daily: "Resumen diario" });
 (function () {
   var box = document.getElementById("rulechips");
   if (!box) return;
