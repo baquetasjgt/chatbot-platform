@@ -9397,9 +9397,10 @@ ${inject}</body></html>`;
         if (!tenant) return json({ error: "clave no válida" }, 401);
         // el host propio se permite siempre: las páginas /demo viven en él
         const cc = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
-        // mismo criterio que /api/chat: contextos de origen «null» (iframe
-        // aislado, data:) no pueden leer la config
-        if (cc["Access-Control-Allow-Origin"] === "null") {
+        // solo bloqueamos un Origin PRESENTE y no autorizado (iframe aislado envía
+        // "null"). Una petición mismo-origen (demo, «probar el bot») no lleva Origin
+        // y no debe bloquearse: el navegador ni siquiera aplica CORS ahí.
+        if (origin && cc["Access-Control-Allow-Origin"] === "null") {
           return json({ error: "dominio no autorizado" }, 403, cc);
         }
         // canal web apagado desde el panel (Canales): el widget no se renderiza
