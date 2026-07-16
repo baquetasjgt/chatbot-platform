@@ -25,7 +25,7 @@ binding = "AI"
 #   PORTAL_SECRET (mín. 32 caracteres, opcional pero recomendado): firma las sesiones
 #     del portal de clientes, separada de ADMIN_TOKEN. Si no está, se usa ADMIN_TOKEN.
 
-#   INVOICE_ISSUER_NAME, INVOICE_ISSUER_NIF, INVOICE_ISSUER_ADDRESS, INVOICE_ISSUER_EMAIL
+#   INVOICE_ISSUER_NAME, INVOICE_ISSUER_NIF, INVOICE_ISSUER_ADDRESS, INVOICE_ISSUER_EMAIL, INVOICE_ISSUER_PHONE
 #   INVOICE_IVA_RATE (opcional, por defecto 0.21)
 #   REQUIRE_WHATSAPP_SIGNATURE=true (activar tras completar App Secret en conexiones heredadas)
 [observability]

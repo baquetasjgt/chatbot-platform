@@ -32,6 +32,7 @@ wrangler secret put INVOICE_ISSUER_NAME
 wrangler secret put INVOICE_ISSUER_NIF
 wrangler secret put INVOICE_ISSUER_ADDRESS
 wrangler secret put INVOICE_ISSUER_EMAIL
+wrangler secret put INVOICE_ISSUER_PHONE
 # Opcional: INVOICE_IVA_RATE (por defecto 0.21)
 
 wrangler deploy

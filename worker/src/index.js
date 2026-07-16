@@ -2147,9 +2147,18 @@ function invoiceIssuer(env) {
   const nif = String(env.INVOICE_ISSUER_NIF || "").trim();
   const address = String(env.INVOICE_ISSUER_ADDRESS || "").trim();
   const email = normEmail(env.INVOICE_ISSUER_EMAIL || env.EMAIL_FROM || "");
+  const phone = String(env.INVOICE_ISSUER_PHONE || "").trim();
   const parsedRate = Number(env.INVOICE_IVA_RATE ?? 0.21);
-  if (!name || !nif || !address || !email || !Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 1) return null;
-  return { name: name.slice(0, 160), nif: nif.slice(0, 40), address: address.slice(0, 300), email, iva_rate: parsedRate };
+  if (!name || !nif || !address || !email || phone.length > 60 ||
+      !Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 1) return null;
+  return {
+    name: name.slice(0, 160),
+    nif: nif.slice(0, 40),
+    address: address.slice(0, 300),
+    email,
+    phone,
+    iva_rate: parsedRate,
+  };
 }
 
 function eurPdf(cents) {
@@ -2185,7 +2194,8 @@ function buildInvoicePdf(inv, client, issuer) {
   L.push({ t: issuer.name, size: 12, font: 2, gap: 1 });
   L.push({ t: `NIF ${issuer.nif}`, size: 10.5, font: 1, color: PDF_MUT, gap: 1 });
   L.push({ t: issuer.address, size: 10.5, font: 1, color: PDF_MUT, gap: 1 });
-  L.push({ t: issuer.email, size: 10.5, font: 1, color: PDF_MUT, gap: 16 });
+  L.push({ t: issuer.email, size: 10.5, font: 1, color: PDF_MUT, gap: issuer.phone ? 1 : 16 });
+  if (issuer.phone) L.push({ t: issuer.phone, size: 10.5, font: 1, color: PDF_MUT, gap: 16 });
   // cliente
   L.push({ t: "FACTURAR A", size: 9, font: 2, color: PDF_MUSTARD, gap: 3 });
   L.push({ t: (client && client.name) || "Cliente", size: 12, font: 2, gap: 1 });
