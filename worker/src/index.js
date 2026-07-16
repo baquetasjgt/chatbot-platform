@@ -2268,6 +2268,8 @@ const ADMIN_HTML = `<!doctype html>
   .chk.done .chk-ic{background:#e3f6e9;color:#1d9e4b}
   .chk button{margin-left:auto;white-space:nowrap}
   #crumb a{text-decoration:none;font-weight:600;color:var(--acc)}
+  #crumb a:hover{text-decoration:underline}
+  #crumb .crumb-cur{color:var(--ink);font-weight:700;background:var(--soft,#f7f1dd);border-radius:6px;padding:1px 8px;text-transform:none;letter-spacing:0}
   #ck{position:fixed;inset:0;background:rgba(16,24,43,.45);z-index:90;display:flex;
     align-items:flex-start;justify-content:center;padding-top:12vh}
   #ck-box{background:#fff;border-radius:14px;width:540px;max-width:92vw;
@@ -3783,7 +3785,15 @@ function crumb(parts) {
       a.onclick = function (e) { e.preventDefault(); p.go(); };
       box.appendChild(a);
     } else {
-      box.appendChild(document.createTextNode(typeof p === "string" ? p : p.t));
+      var txt = typeof p === "string" ? p : p.t;
+      if (i === parts.length - 1 && txt) {
+        var s = document.createElement("span");
+        s.className = "crumb-cur";
+        s.textContent = txt;
+        box.appendChild(s);
+      } else {
+        box.appendChild(document.createTextNode(txt));
+      }
     }
   });
 }
@@ -4676,6 +4686,18 @@ function setBotTab(bt) {
   if (bt === "resumen") renderBotOverview();
   if (bt === "canales") renderBotChannels();
   if (bt === "publicar") loadChecklist();
+  // migas de pan: ruta completa clicable + pestaña actual
+  var bf = sel && sel.id ? findTenant(sel.id) : null;
+  if (bf) {
+    var btLbl = { resumen: "Resumen", cerebro: "Objetivo y comportamiento", contenido: "Conocimiento", diseno: "Diseño", captacion: "Captación", canales: "Canales", calidad: "Pruebas", publicar: "Publicar" }[bt] || "";
+    crumb([
+      { t: "Clientes", go: goClients },
+      { t: bf.client.name, go: function () { selClient(bf.client.id); } },
+      { t: bf.project.name, go: function () { selProject(bf.project.id); } },
+      { t: bf.tenant.name, go: function () { setBotTab("resumen"); } },
+      btLbl,
+    ]);
+  }
 }
 [].forEach.call(document.querySelectorAll("#bot-tabs button"), function (b) {
   b.onclick = function () { setBotTab(b.dataset.bt); };
