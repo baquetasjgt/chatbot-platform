@@ -86,6 +86,22 @@ async function sb(env, path, { method = "GET", body, headers = {} } = {}, _retry
   return text ? JSON.parse(text) : null;
 }
 
+// ¿primera entrega de este update? Meta y Telegram reintentan webhooks: solo la
+// primera inserción gana (PK provider+update_id); los reenvíos devuelven [] y se
+// descartan, evitando respuestas duplicadas al cliente y doble gasto de IA.
+async function firstDelivery(env, provider, updateId) {
+  try {
+    const rows = await sb(env, "processed_updates", {
+      method: "POST",
+      body: { provider, update_id: String(updateId).slice(0, 200) },
+      headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+    });
+    return Array.isArray(rows) && rows.length > 0;
+  } catch (e) {
+    return true; // si el registro falla, mejor arriesgar un duplicado que callar
+  }
+}
+
 async function rpc(env, fn, args) {
   return sb(env, `rpc/${fn}`, { method: "POST", body: args });
 }
@@ -379,6 +395,31 @@ function htmlToText(html) {
 }
 
 // ---------- indexación común (URLs, textos y archivos) ----------
+
+// Descarga y limpia una URL para indexarla. Compartida por /admin/ingest y el
+// re-rastreo semanal. Lanza HttpError con motivo legible si la fuente no vale.
+async function fetchUrlDocument(sourceUrl) {
+  const source = String(sourceUrl || "").trim();
+  const target = safeExternalUrl(source);
+  if (!target || source.length > 2048) throw new HttpError(400, "URL no válida o no permitida");
+  const response = await fetchExternal(target, {
+    headers: { "User-Agent": "ExpoBotIndexer/1.0", Accept: "text/html,application/xhtml+xml,text/plain" },
+  }, 15000);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    throw new HttpError(502, `HTTP ${response.status}`);
+  }
+  const type = (response.headers.get("Content-Type") || "").toLowerCase();
+  if (!type.includes("text/html") && !type.includes("text/plain")) {
+    await response.body?.cancel().catch(() => {});
+    throw new HttpError(415, "tipo de contenido no permitido");
+  }
+  const raw = await responseTextLimited(response, 2 * 1024 * 1024);
+  const title = type.includes("html")
+    ? (raw.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] || target.href).trim().slice(0, 200)
+    : target.href;
+  return { url: target.href, title, content: type.includes("html") ? htmlToText(raw) : raw };
+}
 
 async function indexDocument(env, tenantId, { source_url = null, source_type, title, content }) {
   const clean = String(content || "").trim();
@@ -1540,6 +1581,76 @@ async function runLeadsRetention(env) {
     await sb(env, `leads?hidden_admin=is.true&hidden_client=is.true`, { method: "DELETE" });
   } catch (err) {
     await logError(env, "retencion-leads/purga", err?.message || err);
+  }
+}
+
+// Salud de canales (cron diario): prueba el token de WhatsApp contra la Graph API.
+// Un token caducado (p. ej. el temporal de 24 h, error 131005) se detecta aquí y
+// avisa al admin, en vez de descubrirse cuando un cliente deja de recibir respuesta.
+// No cambia el status (eso pararía el canal): marca error_message y la UI lo enseña.
+async function runChannelHealth(env) {
+  const integs = await sb(
+    env,
+    `project_integrations?provider=eq.whatsapp&status=eq.connected&select=id,name,settings`
+  );
+  for (const it of integs || []) {
+    const s = it.settings || {};
+    let err = null;
+    if (!s.access_token || !s.phone_number_id) {
+      err = "Faltan credenciales (token de acceso o ID del número)";
+    } else {
+      try {
+        const r = await fetchWithTimeout(
+          `https://graph.facebook.com/v21.0/${encodeURIComponent(s.phone_number_id)}?fields=id`,
+          { headers: { Authorization: `Bearer ${s.access_token}` } },
+          10000
+        );
+        if (!r.ok) {
+          await responseTextLimited(r, 2048).catch(() => "");
+          err = `Token de WhatsApp rechazado por Meta (HTTP ${r.status}): caducado o revocado. Genera uno permanente de usuario del sistema y actualiza la conexión.`;
+        }
+      } catch (e) {
+        err = "No se pudo comprobar el token: " + (e?.message || e);
+      }
+    }
+    try {
+      await sb(env, `project_integrations?id=eq.${it.id}`, {
+        method: "PATCH",
+        body: { error_message: err, last_checked_at: new Date().toISOString() },
+      });
+    } catch (e) {}
+    if (err) await logError(env, "salud-whatsapp/" + (it.name || it.id), err).catch(() => {});
+  }
+  // limpieza del registro de dedup de webhooks: 48 h cubren cualquier reintento
+  try {
+    const cut = new Date(Date.now() - 48 * 3600000).toISOString();
+    await sb(env, `processed_updates?created_at=lt.${cut}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    });
+  } catch (e) {}
+}
+
+// Re-rastreo semanal de URLs: mantiene fresco el conocimiento indexado desde webs
+// sin trabajo manual. Las fuentes más antiguas primero; reindexar reemplaza el
+// documento anterior (dedup por tenant+source_url dentro de indexDocument).
+async function runWeeklyReindex(env) {
+  const docs = await sb(
+    env,
+    `documents?source_type=eq.url&source_url=not.is.null&select=id,tenant_id,source_url&order=indexed_at.asc.nullsfirst&limit=12`
+  );
+  for (const d of docs || []) {
+    try {
+      const page = await fetchUrlDocument(d.source_url);
+      await indexDocument(env, d.tenant_id, {
+        source_url: page.url,
+        source_type: "url",
+        title: page.title,
+        content: page.content,
+      });
+    } catch (err) {
+      await logError(env, "reindex/" + String(d.source_url || d.id).slice(0, 80), err?.message || err).catch(() => {});
+    }
   }
 }
 
@@ -10097,9 +10208,11 @@ export default {
     // día 1 de cada mes: informes a los clientes; a diario: resumen de leads
     // (si está activado) + purga de leads por retención de cada bot
     if (event.cron === "0 7 1 * *") ctx.waitUntil(runMonthlyReports(env));
+    else if (event.cron === "0 5 * * 1") ctx.waitUntil(runWeeklyReindex(env));
     else {
       ctx.waitUntil(runDailyLeadDigests(env));
       ctx.waitUntil(runLeadsRetention(env));
+      ctx.waitUntil(runChannelHealth(env));
     }
   },
 
@@ -10294,6 +10407,8 @@ ${inject}</body></html>`;
                   const phoneId = val.metadata?.phone_number_id || integ.settings.phone_number_id;
                   for (const m of val.messages || []) {
                     if (m.type !== "text" || !m.text?.body || !m.from) continue;
+                    // reintentos de Meta: cada wamid se procesa una sola vez
+                    if (m.id && !(await firstDelivery(env, "whatsapp", m.id))) continue;
                     if ((await rpc(env, "check_rate", { p_ip: "wa:" + m.from, p_limit: 20 })) === false) continue;
                     const sid = "wa:" + m.from, txt = m.text.body.slice(0, 2000);
                     // conversación en manos de una persona: guardar sin que el bot conteste
@@ -10320,7 +10435,8 @@ ${inject}</body></html>`;
         const [integ] = await sb(env, `project_integrations?id=eq.${mTg[1]}&provider=eq.telegram&limit=1`);
         // secreto que Telegram reenvía en cada actualización (lo fijamos al conectar)
         const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
-        if (!integ || !integ.settings?.webhook_secret || !safeEqual(secret, integ.settings.webhook_secret)) {
+        // mismo criterio que WhatsApp: una integración pausada o con error no contesta
+        if (!integ || integ.status !== "connected" || !integ.settings?.webhook_secret || !safeEqual(secret, integ.settings.webhook_secret)) {
           return new Response("forbidden", { status: 403 });
         }
         let update;
@@ -10329,8 +10445,12 @@ ${inject}</body></html>`;
         ctx.waitUntil((async () => {
           try {
             const token = integ.settings?.bot_token;
-            const msg = update.message || update.edited_message;
+            // solo mensajes nuevos: editar un mensaje ya contestado no debe generar
+            // otra respuesta del bot (update.edited_message se ignora a propósito)
+            const msg = update.message;
             if (!token || !msg || !msg.text || !msg.chat) return;
+            // reintentos de Telegram: cada update_id se procesa una sola vez (por bot)
+            if (update.update_id != null && !(await firstDelivery(env, "telegram", integ.id + ":" + update.update_id))) return;
             const tenant = await tenantForIntegration(env, integ);
             if (!tenant) return;
             if (!channelOn(tenant, "telegram")) return; // canal apagado (admin o cliente)
@@ -10574,33 +10694,14 @@ ${inject}</body></html>`;
         const docs = [];
         for (const rawUrl of urls) {
           const source = String(rawUrl || "").trim();
-          const target = safeExternalUrl(source);
-          if (!target || source.length > 2048) {
-            docs.push({ url: source.slice(0, 200), error: "URL no válida o no permitida" });
-            continue;
-          }
           try {
-            const response = await fetchExternal(target, {
-              headers: { "User-Agent": "ExpoBotIndexer/1.0", Accept: "text/html,application/xhtml+xml,text/plain" },
-            }, 15000);
-            if (!response.ok) {
-              await response.body?.cancel().catch(() => {});
-              docs.push({ url: target.href, error: `HTTP ${response.status}` });
-              continue;
-            }
-            const type = (response.headers.get("Content-Type") || "").toLowerCase();
-            if (!type.includes("text/html") && !type.includes("text/plain")) {
-              await response.body?.cancel().catch(() => {});
-              docs.push({ url: target.href, error: "tipo de contenido no permitido" });
-              continue;
-            }
-            const raw = await responseTextLimited(response, 2 * 1024 * 1024);
-            const title = type.includes("html")
-              ? (raw.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] || target.href).trim().slice(0, 200)
-              : target.href;
-            docs.push({ url: target.href, title, content: type.includes("html") ? htmlToText(raw) : raw });
+            const page = await fetchUrlDocument(source);
+            docs.push({ url: page.url, title: page.title, content: page.content });
           } catch (error) {
-            docs.push({ url: target.href, error: error instanceof HttpError ? error.publicMessage : "no se pudo descargar" });
+            docs.push({
+              url: source.slice(0, 200),
+              error: error instanceof HttpError ? error.publicMessage : "no se pudo descargar",
+            });
           }
         }
         for (const item of texts) {
