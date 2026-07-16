@@ -2102,6 +2102,21 @@ const ADMIN_HTML = `<!doctype html>
     color:var(--mut);border-right:1px solid var(--line);cursor:pointer}
   #ft-ap .segfull button:last-child{border-right:0}
   #ft-ap .segfull button.on{background:var(--ink);color:#fff}
+  /* en Diseño ocultamos cabecera nombre/slug: empieza en las secciones */
+  #v-tenant.dsn-only .tenant-head{display:none}
+  #v-tenant.dsn-only{padding-top:16px}
+  /* interruptor exacto de la plantilla (riel + bolita) */
+  #ft-ap .swrow{display:flex;align-items:center;gap:14px;justify-content:space-between;margin-top:4px}
+  #ft-ap .swrow .swlab{font-size:12.5px;font-weight:600;color:var(--ink)}
+  #ft-ap .swrow .swlab small{display:block;font-weight:400;color:var(--mut);font-size:11px;margin-top:1px}
+  #ft-ap .switch{position:relative;width:44px;height:26px;flex:0 0 auto;margin:0;display:inline-block}
+  #ft-ap .switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer;position:absolute;inset:0;z-index:2}
+  #ft-ap .switch .track{position:absolute;inset:0;border-radius:99px;background:#cfcfc9;transition:.2s;pointer-events:none}
+  #ft-ap .switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+  #ft-ap .switch input:checked ~ .track{background:var(--acc)}
+  #ft-ap .switch input:checked ~ .knob{left:21px}
+  /* chips de color un poco mas compactos, redondeados como la plantilla */
+  #ft-ap input[type=color]{width:44px!important;height:34px!important;border-radius:8px!important}
   #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
     padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;
     z-index:60;pointer-events:none;max-width:90vw}
@@ -2146,8 +2161,15 @@ const ADMIN_HTML = `<!doctype html>
   @media(max-width:1100px){#main.with-canvas>#canvas-panel{order:5}}
   #canvas-panel{min-width:0}
   #cv-sticky{position:sticky;top:74px}
-  #cv-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
-    font-weight:600;font-size:14px}
+  #cv-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap}
+  .cv-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .cv-tools{display:flex;align-items:center;gap:8px}
+  .cv-vp{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:99px;padding:3px}
+  .cv-vp button{border:0;background:transparent;border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer}
+  .cv-vp button.on{background:var(--ink);color:#fff}
+  #cv-frame.cv-mobile{align-items:center}
+  #cv-frame.cv-mobile #cv-widget{width:320px}
+  #cv-frame.cv-mobile #cv-btnrow{justify-content:center;width:320px}
   #cv-frame{background:
       radial-gradient(120% 80% at 80% 0%,rgba(245,190,16,.10),transparent 55%),
       repeating-linear-gradient(90deg,rgba(10,16,46,.028) 0 1px,transparent 1px 108px),
@@ -2600,11 +2622,13 @@ const ADMIN_HTML = `<!doctype html>
       </div>
 
       <div class="card hide" id="v-tenant">
+        <div class="tenant-head">
         <h2 id="f-title">Chatbot</h2>
         <p class="sub">Los cambios se aplican al guardar. El bot los usa en la siguiente conversación.</p>
         <div class="row">
           <div><label>Nombre (lo ve el usuario en el chat)</label><input id="f-name"></div>
           <div><label>Nombre interno (se rellena solo; no lo verá nadie)</label><input id="f-slug"></div>
+        </div>
         </div>
         <div class="ftabs">
           <button class="on" data-ft="ft-comp">Comportamiento</button>
@@ -2715,7 +2739,7 @@ const ADMIN_HTML = `<!doctype html>
                 <div><label>Fondo del botón</label><input id="f-btnbg" type="color" value="#111111"></div>
                 <div><label>Color del borde</label><input id="f-btnborder" type="color" value="#f5be10"></div>
               </div>
-              <div class="check"><input id="f-btnborderon" type="checkbox"><label for="f-btnborderon">Mostrar borde en el botón</label></div>
+              <div class="swrow"><span class="swlab">Mostrar borde en el botón</span><label class="switch"><input id="f-btnborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="cfgrow"><div class="cfgl">Grosor del borde</div>
                 <input id="f-btnborderw" type="range" min="1" max="8" value="2"><span class="cfgval"><span id="f-btnborderw-v">2</span> px</span></div>
               <div class="row">
@@ -2770,7 +2794,7 @@ const ADMIN_HTML = `<!doctype html>
               </div>
               <div><label>Fondo de la ventana de chat</label>
                 <input id="f-colorbg" type="color" value="#ffffff"></div>
-              <div class="check"><input id="f-winborderon" type="checkbox"><label for="f-winborderon">Borde en la ventana de chat</label></div>
+              <div class="swrow"><span class="swlab">Borde en la ventana de chat</span><label class="switch"><input id="f-winborderon" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <div class="row">
                 <div><label>Color del borde de la ventana</label><input id="f-winborder" type="color" value="#d9d9d4"></div>
                 <div><label>Grosor del borde: <span id="f-winborderw-v">1</span> px</label>
@@ -2814,7 +2838,7 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Textos y burbuja de invitación</div><div class="cs">Campo de escritura, invitación, mensajes</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="check"><input id="f-teaser" type="checkbox" checked><label for="f-teaser">Burbuja de invitación automática</label></div>
+              <div class="swrow"><span class="swlab">Burbuja de invitación automática</span><label class="switch"><input id="f-teaser" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
               <div class="row">
                 <div><label>Segundos hasta la invitación</label>
                   <input id="f-tdelay" type="number" min="1" max="60" value="4"></div>
@@ -2837,7 +2861,7 @@ const ADMIN_HTML = `<!doctype html>
               <div><div class="ct">Marca y avanzado</div><div class="cs">Pie del chat, tu firma, sonido, CSS</div></div>
               <span class="cv"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
             <div class="cfgb">
-              <div class="check"><input id="f-expobot" type="checkbox" checked><label for="f-expobot">Mostrar «Con tecnología de ExpoBot» + enlace a expobot.es <span class="lh">solo si no defines una marca propia debajo</span></label></div>
+              <div class="swrow"><span class="swlab">Mostrar «Con tecnología de ExpoBot» <small>+ enlace a expobot.es; solo si no defines una marca propia debajo</small></span><label class="switch"><input id="f-expobot" type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
               <label style="margin-top:16px">Marca propia en el pie <span class="lh">«Impulsado por…» — vacío = sin pie propio</span></label>
               <div class="row">
                 <div><label>Nombre de tu marca</label><input id="f-brand" placeholder="Tu Agencia"></div>
@@ -2845,7 +2869,7 @@ const ADMIN_HTML = `<!doctype html>
               </div>
               <label>Logotipo del pie <span class="lh">opcional; sustituye el nombre</span></label>
               <input id="f-brandlogo" type="url" placeholder="https://tuagencia.com/logotipo.svg">
-              <div class="check"><input id="f-sound" type="checkbox"><label for="f-sound">Sonido sutil al aparecer la invitación</label></div>
+              <div class="swrow"><span class="swlab">Sonido sutil al aparecer la invitación</span><label class="switch"><input id="f-sound" type="checkbox"><span class="track"></span><span class="knob"></span></label></div>
               <label style="margin-top:16px">CSS personalizado <span class="lh">avanzado; se inyecta tal cual en la web del cliente</span></label>
               <textarea id="f-css" rows="3" placeholder=".cb-btn{ } .cb-panel{ } .cb-msg.bot{ } …"></textarea>
             </div>
@@ -2996,8 +3020,11 @@ const ADMIN_HTML = `<!doctype html>
 
       <aside id="canvas-panel" class="hide">
         <div id="cv-sticky">
-          <div id="cv-bar"><span><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Vista en vivo</span>
-            <button id="cv-dark" class="ghost small" type="button"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg> Oscuro</button></div>
+          <div id="cv-bar"><span class="cv-eyebrow">Vista en vivo · así lo verá el visitante</span>
+            <div class="cv-tools">
+              <div class="cv-vp" id="cv-vp"><button type="button" class="on" data-vp="desktop">Escritorio</button><button type="button" data-vp="mobile">Móvil</button></div>
+              <button id="cv-dark" class="ghost small" type="button" title="Previsualizar en oscuro"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
+            </div></div>
           <div id="cv-frame">
             <div id="cv-widget">
               <div id="cv-h"><div id="cv-av">A</div>
@@ -4553,6 +4580,8 @@ function setBotTab(bt) {
     apBtn.classList.add("hide");
     ftShow("ft-comp");
   }
+  var vt = document.getElementById("v-tenant");
+  if (vt) vt.classList.toggle("dsn-only", bt === "diseno");
   if (bt === "resumen") renderBotOverview();
   if (bt === "canales") renderBotChannels();
   if (bt === "publicar") loadChecklist();
@@ -4832,9 +4861,17 @@ function setBgMode(m) {
 
 $("cv-dark").onclick = function () {
   cvDark = !cvDark;
-  $("cv-dark").innerHTML = cvDark ? svgIco("sun") + " Claro" : svgIco("moon") + " Oscuro";
+  $("cv-dark").innerHTML = cvDark ? svgIco("sun") : svgIco("moon");
+  $("cv-dark").title = cvDark ? "Previsualizar en claro" : "Previsualizar en oscuro";
   updPrev();
 };
+[].forEach.call(document.querySelectorAll("#cv-vp button"), function (b) {
+  b.onclick = function () {
+    [].forEach.call(document.querySelectorAll("#cv-vp button"), function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    $("cv-frame").classList.toggle("cv-mobile", b.dataset.vp === "mobile");
+  };
+});
 
 // ----- chat real dentro del canvas -----
 
