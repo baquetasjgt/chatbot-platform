@@ -402,7 +402,7 @@
           : brandBody) +
         "</div>";
     } else if (TH.expobot_branding !== false) {
-      var ebLogo = API + "/assets/expobot-wordmark-" + (isDark() ? "light" : "dark") + ".svg";
+      var ebLogo = API + "/brand/wordmark-" + (isDark() ? "light" : "dark") + ".svg";
       brand = '<div class="cb-brand"><a href="https://expobot.es" target="_blank" rel="noopener">Con tecnología de <img class="cb-eblogo" src="' + ebLogo + '" alt="ExpoBot"></a></div>';
     }
     panel.innerHTML =
@@ -782,7 +782,14 @@
   fetch(API + "/api/config?key=" + encodeURIComponent(KEY))
     .then(function (r) { return r.json(); })
     .then(function (d) {
-      if (d.error) return;
+      if (d.error) {
+        // canal web apagado desde el panel o dominio no autorizado: el widget
+        // no debe verse ni poder abrirse (sus mensajes darían error)
+        if (btn.parentNode) btn.parentNode.removeChild(btn);
+        if (panel.parentNode) panel.parentNode.removeChild(panel);
+        hideTeaser();
+        return;
+      }
       cfg = d;
       applyTheme();
       var autoMs = AUTO > 0 ? AUTO : (TH && TH.auto_open ? Math.max(1, (TH.teaser_delay || 3)) * 1000 : 0);

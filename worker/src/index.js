@@ -5636,7 +5636,7 @@ function updPrev() {
   $("cv-brand").innerHTML = brandLogo
     ? 'Impulsado por <img src="' + brandLogo.replace(/"/g, "") + '" alt="' + (brand || "Marca") + '" style="max-width:62px;max-height:14px;vertical-align:middle;margin-left:4px">'
     : brand ? "Impulsado por " + brand
-    : (expobotOn ? 'Con tecnología de <img src="/assets/expobot-wordmark-' + (cvDark ? "light" : "dark") + '.svg" alt="ExpoBot" style="height:13px;width:auto;vertical-align:middle;margin-left:4px">' : "");
+    : (expobotOn ? 'Con tecnología de <img src="/brand/wordmark-' + (cvDark ? "light" : "dark") + '.svg" alt="ExpoBot" style="height:13px;width:auto;vertical-align:middle;margin-left:4px">' : "");
   $("cv-brand").style.background = cbg;
   $("cv-brand").style.color = cvDark ? "#777" : "#999";
 
@@ -8323,6 +8323,13 @@ export default {
           headers: { "Content-Type": "image/svg+xml;charset=utf-8", "Cache-Control": "public, max-age=86400" },
         });
       }
+      // wordmark oscuro con ruta propia (servida en cualquier host, no solo en
+      // expobot.es): la usan el widget embebido y la vista previa del panel
+      if (url.pathname === "/brand/wordmark-dark.svg") {
+        return new Response(BRAND_WORDMARK_DARK, {
+          headers: { "Content-Type": "image/svg+xml;charset=utf-8", "Cache-Control": "public, max-age=86400" },
+        });
+      }
       if (url.pathname === "/widget.js") {
         return new Response(WIDGET_JS, {
           headers: {
@@ -8410,10 +8417,16 @@ ${inject}</body></html>`;
       if (url.pathname === "/api/config") {
         const tenant = await getTenant(env, url.searchParams.get("key"));
         if (!tenant) return json({ error: "clave no válida" }, 401);
+        // el host propio se permite siempre: las páginas /demo viven en él
+        const cc = cors(origin, [...(tenant.allowed_domains || []), url.hostname]);
+        // mismo criterio que /api/chat: contextos de origen «null» (iframe
+        // aislado, data:) no pueden leer la config
+        if (cc["Access-Control-Allow-Origin"] === "null") {
+          return json({ error: "dominio no autorizado" }, 403, cc);
+        }
         // canal web apagado desde el panel (Canales): el widget no se renderiza
         if (tenant.features && tenant.features.web === false) {
-          return json({ error: "canal web desactivado" }, 403,
-            cors(origin, [...(tenant.allowed_domains || []), url.hostname]));
+          return json({ error: "canal web desactivado" }, 403, cc);
         }
         return json(
           {
@@ -8424,8 +8437,7 @@ ${inject}</body></html>`;
             theme: tenant.theme || {},
           },
           200,
-          // el host propio se permite siempre: las páginas /demo viven en él
-          cors(origin, [...(tenant.allowed_domains || []), url.hostname])
+          cc
         );
       }
 
