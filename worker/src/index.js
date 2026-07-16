@@ -615,6 +615,36 @@ const ESCALATE_TOOL = {
   },
 };
 
+// ---------- costes por tokens (control de gasto y margen) ----------
+// Precios por MILLÓN de tokens en USD (entrada/salida), resueltos por prefijo del
+// nombre del modelo (gana el prefijo más largo). Ajustables SIN desplegar mediante
+// el secreto MODEL_PRICES_JSON (mismo formato, se fusiona encima). El cambio a
+// euros usa EUR_PER_USD (por defecto 0,90). La entrada "elevenlabs" queda
+// preparada para el futuro canal de voz (se factura por minuto, no por token).
+const MODEL_PRICES_USD = {
+  "claude-opus": { in: 15, out: 75 },
+  "claude-sonnet": { in: 3, out: 15 },
+  "claude-haiku": { in: 1, out: 5 },
+  "gemini-3.5-pro": { in: 2.5, out: 15 },
+  "gemini-3.5-flash": { in: 0.3, out: 2.5 },
+  "gemini-3.1-flash-lite": { in: 0.1, out: 0.4 },
+  gemini: { in: 0.3, out: 2.5 },
+  elevenlabs: { per_minute: 0.08 },
+};
+function modelPrice(env, model) {
+  let table = MODEL_PRICES_USD;
+  if (env.MODEL_PRICES_JSON) {
+    try { table = { ...MODEL_PRICES_USD, ...JSON.parse(env.MODEL_PRICES_JSON) }; } catch (e) {}
+  }
+  const m = String(model || "").toLowerCase();
+  let best = null;
+  let bestLen = -1;
+  for (const k of Object.keys(table)) {
+    if (m.startsWith(k) && k.length > bestLen) { best = table[k]; bestLen = k.length; }
+  }
+  return best;
+}
+
 // prompt maestro: normas generales que se AÑADEN al system_prompt de TODOS los bots.
 // Su objetivo principal ahora: que el bot resuelva por sí mismo y no derive rápido.
 const MASTER_PROMPT =
@@ -2732,6 +2762,67 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
     );
   }
 
+  // --- costes por tokens y margen por cliente (mes actual o ?month=YYYY-MM) ---
+  if (url.pathname === "/admin/api/costs" && request.method === "GET") {
+    const monthParam = url.searchParams.get("month");
+    const monthDate = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam + "-01" : null;
+    const eurPerUsd = Math.min(2, Math.max(0.5, Number(env.EUR_PER_USD) || 0.9));
+    const [usage, tenants] = await Promise.all([
+      rpc(env, "admin_token_usage", monthDate ? { p_month: monthDate } : {}),
+      sb(env, "tenants?select=id,name,model,project_id,projects(client_id,clients(id,name))"),
+    ]);
+    const now = new Date();
+    const mStart = monthDate
+      ? new Date(monthDate + "T00:00:00Z")
+      : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const mEnd = new Date(Date.UTC(mStart.getUTCFullYear(), mStart.getUTCMonth() + 1, 1));
+    const invoices = await sb(
+      env,
+      `invoices?issued_at=gte.${mStart.toISOString().slice(0, 10)}&issued_at=lt.${mEnd.toISOString().slice(0, 10)}&select=client_id,amount_cents`
+    );
+    const byTenant = new Map((usage || []).map((u) => [u.tenant_id, u]));
+    const rows = [];
+    const clients = new Map();
+    for (const t of tenants || []) {
+      const u = byTenant.get(t.id) || { input_tokens: 0, output_tokens: 0, questions: 0 };
+      const price = modelPrice(env, t.model);
+      const usd = price && price.in != null
+        ? (u.input_tokens / 1e6) * price.in + (u.output_tokens / 1e6) * price.out
+        : null;
+      const eur = usd == null ? null : usd * eurPerUsd;
+      const clientId = t.projects?.client_id || null;
+      const clientName = t.projects?.clients?.name || "(sin cliente)";
+      rows.push({
+        tenant_id: t.id,
+        name: t.name,
+        model: t.model,
+        client: clientName,
+        input_tokens: Number(u.input_tokens) || 0,
+        output_tokens: Number(u.output_tokens) || 0,
+        questions: Number(u.questions) || 0,
+        cost_eur: eur == null ? null : Math.round(eur * 10000) / 10000,
+        priced: !!(price && price.in != null),
+      });
+      if (clientId) {
+        const c = clients.get(clientId) || { client_id: clientId, name: clientName, cost_eur: 0, income_eur: 0, unpriced: false };
+        if (eur == null) c.unpriced = true;
+        else c.cost_eur += eur;
+        clients.set(clientId, c);
+      }
+    }
+    for (const inv of invoices || []) {
+      const c = clients.get(inv.client_id);
+      if (c) c.income_eur += (inv.amount_cents || 0) / 100;
+    }
+    const clientRows = [...clients.values()].map((c) => ({
+      ...c,
+      cost_eur: Math.round(c.cost_eur * 100) / 100,
+      income_eur: Math.round(c.income_eur * 100) / 100,
+      margin_eur: Math.round((c.income_eur - c.cost_eur) * 100) / 100,
+    }));
+    return json({ month: mStart.toISOString().slice(0, 7), eur_per_usd: eurPerUsd, tenants: rows, clients: clientRows });
+  }
+
   // --- informe mensual bajo demanda ---
   const mRep = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/send-report$/);
   if (mRep && request.method === "POST") {
@@ -3878,6 +3969,17 @@ const ADMIN_HTML = `<!doctype html>
     #cv-frame{padding:10px}
     .copyrow{flex-wrap:wrap}
     .copyrow input,.copyrow textarea{min-width:0}
+    /* Bandeja: tarjetas y burbujas cómodas en pantalla estrecha */
+    #v-inbox .ibx-h{flex-wrap:wrap;gap:6px}
+    #v-inbox .ibx-meta{white-space:normal}
+    #v-inbox .ibx-m{max-width:94%}
+    #v-inbox .convreply{flex-wrap:wrap}
+    #v-inbox .convreply input{min-width:0;flex:1 1 160px}
+    /* Leads: la tabla se desplaza en horizontal sin romper la página */
+    #v-leads .twrap,#v-leads>div[style*="overflow"]{-webkit-overflow-scrolling:touch}
+    #v-leads table{font-size:12.5px}
+    .ops-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #ops-costs table{font-size:11.5px}
   }
   .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:fit-content}
   .seg button{border:0;background:#fff;padding:8px 16px;font-size:13.5px;cursor:pointer;color:#555}
@@ -3979,6 +4081,14 @@ const ADMIN_HTML = `<!doctype html>
           <div><label>Teléfono (opcional)</label><input id="w-phone"></div>
         </div>
         <label>Cuéntale a la IA qué hace el negocio y qué debe conseguir el bot</label>
+        <div id="w-sectors" style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px">
+          <button type="button" class="ghost small" data-sector="clinica">🦷 Clínica</button>
+          <button type="button" class="ghost small" data-sector="restaurante">🍽 Restaurante</button>
+          <button type="button" class="ghost small" data-sector="asesoria">📋 Asesoría</button>
+          <button type="button" class="ghost small" data-sector="inmobiliaria">🏠 Inmobiliaria</button>
+          <button type="button" class="ghost small" data-sector="feria">🎪 Feria / evento</button>
+          <button type="button" class="ghost small" data-sector="ecommerce">🛒 Tienda online</button>
+        </div>
         <textarea id="w-brief" rows="3" placeholder="Clínica dental en Valencia. El bot resuelve dudas de tratamientos y precios orientativos, capta pacientes interesados con nombre y teléfono, y nunca da consejo médico."></textarea>
         <div class="actions">
           <button id="w-go" class="primary">Crear cliente y chatbot con IA</button>
@@ -4055,6 +4165,8 @@ const ADMIN_HTML = `<!doctype html>
           <div class="ops-stat"><span>Integraciones con error</span><strong id="ops-integration-errors">0</strong></div>
           <div class="ops-stat"><span>Errores recientes</span><strong id="ops-error-count">0</strong></div>
         </div>
+        <div class="data-surface ops-list"><div class="surface-head"><h2>Costes y margen — mes en curso</h2><span>Gasto de IA por bot (tokens × precio del modelo, en €) frente a lo facturado a cada cliente</span></div>
+          <div id="ops-costs" class="mut">Cargando…</div></div>
         <div class="data-surface ops-list"><div class="surface-head"><h2>Incidencias recientes</h2><span>Últimos registros del motor</span></div><div id="ops-errors" class="mut">Cargando…</div></div>
       </section>
 
@@ -5568,6 +5680,64 @@ function goOps() {
       box.appendChild(d);
     });
   });
+  renderOpsCosts();
+}
+
+// costes del mes: cuánto gasta cada bot en IA y qué margen deja cada cliente
+function renderOpsCosts() {
+  var box = $("ops-costs"); if (!box) return;
+  api("/admin/api/costs").then(function (d) {
+    if (!d || d.error) { box.textContent = "No disponible."; return; }
+    box.className = "";
+    box.innerHTML = "";
+    var eur = function (v) { return v == null ? "—" : v.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"; };
+    var tk = function (v) { return (v || 0) >= 1000 ? Math.round(v / 1000) + "k" : String(v || 0); };
+    // por bot
+    var t1 = document.createElement("table");
+    t1.style.cssText = "width:100%;border-collapse:collapse;font-size:12.5px";
+    t1.innerHTML = "<thead><tr style='text-align:left;color:var(--mut)'><th style='padding:6px 8px'>Bot</th><th>Cliente</th><th>Modelo</th><th style='text-align:right'>Tokens (ent/sal)</th><th style='text-align:right'>Consultas</th><th style='text-align:right'>Coste IA</th></tr></thead>";
+    var tb1 = document.createElement("tbody");
+    (d.tenants || []).forEach(function (r) {
+      var tr = document.createElement("tr");
+      tr.style.borderTop = "1px solid var(--line)";
+      function td(text, right) { var c = document.createElement("td"); c.style.cssText = "padding:6px 8px" + (right ? ";text-align:right" : ""); c.textContent = text; return c; }
+      tr.appendChild(td(r.name)); tr.appendChild(td(r.client)); tr.appendChild(td(r.model || "—"));
+      tr.appendChild(td(tk(r.input_tokens) + " / " + tk(r.output_tokens), true));
+      tr.appendChild(td(String(r.questions), true));
+      tr.appendChild(td(r.priced ? eur(r.cost_eur) : "sin precio", true));
+      tb1.appendChild(tr);
+    });
+    t1.appendChild(tb1);
+    box.appendChild(t1);
+    // por cliente: coste vs facturado vs margen
+    if ((d.clients || []).length) {
+      var h = document.createElement("div");
+      h.style.cssText = "margin:14px 0 4px;font-weight:700;font-size:13px";
+      h.textContent = "Margen por cliente (coste de IA frente a facturas emitidas en " + d.month + ")";
+      box.appendChild(h);
+      var t2 = document.createElement("table");
+      t2.style.cssText = "width:100%;border-collapse:collapse;font-size:12.5px";
+      t2.innerHTML = "<thead><tr style='text-align:left;color:var(--mut)'><th style='padding:6px 8px'>Cliente</th><th style='text-align:right'>Coste IA</th><th style='text-align:right'>Facturado</th><th style='text-align:right'>Margen</th></tr></thead>";
+      var tb2 = document.createElement("tbody");
+      d.clients.forEach(function (c) {
+        var tr = document.createElement("tr");
+        tr.style.borderTop = "1px solid var(--line)";
+        function td(text, right, color) { var x = document.createElement("td"); x.style.cssText = "padding:6px 8px" + (right ? ";text-align:right" : "") + (color ? ";color:" + color + ";font-weight:700" : ""); x.textContent = text; return x; }
+        tr.appendChild(td(c.name));
+        tr.appendChild(td(eur(c.cost_eur) + (c.unpriced ? " (+ modelos sin precio)" : ""), true));
+        tr.appendChild(td(eur(c.income_eur), true));
+        tr.appendChild(td(eur(c.margin_eur), true, c.margin_eur >= 0 ? "var(--ok)" : "var(--err)"));
+        tb2.appendChild(tr);
+      });
+      t2.appendChild(tb2);
+      box.appendChild(t2);
+      var note = document.createElement("p");
+      note.className = "mut";
+      note.style.marginTop = "8px";
+      note.textContent = "Precios por millón de tokens según el modelo (ajustables con el secreto MODEL_PRICES_JSON); cambio a euros con EUR_PER_USD (" + d.eur_per_usd + "). El coste de voz (ElevenLabs) se sumará aquí cuando el canal telefónico esté activo.";
+      box.appendChild(note);
+    }
+  }).catch(function () { box.textContent = "No disponible."; });
 }
 
 function goTemplates() { if (!guardNav()) return; sel = { type: "templates" }; setGlobalNav("templates"); renderTree(); crumb(["Plantillas"]); showCards(["v-templates"]); }
@@ -5830,6 +6000,23 @@ function slugify(s) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
+
+// plantillas por sector: prerellenan el brief con un encargo bien redactado que
+// la IA del wizard convierte en configuración completa; el admin solo personaliza
+var SECTOR_BRIEFS = {
+  clinica: "Clínica de salud en [ciudad]. El bot resuelve dudas sobre tratamientos, precios orientativos, horarios y cómo pedir cita; capta pacientes interesados con nombre y teléfono; NUNCA da consejo médico ni diagnostica: ante síntomas deriva a la consulta.",
+  restaurante: "Restaurante en [ciudad]. El bot informa de carta, alérgenos, horarios, ubicación y eventos privados; gestiona intenciones de reserva captando nombre, teléfono, día y comensales; tono cercano y apetitoso.",
+  asesoria: "Asesoría/gestoría en [ciudad]. El bot resuelve dudas frecuentes de servicios (fiscal, laboral, contable), plazos e impuestos de forma orientativa; capta empresas y autónomos interesados con nombre, email y necesidad; nunca da asesoramiento vinculante: deriva a consulta con el equipo.",
+  inmobiliaria: "Inmobiliaria en [zona]. El bot informa de compra, venta y alquiler, proceso y documentación; cualifica interesados (comprar/vender/alquilar, zona y presupuesto) y capta nombre y teléfono para que un agente les llame.",
+  feria: "Feria/evento profesional en [recinto y fechas]. El bot informa de fechas, horarios, entradas, cómo llegar, programa y expositores; capta como leads a las EMPRESAS interesadas en exponer (nombre, empresa, email); no inventa fechas ni precios: si no está en el contexto, deriva a contacto.",
+  ecommerce: "Tienda online de [productos]. El bot resuelve dudas de productos, tallas, envíos, plazos y devoluciones; recomienda según necesidad; capta email de interesados si un producto no está disponible; ante incidencias de pedido pide el número y deriva a atención al cliente.",
+};
+[].forEach.call(document.querySelectorAll("#w-sectors button"), function (b) {
+  b.onclick = function () {
+    $("w-brief").value = SECTOR_BRIEFS[b.dataset.sector] || "";
+    $("w-brief").focus();
+  };
+});
 
 $("w-go").onclick = function () {
   var name = $("w-name").value.trim();
