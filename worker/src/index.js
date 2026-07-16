@@ -8921,14 +8921,9 @@ function renderConvs() {
         body.appendChild(rrow);
       }
     }
-    var delRow = document.createElement("div");
-    delRow.className = "convdel";
-    var del = document.createElement("button");
-    del.className = "mini";
-    del.innerHTML = svgIco("trash") + " Eliminar esta conversación";
-    del.onclick = function () {
+    var doDelete = function (btn) {
       if (!confirm("¿Eliminar esta conversación entera? No se puede deshacer.")) return;
-      del.disabled = true;
+      if (btn) btn.disabled = true;
       fetch("/panel/delete?token=" + encodeURIComponent(token), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -8941,13 +8936,22 @@ function renderConvs() {
           renderGaps();
           renderStats();
           renderChart();
-        } else del.disabled = false;
-      }).catch(function () { del.disabled = false; });
+        } else if (btn) btn.disabled = false;
+      }).catch(function () { if (btn) btn.disabled = false; });
     };
-    delRow.appendChild(del);
-    body.appendChild(delRow);
+    // borrar sin desplegar: papelera visible en la propia fila
+    box.style.position = "relative";
+    head.style.paddingRight = "52px";
+    var qdel = document.createElement("button");
+    qdel.className = "del";
+    qdel.title = "Eliminar conversación";
+    qdel.setAttribute("aria-label", "Eliminar conversación");
+    qdel.innerHTML = svgIco("trash");
+    qdel.style.cssText = "position:absolute;top:9px;right:10px;z-index:2;width:auto;display:inline-flex;align-items:center;padding:4px 7px";
+    qdel.onclick = function (e) { if (e) e.stopPropagation(); doDelete(qdel); };
     box.appendChild(head);
     box.appendChild(body);
+    box.appendChild(qdel);
     // mantener abierta la conversación que estabas mirando (o la que atiendes)
     if (OPEN_CONVS[c.id] || c.human_handoff) box.classList.add("open");
     cv.appendChild(box);
