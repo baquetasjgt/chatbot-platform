@@ -327,16 +327,37 @@ const FORM_TOOL = {
 const ESCALATE_TOOL = {
   name: "avisar_a_persona",
   description:
-    "Avisa a una persona del equipo para que tome el control y responda personalmente por este canal. " +
-    "Úsala SOLO cuando el usuario pide expresamente hablar con una persona/agente/humano/operador, " +
-    "o cuando muestra enfado real o una urgencia que necesita atención humana. " +
-    "NO la uses para preguntas normales que puedas responder con el contexto.",
+    "Avisa a una persona del equipo para que tome el control y responda personalmente. " +
+    "Sé EXIGENTE: no la uses a la ligera ni a la primera. Úsala SOLO en uno de estos casos: " +
+    "(1) no puedes responder ese tipo de consulta con tu conocimiento y de verdad requiere a una persona; " +
+    "(2) el cliente está visiblemente enfadado o molesto; " +
+    "(3) es algo importante, urgente o de vital importancia; " +
+    "(4) el cliente pide hablar con una persona de forma expresa AL MENOS DOS veces (la primera vez, intenta ayudarle tú; solo si insiste, avisa). " +
+    "NO la uses para preguntas normales que puedas responder tú.",
   input_schema: {
     type: "object",
     properties: { motivo: { type: "string", description: "Motivo breve por el que hace falta una persona" } },
     required: [],
   },
 };
+
+// prompt maestro: normas generales que se AÑADEN al system_prompt de TODOS los bots.
+// Su objetivo principal ahora: que el bot resuelva por sí mismo y no derive rápido.
+const MASTER_PROMPT =
+  "\n\n== Normas generales de atención (se aplican siempre, además de tus instrucciones) ==\n" +
+  "Tu prioridad es AYUDAR y resolver tú mismo con tu conocimiento y el contexto. La mayoría de " +
+  "consultas puedes resolverlas o encaminarlas sin pasar a nadie.\n" +
+  "NO derives a una persona a la ligera ni a la primera. Deriva (o avisa para que intervenga una " +
+  "persona) SOLO en estos casos:\n" +
+  "1) No puedes responder ese tipo de consulta con tu conocimiento y de verdad necesita a una persona " +
+  "(gestiones concretas de su cuenta, decisiones, casos fuera de tu alcance). Antes, ofrece lo que sí sabes.\n" +
+  "2) El cliente está visiblemente enfadado o molesto.\n" +
+  "3) Parece algo importante, urgente o de vital importancia (una incidencia grave, algo sensible o que no admite espera).\n" +
+  "4) El cliente pide hablar con una persona de forma expresa AL MENOS DOS veces. La primera vez que lo " +
+  "pida, atiéndele tú con normalidad e intenta ayudarle; si insiste, entonces sí derívalo.\n" +
+  "Si no se da ninguno de estos casos, sigue atendiendo tú con naturalidad. Cuando derives, hazlo con " +
+  "calma y tranquiliza al cliente («te paso con una persona del equipo, te atenderá enseguida»). " +
+  "Nunca inventes datos que no tengas: si no lo sabes, dilo y ofrece el contacto.";
 
 // herramientas disponibles según el tenant y si el canal admite relevo humano
 function toolsFor(tenant, allowEscalate) {
@@ -350,7 +371,7 @@ function toolsFor(tenant, allowEscalate) {
 
 async function callClaude(env, tenant, messages, contextBlock, allowEscalate) {
   const system = [
-    { type: "text", text: tenant.system_prompt },
+    { type: "text", text: (tenant.system_prompt || "") + MASTER_PROMPT },
     {
       type: "text",
       text:
@@ -448,7 +469,7 @@ async function callGemini(env, tenant, contents, contextBlock, allowEscalate) {
   if (!env.GEMINI_API_KEY) throw new Error("Falta el secreto GEMINI_API_KEY");
 
   const system =
-    tenant.system_prompt +
+    (tenant.system_prompt || "") + MASTER_PROMPT +
     "\n\nCONTEXTO (única fuente de verdad; si la respuesta no está aquí, dilo y ofrece el contacto):\n\n" +
     (contextBlock || "[No se ha encontrado información relevante para esta pregunta.]");
 
