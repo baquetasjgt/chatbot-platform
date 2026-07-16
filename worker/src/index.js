@@ -322,9 +322,33 @@ const FORM_TOOL = {
   },
 };
 
+// tercera herramienta (solo en canales de mensajería): el bot avisa de que hace
+// falta una persona y pausa su intervención hasta que el humano tome el control
+const ESCALATE_TOOL = {
+  name: "avisar_a_persona",
+  description:
+    "Avisa a una persona del equipo para que tome el control y responda personalmente por este canal. " +
+    "Úsala SOLO cuando el usuario pide expresamente hablar con una persona/agente/humano/operador, " +
+    "o cuando muestra enfado real o una urgencia que necesita atención humana. " +
+    "NO la uses para preguntas normales que puedas responder con el contexto.",
+  input_schema: {
+    type: "object",
+    properties: { motivo: { type: "string", description: "Motivo breve por el que hace falta una persona" } },
+    required: [],
+  },
+};
+
+// herramientas disponibles según el tenant y si el canal admite relevo humano
+function toolsFor(tenant, allowEscalate) {
+  const t = [];
+  if (leadCaptureEnabled(tenant)) t.push(LEAD_TOOL, FORM_TOOL);
+  if (allowEscalate) t.push(ESCALATE_TOOL);
+  return t;
+}
+
 // ---------- llamada a Claude ----------
 
-async function callClaude(env, tenant, messages, contextBlock) {
+async function callClaude(env, tenant, messages, contextBlock, allowEscalate) {
   const system = [
     { type: "text", text: tenant.system_prompt },
     {
@@ -347,7 +371,7 @@ async function callClaude(env, tenant, messages, contextBlock) {
       max_tokens: 800,
       system,
       messages,
-      tools: leadCaptureEnabled(tenant) ? [LEAD_TOOL, FORM_TOOL] : [],
+      tools: toolsFor(tenant, allowEscalate),
     }),
   });
 
@@ -368,15 +392,21 @@ function pickRunner(tenant) {
   return tenant.provider === "google" ? runGemini : runClaude;
 }
 
-async function runClaude(env, tenant, history, message, contextBlock, saveLead) {
+async function runClaude(env, tenant, history, message, contextBlock, saveLead, opts) {
+  opts = opts || {};
   const msgs = [...history, { role: "user", content: message }];
-  let reply = await callClaude(env, tenant, msgs, contextBlock);
+  let reply = await callClaude(env, tenant, msgs, contextBlock, opts.allowEscalate);
   let leadForm = null;
+  let escalated = false;
 
   const toolUse = reply.content.find((b) => b.type === "tool_use");
   if (toolUse && toolUse.name === FORM_TOOL.name) {
     // el widget pinta el formulario; el texto que acompañe a la llamada es la invitación
     leadForm = { kind: toolUse.input?.kind || null };
+  } else if (toolUse && toolUse.name === ESCALATE_TOOL.name) {
+    // el modelo pide relevo humano: pausamos el bot y avisamos a la persona
+    escalated = true;
+    if (opts.onEscalate) await opts.onEscalate(toolUse.input?.motivo || "");
   } else if (toolUse) {
     await saveLead(toolUse.input);
     msgs.push({ role: "assistant", content: reply.content });
@@ -390,7 +420,7 @@ async function runClaude(env, tenant, history, message, contextBlock, saveLead) 
         },
       ],
     });
-    reply = await callClaude(env, tenant, msgs, contextBlock);
+    reply = await callClaude(env, tenant, msgs, contextBlock, opts.allowEscalate);
   }
 
   let text = reply.content
@@ -399,10 +429,12 @@ async function runClaude(env, tenant, history, message, contextBlock, saveLead) 
     .join("\n")
     .trim();
   if (!text && leadForm) text = "¡Genial! Déjame tus datos y el equipo te contactará muy pronto 👇";
+  if (!text && escalated) text = "Enseguida te atiende una persona del equipo por aquí. Un momento, por favor 🙌";
 
   return {
     text,
     leadForm,
+    escalated,
     usage: {
       input_tokens: reply.usage?.input_tokens,
       output_tokens: reply.usage?.output_tokens,
@@ -412,13 +444,19 @@ async function runClaude(env, tenant, history, message, contextBlock, saveLead) 
 
 // ---------- llamada a Gemini ----------
 
-async function callGemini(env, tenant, contents, contextBlock) {
+async function callGemini(env, tenant, contents, contextBlock, allowEscalate) {
   if (!env.GEMINI_API_KEY) throw new Error("Falta el secreto GEMINI_API_KEY");
 
   const system =
     tenant.system_prompt +
     "\n\nCONTEXTO (única fuente de verdad; si la respuesta no está aquí, dilo y ofrece el contacto):\n\n" +
     (contextBlock || "[No se ha encontrado información relevante para esta pregunta.]");
+
+  const decls = toolsFor(tenant, allowEscalate).map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.input_schema,
+  }));
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${tenant.model}:generateContent`,
@@ -431,24 +469,7 @@ async function callGemini(env, tenant, contents, contextBlock) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents,
-        tools: leadCaptureEnabled(tenant)
-          ? [
-              {
-                functionDeclarations: [
-                  {
-                    name: LEAD_TOOL.name,
-                    description: LEAD_TOOL.description,
-                    parameters: LEAD_TOOL.input_schema,
-                  },
-                  {
-                    name: FORM_TOOL.name,
-                    description: FORM_TOOL.description,
-                    parameters: FORM_TOOL.input_schema,
-                  },
-                ],
-              },
-            ]
-          : [],
+        tools: decls.length ? [{ functionDeclarations: decls }] : [],
         generationConfig: {
           maxOutputTokens: 2000,
           thinkingConfig: { thinkingLevel: "low" },
@@ -461,7 +482,8 @@ async function callGemini(env, tenant, contents, contextBlock) {
   return res.json();
 }
 
-async function runGemini(env, tenant, history, message, contextBlock, saveLead) {
+async function runGemini(env, tenant, history, message, contextBlock, saveLead, opts) {
+  opts = opts || {};
   const contents = [
     ...history.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -469,14 +491,18 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
     })),
     { role: "user", parts: [{ text: message }] },
   ];
-  let reply = await callGemini(env, tenant, contents, contextBlock);
+  let reply = await callGemini(env, tenant, contents, contextBlock, opts.allowEscalate);
   let cand = reply.candidates?.[0];
   let leadForm = null;
+  let escalated = false;
 
   const call = cand?.content?.parts?.find((p) => p.functionCall);
   if (call && call.functionCall.name === FORM_TOOL.name) {
     // el widget pinta el formulario; el texto que acompañe a la llamada es la invitación
     leadForm = { kind: call.functionCall.args?.kind || null };
+  } else if (call && call.functionCall.name === ESCALATE_TOOL.name) {
+    escalated = true;
+    if (opts.onEscalate) await opts.onEscalate(call.functionCall.args?.motivo || "");
   } else if (call) {
     await saveLead(call.functionCall.args);
     // el content vuelve tal cual: Gemini 3 exige conservar las thought signatures
@@ -492,7 +518,7 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
         },
       ],
     });
-    reply = await callGemini(env, tenant, contents, contextBlock);
+    reply = await callGemini(env, tenant, contents, contextBlock, opts.allowEscalate);
     cand = reply.candidates?.[0];
   }
 
@@ -502,10 +528,12 @@ async function runGemini(env, tenant, history, message, contextBlock, saveLead) 
     .join("\n")
     .trim();
   if (!text && leadForm) text = "¡Genial! Déjame tus datos y el equipo te contactará muy pronto 👇";
+  if (!text && escalated) text = "Enseguida te atiende una persona del equipo por aquí. Un momento, por favor 🙌";
 
   return {
     text,
     leadForm,
+    escalated,
     usage: {
       input_tokens: reply.usageMetadata?.promptTokenCount,
       output_tokens: reply.usageMetadata?.candidatesTokenCount,
@@ -836,8 +864,23 @@ async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history) {
     else await notifyLeadInstant(env, tenant, l).catch(() => {});
   };
 
+  // en canales de mensajería (WhatsApp/Telegram) el bot puede pasar el relevo a
+  // una persona: pausa su intervención en esta conversación y avisa
+  const isChannel = pageUrl === "whatsapp" || pageUrl === "telegram";
+  const doEscalate = async (motivo) => {
+    await sb(env, `conversations?id=eq.${conv.id}`, {
+      method: "PATCH",
+      body: { human_handoff: true, handoff_at: new Date().toISOString() },
+    });
+    const notify = notifyHandoff(env, tenant, conv, message, motivo, pageUrl);
+    if (ctx && ctx.waitUntil) ctx.waitUntil(notify); else await notify.catch(() => {});
+  };
+
   const run = pickRunner(tenant);
-  const { text, usage, leadForm } = await run(env, tenant, hist, message, contextBlock, saveLead);
+  const { text, usage, leadForm } = await run(
+    env, tenant, hist, message, contextBlock, saveLead,
+    isChannel ? { allowEscalate: true, onEscalate: doEscalate } : {}
+  );
   const sources = [...new Set((hits || []).map((hh) => hh.source_url).filter(Boolean))].slice(0, 3);
 
   await sb(env, "messages", {
@@ -879,6 +922,80 @@ async function tenantForIntegration(env, integration) {
   if (!ids.length) return null;
   const rows = await sb(env, `tenants?id=in.(${ids.map((x) => `"${x}"`).join(",")})&active=is.true&select=*&limit=1`);
   return rows?.[0] || null;
+}
+
+// tiempo (ms) tras el cual, si nadie del equipo sigue activo, el bot retoma solo
+const HANDOFF_TTL_MS = 12 * 3600 * 1000;
+
+// estado de relevo de una conversación de canal (por session_id wa:/tg:)
+// devuelve { id, paused }; aplica la reactivación de seguridad si está caducado
+async function channelHandoffState(env, tenantId, sid) {
+  const [c] = await sb(env, `conversations?tenant_id=eq.${tenantId}&session_id=eq.${encodeURIComponent(sid)}&select=id,human_handoff,handoff_at&limit=1`);
+  if (!c) return { id: null, paused: false };
+  let paused = !!c.human_handoff;
+  if (paused && c.handoff_at && Date.now() - new Date(c.handoff_at).getTime() > HANDOFF_TTL_MS) {
+    await sb(env, `conversations?id=eq.${c.id}`, { method: "PATCH", body: { human_handoff: false } });
+    paused = false;
+  }
+  return { id: c.id, paused };
+}
+
+// guarda un mensaje entrante SIN que el bot responda (conversación en manos humanas)
+async function saveInboundOnly(env, tenantId, convId, sid, text, pageUrl) {
+  let cid = convId;
+  if (!cid) {
+    cid = (await sb(env, "conversations", { method: "POST", body: { tenant_id: tenantId, session_id: sid, page_url: pageUrl } }))[0].id;
+  }
+  await sb(env, "messages", {
+    method: "POST",
+    body: { tenant_id: tenantId, conversation_id: cid, role: "user", content: text, sources: [], input_tokens: null, output_tokens: null, was_answered: null },
+  });
+  await sb(env, `conversations?id=eq.${cid}`, { method: "PATCH", body: { last_message_at: new Date().toISOString() } });
+}
+
+// envía un mensaje escrito por una PERSONA al cliente por su canal (WhatsApp/Telegram),
+// lo guarda como mensaje del asistente y mantiene vivo el relevo humano
+async function sendHumanReply(env, tenant, conv, text) {
+  const sid = conv.session_id || "";
+  const provider = sid.startsWith("wa:") ? "whatsapp" : sid.startsWith("tg:") ? "telegram" : null;
+  if (!provider) throw new Error("Esta conversación no es de un canal de mensajería.");
+  const to = sid.slice(3);
+  const [integ] = await sb(env, `project_integrations?provider=eq.${provider}&status=eq.connected&assigned_tenant_ids=cs.{${tenant.id}}&limit=1`);
+  if (!integ || !integ.settings) throw new Error("No hay un canal " + provider + " conectado para este asistente.");
+  if (provider === "whatsapp") await waSendText(integ.settings.access_token, integ.settings.phone_number_id, to, text);
+  else await tgSendText(integ.settings.bot_token, to, text);
+  await sb(env, "messages", {
+    method: "POST",
+    body: { tenant_id: tenant.id, conversation_id: conv.id, role: "assistant", content: text, sources: [], input_tokens: null, output_tokens: null, was_answered: true },
+  });
+  // responder desde el panel mantiene (o activa) el relevo y renueva su caducidad
+  await sb(env, `conversations?id=eq.${conv.id}`, {
+    method: "PATCH",
+    body: { human_handoff: true, handoff_at: new Date().toISOString(), last_message_at: new Date().toISOString() },
+  });
+}
+
+// aviso al cliente/gestor de que un cliente pide atención humana en un canal
+async function notifyHandoff(env, tenant, conv, customerMsg, motivo, channel) {
+  try {
+    const to = await leadNotifyEmail(env, tenant);
+    if (!to) return;
+    const canal = channel === "whatsapp" ? "WhatsApp" : channel === "telegram" ? "Telegram" : "un canal";
+    await sendEmail(
+      env,
+      to,
+      `🙋 Un cliente pide atención humana — ${tenant.name}`,
+      emailShell(
+        `<h2 style="margin:0 0 10px;font-size:18px">Alguien quiere hablar con una persona</h2>` +
+          `<p style="margin:0 0 8px">En <b>${h(tenant.name)}</b>, por <b>${h(canal)}</b>, el bot ha pasado el relevo.</p>` +
+          (motivo ? `<p style="margin:0 0 8px;color:#6b7590">Motivo: ${h(motivo)}</p>` : "") +
+          (customerMsg ? `<p style="margin:0 0 14px">Último mensaje del cliente: «${h(String(customerMsg).slice(0, 300))}»</p>` : "") +
+          `<p style="margin:0;color:#6b7590;font-size:13px">Entra en el panel para tomar el control y responderle. El bot ya no contestará en esa conversación hasta que lo devuelvas.</p>`
+      )
+    );
+  } catch (e) {
+    await logError(env, "handoff-notify/" + tenant.slug, e?.message || e).catch(() => {});
+  }
 }
 
 async function runDailyLeadDigests(env) {
@@ -2073,6 +2190,34 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
       return json({ error: "No se ha podido conectar ahora mismo. Inténtalo de nuevo." }, 502);
     }
   }
+  // --- relevo humano desde el admin (mismas acciones que el panel del cliente) ---
+  const mConvHand = url.pathname.match(/^\/admin\/api\/conversations\/([0-9a-f-]{36})\/handoff$/);
+  if (mConvHand && request.method === "POST") {
+    const { on } = await request.json();
+    const [row] = await sb(env, `conversations?id=eq.${mConvHand[1]}`, {
+      method: "PATCH",
+      body: { human_handoff: !!on, handoff_at: on ? new Date().toISOString() : null },
+    });
+    if (!row) return json({ error: "conversación no encontrada" }, 404);
+    return json({ ok: true, human_handoff: !!on });
+  }
+  const mConvReply = url.pathname.match(/^\/admin\/api\/conversations\/([0-9a-f-]{36})\/reply$/);
+  if (mConvReply && request.method === "POST") {
+    const { text } = await request.json();
+    const msg = String(text || "").trim().slice(0, 3000);
+    if (!msg) return json({ error: "escribe un mensaje" }, 400);
+    const [conv] = await sb(env, `conversations?id=eq.${mConvReply[1]}&select=id,session_id,tenant_id`);
+    if (!conv) return json({ error: "conversación no encontrada" }, 404);
+    const [tenant] = await sb(env, `tenants?id=eq.${conv.tenant_id}&select=*`);
+    if (!tenant) return json({ error: "asistente no encontrado" }, 404);
+    try {
+      await sendHumanReply(env, tenant, conv, msg);
+    } catch (e) {
+      return json({ error: e?.message || "no se ha podido enviar" }, 400);
+    }
+    return json({ ok: true });
+  }
+
   // --- asistente de configuración con IA ---
   if (url.pathname === "/admin/api/assist" && request.method === "POST") {
     if (!env.GEMINI_API_KEY) return json({ error: "Falta el secreto GEMINI_API_KEY" }, 500);
@@ -7760,6 +7905,16 @@ const PANEL_HTML = `<!doctype html>
   .msgs{display:none;border-top:1px solid var(--line);padding:16px}.conv.open .msgs{display:block}
   .m{width:fit-content;max-width:80%;padding:9px 12px;margin-bottom:8px;white-space:pre-wrap;font-size:14px}
   .m.user{background:var(--userbub);margin-left:auto}.m.assistant{background:var(--botbub)}.convdel{margin-top:8px;text-align:right}
+  .chtag{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;background:#111;color:#fff;border-radius:4px;padding:1px 6px;margin-right:4px}
+  .hotag{color:#8a3222}
+  .convho{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px dashed var(--line);margin-top:10px;padding-top:12px}
+  .hostate{font-size:12.5px;font-weight:600;color:var(--mut);display:inline-flex;align-items:center;gap:6px}
+  .hostate:before{content:"";width:8px;height:8px;border-radius:50%;background:#c9c9c4;display:inline-block}
+  .hostate.on{color:#8a3222}.hostate.on:before{background:#e0574a}
+  .convreply{display:flex;gap:8px;margin-top:10px}
+  .convreply input{flex:1;border:1px solid var(--line);border-radius:3px;padding:9px 11px;font:inherit;font-size:14px;outline:0}
+  .convreply input:focus{border-color:#111}
+  .mini.send{background:#111;color:#fff;border-color:#111;font-weight:650}.mini.send:disabled{opacity:.5}
   .btn{background:#111;color:#fff;border:.75px solid var(--acc);border-radius:3px;padding:10px 15px;font-weight:650}
   .btn:disabled{opacity:.5;cursor:default}.mini{padding:5px 9px}.del{background:none;border:0;font-size:15px;opacity:.55;padding:3px 6px}.del:hover{opacity:1}
   .done{color:var(--ok);font-size:12px;white-space:nowrap}
@@ -7919,6 +8074,7 @@ function svgIco(n, s) {
 }
 
 var LEADS = [], CONVS = [], GAPS = [], DOCS = [], ACT = [];
+var OPEN_CONVS = {};
 var PERIOD = 30;
 var PRIMARY = "#3c62f0";
 var SEEN_KEY = "cb_seen_" + token.slice(-10);
@@ -8199,15 +8355,65 @@ function renderConvs() {
     for (var i = 0; i < ms.length; i++) if (ms[i].role === "user") { first = ms[i].content; break; }
     var box = document.createElement("div");
     box.className = "conv";
+    var chan = /^wa:/.test(c.session_id || "") ? "WhatsApp" : /^tg:/.test(c.session_id || "") ? "Telegram" : "";
     var head = document.createElement("button");
-    head.innerHTML = "<span>" + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
-      "<span class='meta'>" + ms.length + " mensajes · " + esc(fmt(c.last_message_at)) + "</span>";
-    head.onclick = function () { box.classList.toggle("open"); };
+    head.innerHTML = "<span>" + (chan ? "<b class='chtag'>" + chan + "</b> " : "") + esc(first.slice(0, 90) || "(sin mensajes)") + "</span>" +
+      "<span class='meta'>" + (c.human_handoff ? "<b class='hotag'>Atendiendo tú</b> · " : "") + ms.length + " mensajes · " + esc(fmt(c.last_message_at)) + "</span>";
+    head.onclick = function () { box.classList.toggle("open"); OPEN_CONVS[c.id] = box.classList.contains("open"); };
     var body = document.createElement("div");
     body.className = "msgs";
     body.innerHTML = ms.map(function (m) {
       return "<div class='m " + (m.role === "user" ? "user" : "assistant") + "'>" + esc(m.content) + "</div>";
     }).join("");
+    // relevo humano: solo en canales de mensajería (WhatsApp/Telegram)
+    if (chan) {
+      var hbar = document.createElement("div");
+      hbar.className = "convho";
+      var state = document.createElement("span");
+      state.className = "hostate" + (c.human_handoff ? " on" : "");
+      state.textContent = c.human_handoff ? "En manos de una persona" : "Responde el bot";
+      var tgl = document.createElement("button");
+      tgl.className = "mini";
+      tgl.textContent = c.human_handoff ? "Devolver al bot" : "Tomar el control";
+      tgl.onclick = function () {
+        tgl.disabled = true;
+        fetch("/panel/handoff?token=" + encodeURIComponent(token), {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: c.id, on: !c.human_handoff }),
+        }).then(function (r) { return r.json(); }).then(function (r) {
+          tgl.disabled = false;
+          if (r.ok) { c.human_handoff = r.human_handoff; OPEN_CONVS[c.id] = true; renderConvs(); }
+          else alert(r.error || "No se ha podido cambiar.");
+        }).catch(function () { tgl.disabled = false; });
+      };
+      hbar.appendChild(state); hbar.appendChild(tgl);
+      body.appendChild(hbar);
+      if (c.human_handoff) {
+        var rrow = document.createElement("div");
+        rrow.className = "convreply";
+        var inp = document.createElement("input");
+        inp.placeholder = "Escribe y responde por " + chan + "…";
+        var snd = document.createElement("button");
+        snd.className = "mini send";
+        snd.textContent = "Enviar";
+        var doSend = function () {
+          var t = inp.value.trim(); if (!t) return;
+          snd.disabled = true; inp.disabled = true;
+          fetch("/panel/reply?token=" + encodeURIComponent(token), {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: c.id, text: t }),
+          }).then(function (r) { return r.json(); }).then(function (r) {
+            snd.disabled = false; inp.disabled = false;
+            if (r.ok) { inp.value = ""; OPEN_CONVS[c.id] = true; refreshConvs(true); }
+            else alert(r.error || "No se ha podido enviar.");
+          }).catch(function () { snd.disabled = false; inp.disabled = false; alert("No se ha podido enviar."); });
+        };
+        snd.onclick = doSend;
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") doSend(); });
+        rrow.appendChild(inp); rrow.appendChild(snd);
+        body.appendChild(rrow);
+      }
+    }
     var delRow = document.createElement("div");
     delRow.className = "convdel";
     var del = document.createElement("button");
@@ -8235,8 +8441,26 @@ function renderConvs() {
     body.appendChild(delRow);
     box.appendChild(head);
     box.appendChild(body);
+    // mantener abierta la conversación que estabas mirando (o la que atiendes)
+    if (OPEN_CONVS[c.id] || c.human_handoff) box.classList.add("open");
     cv.appendChild(box);
   });
+}
+
+// refresca las conversaciones desde el servidor (sondeo en vivo y tras responder)
+function refreshConvs(force) {
+  // no interrumpir mientras escribes una respuesta, salvo que se pida explícito
+  if (!force && document.activeElement && $("convs") && $("convs").contains(document.activeElement)) return;
+  fetch("/panel/data?token=" + encodeURIComponent(token))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.conversations) return;
+      CONVS = d.conversations;
+      computeGaps();
+      renderConvs();
+      if (typeof renderGaps === "function") renderGaps();
+      if (typeof renderStats === "function") renderStats();
+    }).catch(function () {});
 }
 
 function computeGaps() {
@@ -8486,6 +8710,9 @@ $("up-run").onclick = function () {
       .catch(function () {});
   }).catch(function () { msg.textContent = "Error al subir."; msg.className = "err"; });
 };
+
+// sondeo en vivo: refresca las conversaciones cada 12 s (sin recargar la página)
+setInterval(function () { refreshConvs(); }, 12000);
 </script>
 </body>
 </html>`;
@@ -8755,7 +8982,11 @@ ${inject}</body></html>`;
                   for (const m of val.messages || []) {
                     if (m.type !== "text" || !m.text?.body || !m.from) continue;
                     if ((await rpc(env, "check_rate", { p_ip: "wa:" + m.from, p_limit: 20 })) === false) continue;
-                    const out = await answerTenant(env, ctx, tenant, "wa:" + m.from, m.text.body.slice(0, 2000), "whatsapp");
+                    const sid = "wa:" + m.from, txt = m.text.body.slice(0, 2000);
+                    // conversación en manos de una persona: guardar sin que el bot conteste
+                    const st = await channelHandoffState(env, tenant.id, sid);
+                    if (st.paused) { await saveInboundOnly(env, tenant.id, st.id, sid, txt, "whatsapp"); continue; }
+                    const out = await answerTenant(env, ctx, tenant, sid, txt, "whatsapp");
                     await waSendText(integ.settings.access_token, phoneId, m.from, out.reply);
                   }
                 }
@@ -8786,7 +9017,10 @@ ${inject}</body></html>`;
             if (!tenant) return;
             const chatId = msg.chat.id;
             if ((await rpc(env, "check_rate", { p_ip: "tg:" + chatId, p_limit: 20 })) === false) return;
-            const out = await answerTenant(env, ctx, tenant, "tg:" + chatId, String(msg.text).slice(0, 2000), "telegram");
+            const sid = "tg:" + chatId, txt = String(msg.text).slice(0, 2000);
+            const st = await channelHandoffState(env, tenant.id, sid);
+            if (st.paused) { await saveInboundOnly(env, tenant.id, st.id, sid, txt, "telegram"); return; }
+            const out = await answerTenant(env, ctx, tenant, sid, txt, "telegram");
             await tgSendText(token, chatId, out.reply);
           } catch (err) { await logError(env, "tg-webhook", err?.message || err).catch(() => {}); }
         })());
@@ -9429,6 +9663,40 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
         return json({ ok: true });
       }
 
+      // relevo humano: tomar el control o devolver la conversación al bot
+      if (url.pathname === "/panel/handoff" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        if (tenant.panel_features?.convs === false) return json({ error: "no disponible" }, 403);
+        const { id, on } = await request.json();
+        if (!/^[0-9a-f-]{36}$/.test(id || "")) return json({ error: "id no válido" }, 400);
+        const [row] = await sb(env, `conversations?id=eq.${id}&tenant_id=eq.${tenant.id}`, {
+          method: "PATCH",
+          body: { human_handoff: !!on, handoff_at: on ? new Date().toISOString() : null },
+        });
+        if (!row) return json({ error: "conversación no encontrada" }, 404);
+        return json({ ok: true, human_handoff: !!on });
+      }
+
+      // relevo humano: enviar una respuesta escrita por la persona al canal del cliente
+      if (url.pathname === "/panel/reply" && request.method === "POST") {
+        const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
+        if (!tenant) return json({ error: "token no válido" }, 401);
+        if (tenant.panel_features?.convs === false) return json({ error: "no disponible" }, 403);
+        const { id, text } = await request.json();
+        if (!/^[0-9a-f-]{36}$/.test(id || "")) return json({ error: "id no válido" }, 400);
+        const msg = String(text || "").trim().slice(0, 3000);
+        if (!msg) return json({ error: "escribe un mensaje" }, 400);
+        const [conv] = await sb(env, `conversations?id=eq.${id}&tenant_id=eq.${tenant.id}&select=id,session_id`);
+        if (!conv) return json({ error: "conversación no encontrada" }, 404);
+        try {
+          await sendHumanReply(env, tenant, conv, msg);
+        } catch (e) {
+          return json({ error: e?.message || "no se ha podido enviar" }, 400);
+        }
+        return json({ ok: true });
+      }
+
       if (url.pathname === "/panel/gap-answer" && request.method === "POST") {
         const tenant = await getTenantByPanelToken(env, url.searchParams.get("token"));
         if (!tenant) return json({ error: "token no válido" }, 401);
@@ -9504,7 +9772,7 @@ ${info.guide.note ? `<p class="mut" style="margin-top:10px">Nota: ${h(info.guide
           sb(
             env,
             `conversations?tenant_id=eq.${tenant.id}&hidden_client=is.false` +
-              `&select=id,page_url,created_at,last_message_at,messages(role,content,was_answered,created_at)` +
+              `&select=id,page_url,session_id,human_handoff,created_at,last_message_at,messages(role,content,was_answered,created_at)` +
               `&order=last_message_at.desc&messages.order=created_at.asc&limit=100`
           ),
           sb(
