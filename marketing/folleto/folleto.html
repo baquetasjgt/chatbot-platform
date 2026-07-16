@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ExpoBOT · Folleto comercial</title>
+<style>
+/* ============ Marca ExpoBOT 2026: negro #111 + mostaza #f9be00, Inter ============ */
+@font-face{font-family:Inter;font-weight:400;src:url(fonts/inter-400.ttf)}
+@font-face{font-family:Inter;font-weight:500;src:url(fonts/inter-500.ttf)}
+@font-face{font-family:Inter;font-weight:600;src:url(fonts/inter-600.ttf)}
+@font-face{font-family:Inter;font-weight:700;src:url(fonts/inter-700.ttf)}
+@font-face{font-family:Inter;font-weight:800;src:url(fonts/inter-800.ttf)}
+@font-face{font-family:Inter;font-weight:900;src:url(fonts/inter-900.ttf)}
+
+@page{size:A4;margin:0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,sans-serif;color:#111;font-size:9.5pt;line-height:1.5}
+
+.page{width:210mm;height:297mm;position:relative;overflow:hidden;page-break-after:always;background:#f3f3f0;padding:14mm 15mm}
+.page.dark{background:#111;color:#fff}
+.page:last-child{page-break-after:auto}
+
+/* utilidades */
+.label{font-size:7.5pt;font-weight:800;letter-spacing:2.2px;color:#9a7600;margin-bottom:4mm}
+.dark .label{color:#f9be00}
+h1{font-size:30pt;font-weight:900;line-height:1.06;letter-spacing:-.6px}
+h2{font-size:21pt;font-weight:900;line-height:1.08;letter-spacing:-.4px}
+h3{font-size:11pt;font-weight:800;line-height:1.2}
+.mut{color:#686868}.dark .mut{color:#b5b5b5}
+.hl{background:linear-gradient(135deg,#f9be00,#ffd75a);color:#111;padding:0 4px;box-decoration-break:clone;-weasy-box-decoration-break:clone}
+.row{display:flex}
+.grow{flex:1}
+
+/* cabecera y pie de página comunes */
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10mm}
+.topbar img{height:7mm}
+.topbar span{font-size:7pt;font-weight:700;letter-spacing:1.8px;color:#8a8a86}
+.dark .topbar span{color:#777}
+.pagefoot{position:absolute;bottom:8mm;left:15mm;right:15mm;display:flex;justify-content:space-between;font-size:6.5pt;font-weight:700;letter-spacing:1.2px;color:#9a9a96}
+.dark .pagefoot{color:#666}
+.pagefoot b{color:#8a6900}.dark .pagefoot b{color:#f9be00}
+
+/* tarjetas estilo marca: borde negro + sombra dura */
+.card{background:#fff;border:1px solid #111;border-radius:4px;box-shadow:4mm 4mm 0 rgba(17,17,17,.9)}
+.dark .card{box-shadow:4mm 4mm 0 rgba(249,190,0,.9)}
+
+/* chips de canal */
+.chips{display:flex;gap:3mm;align-items:center}
+.chip{border:1px solid #444;border-radius:20px;padding:1.2mm 4mm;font-size:7pt;font-weight:800;letter-spacing:1.5px;color:#eee}
+.chip.on{background:#f9be00;border-color:#f9be00;color:#111}
+
+/* ============ P1 · PORTADA ============ */
+.cover-hero{margin-top:6mm;width:108mm}
+.cover-eyebrow{display:inline-block;border:1px solid #f9be00;color:#f9be00;border-radius:20px;padding:1.5mm 5mm;font-size:7.5pt;font-weight:800;letter-spacing:2px;margin-bottom:7mm}
+.cover-hero h1{margin-bottom:7mm}
+.cover-sub{font-size:10.5pt;line-height:1.6;color:#cfcfcb;width:100mm}
+.cover-stats{display:flex;gap:4mm;margin-top:10mm}
+.cover-stat{border-left:2px solid #f9be00;padding:1mm 0 1mm 4mm;width:31mm}
+.cover-stat strong{display:block;font-size:15pt;font-weight:900;color:#fff}
+.cover-stat span{font-size:7pt;color:#b5b5b5;line-height:1.3;display:block}
+.cover-trust{position:absolute;left:15mm;right:15mm;bottom:52mm;display:flex;justify-content:space-between;border-top:1px solid #2c2c2c;padding-top:4mm}
+.cover-trust span{font-size:7.5pt;font-weight:700;color:#cfcfcb;white-space:nowrap}
+.cover-trust b{color:#f9be00;margin-right:1.5mm}
+.cover-cta{position:absolute;left:15mm;right:15mm;bottom:18mm;background:linear-gradient(135deg,#f9be00,#ffd75a);border-radius:4px;padding:7mm 9mm;display:flex;align-items:center;justify-content:space-between;color:#111}
+.cover-cta strong{font-size:13.5pt;font-weight:900;letter-spacing:-.2px}
+.cover-cta span{display:block;font-size:8.5pt;font-weight:600;margin-top:1mm}
+.cover-cta .arrow{font-size:22pt;font-weight:900}
+/* móvil con chat */
+.phone{position:absolute;top:54mm;right:15mm;width:64mm;background:#fff;color:#111;border:1.2px solid #111;border-radius:9mm;padding:5mm 4mm;box-shadow:5mm 5mm 0 rgba(249,190,0,.85)}
+.phone-head{display:flex;align-items:center;gap:2.5mm;border-bottom:1px solid #e5e5e0;padding:0 1mm 3mm}
+.phone-head img.iso{width:8mm}
+.phone-head img.wm{height:3.4mm;display:block}
+.phone-head small{font-size:6pt;color:#3aa15a;font-weight:700}
+.chat{padding:3mm 1mm 1mm}
+.msg{max-width:88%;border-radius:3.5mm;padding:2.6mm 3.4mm;font-size:8pt;line-height:1.5;margin-bottom:2.6mm}
+.msg.bot{background:#eeeeea;border-bottom-left-radius:1mm}
+.msg.user{background:#f9be00;margin-left:auto;border-bottom-right-radius:1mm;font-weight:600}
+.float-card{position:absolute;background:#fff;border:1px solid #111;border-radius:3px;padding:3mm 4mm;box-shadow:2.5mm 2.5mm 0 #111}
+.float-card small{display:block;font-size:5.6pt;font-weight:800;letter-spacing:1.2px;color:#8a6900}
+.float-card strong{font-size:8.5pt;font-weight:900;color:#111}
+.float-card em{display:block;font-style:normal;font-size:6.4pt;color:#686868}
+.fc-lead{top:182mm;right:56mm;width:44mm}
+.fc-time{top:44mm;right:24mm;width:38mm}
+
+/* ============ P2 · PROBLEMA ============ */
+.pains{display:flex;gap:5mm;margin:8mm 0}
+.pain{flex:1;background:#fff;border:1px solid #d9d9d4;border-radius:4px;padding:6mm;border-top:3px solid #111}
+.pain h3{margin:3mm 0 2mm;font-size:10.5pt}
+.pain p{font-size:8.3pt;color:#555}
+.pain .ico{width:9mm;height:9mm;background:#f7f1dd;border-radius:3px;display:flex;align-items:center;justify-content:center}
+.calc{background:#111;color:#fff;border-radius:4px;padding:8mm 9mm;margin-top:8mm}
+.calc .label{margin-bottom:2mm}
+.calc h3{font-size:13pt;font-weight:900;margin-bottom:5mm}
+.calc-row{display:flex;gap:4mm}
+.calc-box{flex:1;border:1px solid #333;border-radius:3px;padding:4mm 5mm}
+.calc-box span{font-size:6.8pt;color:#b5b5b5;display:block;line-height:1.3}
+.calc-box strong{font-size:16pt;font-weight:900;display:block;margin-bottom:1mm}
+.calc-box.hot{background:linear-gradient(135deg,#f9be00,#ffd75a);border-color:#f9be00;color:#111}
+.calc-box.hot span{color:#4a3a00}
+.calc small{display:block;margin-top:4mm;font-size:6.5pt;color:#888}
+.agitate{margin-top:8mm;font-size:11.5pt;line-height:1.55;font-weight:600;width:165mm}
+
+/* ============ P3 · SOLUCIÓN ============ */
+.steps{display:flex;gap:4mm;margin:8mm 0 9mm}
+.step{flex:1;background:#1b1b1b;border:1px solid #333;border-radius:4px;padding:5mm;position:relative}
+.step b.num{position:absolute;top:-3.5mm;left:4mm;background:#f9be00;color:#111;font-size:8pt;font-weight:900;padding:.8mm 2.6mm;border-radius:2px}
+.step h3{font-size:9.5pt;margin:3mm 0 2mm;color:#fff}
+.step p{font-size:7.6pt;color:#b5b5b5;line-height:1.45}
+.trust{background:#f7f1dd;color:#111;border-radius:4px;padding:7mm 8mm}
+.trust h3{font-size:13pt;font-weight:900;margin-bottom:4mm}
+.trust-grid{display:flex;flex-wrap:wrap;gap:4mm}
+.trust-item{width:81mm;display:flex;gap:3mm}
+.trust-item b{color:#8a6900;font-size:10pt;font-weight:900}
+.trust-item strong{display:block;font-size:9pt;font-weight:800}
+.trust-item p{font-size:7.8pt;color:#555;line-height:1.4}
+.sol-quote{margin-top:8mm;border-left:3px solid #f9be00;padding-left:5mm;font-size:11pt;font-weight:600;line-height:1.5;color:#eee;width:160mm}
+
+/* ============ P4 · BENEFICIOS ============ */
+.benefits{display:flex;flex-wrap:wrap;gap:5mm;margin-top:8mm}
+.benefit{width:85.5mm;background:#fff;border:1px solid #d9d9d4;border-radius:4px;padding:6mm 6mm 5mm}
+.benefit .ico{width:10mm;height:10mm;background:linear-gradient(135deg,#f9be00,#ffd75a);border-radius:3px;display:flex;align-items:center;justify-content:center;margin-bottom:3.5mm}
+.benefit h3{font-size:11.5pt;margin-bottom:1.6mm}
+.benefit p{font-size:8.2pt;color:#555;line-height:1.5}
+.benefit small{display:block;margin-top:2.5mm;font-size:6.6pt;font-weight:800;letter-spacing:1px;color:#9a7600}
+
+/* ============ P5 · PLATAFORMA + AUTORIDAD + PRUEBA SOCIAL ============ */
+.features{display:flex;flex-wrap:wrap;gap:3mm;margin:6mm 0 8mm}
+.feature{width:57.3mm;background:#fff;border:1px solid #d9d9d4;border-radius:3px;padding:4mm}
+.feature strong{display:block;font-size:8.6pt;font-weight:800;margin-bottom:1mm}
+.feature p{font-size:7.2pt;color:#666;line-height:1.4}
+.authority{background:#111;color:#fff;border-radius:4px;padding:6mm 8mm;display:flex;gap:6mm}
+.authority>div{flex:1}
+.authority h3{color:#f9be00;font-size:8.6pt;font-weight:900;letter-spacing:.6px;margin-bottom:1.6mm}
+.authority p{font-size:7.3pt;color:#c5c5c1;line-height:1.45}
+.social{margin-top:8mm;display:flex;gap:5mm}
+.case{flex:1.25;background:#fff;border:1px solid #111;border-radius:4px;padding:6mm;box-shadow:3mm 3mm 0 #f9be00}
+.case .tag{display:inline-block;background:#111;color:#f9be00;font-size:6.4pt;font-weight:900;letter-spacing:1.4px;padding:1mm 3mm;border-radius:2px;margin-bottom:3mm}
+.case h3{font-size:11pt;margin-bottom:2mm}
+.case p{font-size:8pt;color:#555;line-height:1.5}
+.testis{flex:1;display:flex;flex-direction:column;gap:5mm}
+.testi{flex:1;background:#f7f1dd;border:1px dashed #b9a24a;border-radius:4px;padding:5mm}
+.testi p{font-size:8.6pt;font-style:italic;color:#6a5a1a;line-height:1.5}
+.testi span{display:block;margin-top:2mm;font-size:6.6pt;font-weight:800;letter-spacing:1px;color:#9a7600}
+
+/* ============ P6 · CONTRAPORTADA ============ */
+.urgency{border:1px solid #f9be00;border-radius:4px;padding:6mm 7mm;margin:9mm 0 10mm;display:flex;gap:5mm;align-items:center}
+.ps{margin-top:12mm;text-align:center;font-size:10.5pt;font-weight:600;color:#cfcfcb;font-style:italic}
+.ps b{color:#f9be00;font-style:normal}
+.urgency .dot{width:3mm;height:3mm;border-radius:50%;background:#f9be00}
+.urgency p{font-size:9.5pt;font-weight:600;color:#ffe9a8;line-height:1.5}
+.cta-final{background:linear-gradient(135deg,#f9be00,#ffd75a);border-radius:4px;color:#111;padding:8mm 9mm;display:flex;gap:8mm;align-items:center}
+.cta-final h3{font-size:17pt;font-weight:900;letter-spacing:-.3px;margin-bottom:2mm}
+.cta-final p{font-size:9pt;font-weight:600;line-height:1.5}
+.cta-final .url{display:inline-block;margin-top:4mm;background:#111;color:#fff;font-weight:800;font-size:10.5pt;padding:2.8mm 6mm;border-radius:3px}
+.qr{background:#fff;border:1.2px solid #111;border-radius:3px;padding:3mm;width:34mm}
+.qr img{width:28mm;height:28mm;display:block}
+.qr span{display:block;text-align:center;font-size:6.2pt;font-weight:800;letter-spacing:.8px;margin-top:1.5mm}
+.next-steps{display:flex;gap:4mm;margin-top:10mm}
+.nstep{flex:1;border:1px solid #333;border-radius:4px;padding:5mm;background:#1b1b1b}
+.nstep b{display:inline-flex;width:7mm;height:7mm;border:1px solid #f9be00;border-radius:2px;color:#f9be00;align-items:center;justify-content:center;font-size:9pt;margin-bottom:2.5mm}
+.nstep strong{display:block;font-size:9.5pt;color:#fff}
+.nstep p{font-size:7.6pt;color:#b5b5b5;line-height:1.45;margin-top:1mm}
+.back-foot{position:absolute;left:15mm;right:15mm;bottom:12mm;border-top:1px solid #2c2c2c;padding-top:5mm;display:flex;justify-content:space-between;align-items:center}
+.back-foot img{height:6mm}
+.back-foot p{font-size:7pt;color:#888}
+svg.i{width:5.4mm;height:5.4mm}
+</style>
+</head>
+<body>
+
+<!-- ==================== PÁGINA 1 · PORTADA ==================== -->
+<div class="page dark">
+  <div class="topbar">
+    <img src="assets/expobot-wordmark-dark.svg" alt="ExpoBOT">
+    <span>CATÁLOGO COMERCIAL · 2026</span>
+  </div>
+
+  <div class="cover-hero">
+    <div class="cover-eyebrow">IA PARA RECINTOS Y ORGANIZADORES FERIALES</div>
+    <h1>Convierte cada pregunta en una <span class="hl">oportunidad comercial.</span></h1>
+  </div>
+  <p class="cover-sub" style="margin-top:7mm">ExpoBOT atiende a visitantes y expositores 24/7 en tu web, WhatsApp y Telegram, responde solo con tu información validada y entrega cada lead organizado en tu panel. Tú vendes; él nunca duerme.</p>
+
+  <div class="cover-stats">
+    <div class="cover-stat"><strong>24/7</strong><span>Atención sin interrupciones, también en fin de semana</span></div>
+    <div class="cover-stat"><strong>&lt; 3 seg</strong><span>Tiempo de respuesta a cada consulta</span></div>
+    <div class="cover-stat"><strong>3 canales</strong><span>Web, WhatsApp y Telegram con una sola IA</span></div>
+  </div>
+
+  <div class="chips" style="margin-top:9mm">
+    <span class="chip on">WEB</span><span class="chip">WHATSAPP</span><span class="chip">TELEGRAM</span>
+  </div>
+
+  <div class="phone">
+    <div class="phone-head">
+      <img class="iso" src="assets/expobot-isotipo.svg" alt="">
+      <div><img class="wm" src="assets/expobot-wordmark-light.svg" alt="ExpoBOT"><small>● En línea</small></div>
+    </div>
+    <div class="chat">
+      <div class="msg bot">¡Hola! Soy el asistente de tu feria. ¿En qué puedo ayudarte?</div>
+      <div class="msg user">Busco proveedores de tecnología para rehabilitación.</div>
+      <div class="msg bot">He encontrado 14 expositores relacionados. ¿Quieres recibir la lista y el plano?</div>
+      <div class="msg user">Sí, y me gustaría hablar con uno de ellos.</div>
+      <div class="msg bot">Perfecto. Déjame tu nombre y empresa y te pondremos en contacto.</div>
+    </div>
+  </div>
+  <div class="float-card fc-time"><small>TIEMPO DE RESPUESTA</small><strong>&lt; 3 segundos</strong></div>
+
+  <div class="cover-trust">
+    <span><b>✓</b>Información validada</span>
+    <span><b>✓</b>Datos bajo tu control</span>
+    <span><b>✓</b>Derivación humana</span>
+    <span><b>✓</b>Con tu marca</span>
+  </div>
+  <div class="float-card fc-lead"><small>NUEVO CONTACTO</small><strong>Lead cualificado ✓</strong><em>Hace 2 segundos</em></div>
+
+  <div class="cover-cta">
+    <div><strong>Solicita una demo de 20 minutos con tu caso real</strong><span>expobot.es · Sin compromiso · Preparada con la información de tu feria</span></div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="pagefoot"><span><b>EXPOBOT</b> · FOLLETO COMERCIAL</span><span>01 / 06</span></div>
+</div>
+
+<!-- ==================== PÁGINA 2 · EL PROBLEMA ==================== -->
+<div class="page">
+  <div class="topbar">
+    <img src="assets/expobot-wordmark-light.svg" alt="ExpoBOT">
+    <span>EL PROBLEMA</span>
+  </div>
+
+  <div class="label">MIENTRAS LEES ESTO, ALGUIEN PREGUNTA POR TU FERIA</div>
+  <h2 style="width:172mm">Cada consulta sin respuesta es un cliente que se marcha a otro evento.</h2>
+  <p style="margin-top:5mm;width:170mm;font-size:10pt;color:#444">Horarios, entradas, cómo llegar, qué expositores hay, cuánto cuesta un stand… Las mismas preguntas llegan por email, teléfono y redes, a todas horas. Tu equipo no puede estar en todo, y cada consulta que se enfría es facturación que no llega.</p>
+
+  <div class="pains">
+    <div class="pain">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+      <h3>Tu equipo, desbordado</h3>
+      <p>Los días de feria nadie da abasto: colas en el mostrador, teléfono sonando y el email echando humo. Y las preguntas de valor se mezclan con las repetitivas.</p>
+    </div>
+    <div class="pain">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 13V7h-6"/></svg></div>
+      <h3>Leads que se enfrían</h3>
+      <p>Una empresa pregunta por un stand un domingo por la noche. Si la respuesta llega el martes, ya ha hablado con otra feria. La velocidad cierra ventas.</p>
+    </div>
+    <div class="pain">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z"/></svg></div>
+      <h3>La misma pregunta, mil veces</h3>
+      <p>El 80% de las consultas son siempre las mismas. Personas cualificadas de tu equipo dedican horas a copiar y pegar respuestas en lugar de vender.</p>
+    </div>
+  </div>
+
+  <div class="calc">
+    <div class="label">HAZ NÚMEROS · FERIA TIPO DE 3 DÍAS</div>
+    <h3>8.000 visitantes. 3 personas atendiendo. ¿Te salen las cuentas?</h3>
+    <div class="calc-row">
+      <div class="calc-box"><strong>2.400</strong><span>Consultas potenciales (30% de los visitantes pregunta)</span></div>
+      <div class="calc-box"><strong>540</strong><span>Capacidad real de tu equipo durante la feria</span></div>
+      <div class="calc-box hot"><strong>1.860</strong><span>Consultas que se quedan sin atender cada edición</span></div>
+      <div class="calc-box"><strong>891</strong><span>Leads potenciales que podrías estar registrando</span></div>
+    </div>
+    <small>Estimación orientativa según la calculadora de oportunidades de expobot.es. Ajusta los datos de tu evento en la web.</small>
+  </div>
+
+  <p class="agitate">Y lo peor no es el trabajo que te cuesta.<br>Es que <span class="hl">no sabes cuántas oportunidades estás perdiendo</span> porque nadie las registra.</p>
+
+  <div class="pagefoot"><span><b>EXPOBOT</b> · EL PROBLEMA</span><span>02 / 06</span></div>
+</div>
+
+<!-- ==================== PÁGINA 3 · LA SOLUCIÓN ==================== -->
+<div class="page dark">
+  <div class="topbar">
+    <img src="assets/expobot-wordmark-dark.svg" alt="ExpoBOT">
+    <span>LA SOLUCIÓN</span>
+  </div>
+
+  <div class="label">DE LA PREGUNTA AL LEAD, EN CUATRO PASOS</div>
+  <h2>ExpoBOT atiende, filtra y entrega<br>la oportunidad <span class="hl">lista para vender.</span></h2>
+  <p style="margin-top:5mm;width:165mm;font-size:10pt;color:#cfcfcb">No es un chatbot genérico de respuestas enlatadas. Es un asistente entrenado con la información real de tu organización que trabaja con un único objetivo: que ninguna oportunidad se pierda.</p>
+
+  <div class="steps">
+    <div class="step"><b class="num">01</b><h3>Pregunta</h3><p>El visitante o expositor escribe desde tu web, WhatsApp o Telegram. A cualquier hora, en su idioma.</p></div>
+    <div class="step"><b class="num">02</b><h3>Respuesta verificada</h3><p>ExpoBOT consulta tu información validada y responde al instante. Si no lo sabe, no lo inventa.</p></div>
+    <div class="step"><b class="num">03</b><h3>Intención detectada</h3><p>Detecta interés comercial —una empresa que quiere exponer— y pide los datos adecuados en el momento justo.</p></div>
+    <div class="step"><b class="num">04</b><h3>Lead en tu panel</h3><p>El contacto llega ordenado, con contexto y listo para que tu equipo comercial actúe de inmediato.</p></div>
+  </div>
+
+  <div class="trust">
+    <h3>Respuestas útiles. Límites claros.</h3>
+    <div class="trust-grid">
+      <div class="trust-item"><b>01</b><div><strong>Solo fuentes aprobadas</strong><p>Web, programa, tarifas, normativa y documentación oficial de tu organización.</p></div></div>
+      <div class="trust-item"><b>02</b><div><strong>Sin respuestas improvisadas</strong><p>Nunca inventa fechas, precios ni condiciones. Si falta información fiable, lo reconoce y deriva.</p></div></div>
+      <div class="trust-item"><b>03</b><div><strong>Datos bajo tu control</strong><p>Conversaciones y contactos quedan accesibles para tu equipo, aislados de cualquier otro cliente.</p></div></div>
+      <div class="trust-item"><b>04</b><div><strong>Siempre hay salida humana</strong><p>Las consultas sensibles o complejas llegan a la persona adecuada de tu equipo.</p></div></div>
+    </div>
+  </div>
+
+  <p class="sol-quote">Mientras tu competencia deja un formulario de contacto, tú dejas un comercial incansable que responde en 3 segundos.</p>
+
+  <div class="pagefoot"><span><b>EXPOBOT</b> · LA SOLUCIÓN</span><span>03 / 06</span></div>
+</div>
+
+<!-- ==================== PÁGINA 4 · BENEFICIOS ==================== -->
+<div class="page">
+  <div class="topbar">
+    <img src="assets/expobot-wordmark-light.svg" alt="ExpoBOT">
+    <span>BENEFICIOS</span>
+  </div>
+
+  <div class="label">LO QUE GANAS DESDE LA PRIMERA SEMANA</div>
+  <h2>Menos trabajo repetitivo. Más negocio.<br>Y la tranquilidad de no perder nada.</h2>
+
+  <div class="benefits">
+    <div class="benefit">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg></div>
+      <h3>Vende mientras duermes</h3>
+      <p>Las ferias no entienden de horario de oficina. ExpoBOT atiende de madrugada, en festivos y en plena avalancha del primer día, sin descansos ni bajas.</p>
+      <small>ATENCIÓN 24/7 EN WEB, WHATSAPP Y TELEGRAM</small>
+    </div>
+    <div class="benefit">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <h3>Cada lead, servido en bandeja</h3>
+      <p>Nombre, empresa, interés y conversación completa. Tu equipo comercial deja de perseguir datos sueltos y empieza el día con contactos listos para llamar.</p>
+      <small>CAPTURA AUTOMÁTICA · PANEL · CONEXIÓN CON TU CRM</small>
+    </div>
+    <div class="benefit">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14l-3-3"/></svg></div>
+      <h3>Tu equipo, liberado</h3>
+      <p>Las preguntas repetitivas se responden solas. Las personas que antes copiaban y pegaban horarios ahora se dedican a lo que de verdad mueve la cuenta de resultados.</p>
+      <small>AUTOMATIZA LAS CONSULTAS FRECUENTES</small>
+    </div>
+    <div class="benefit">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div>
+      <h3>Habla el idioma de cada visitante</h3>
+      <p>Público internacional atendido con la misma calidad que el nacional. Español, inglés, portugués… la misma información precisa, en el idioma de quien pregunta.</p>
+      <small>MULTILINGÜE DE SERIE</small>
+    </div>
+    <div class="benefit">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="12" width="3" height="6"/><rect x="10.5" y="8" width="3" height="10"/><rect x="16" y="4" width="3" height="14"/></svg></div>
+      <h3>Decide con datos, no con intuición</h3>
+      <p>¿Qué pregunta tu público? ¿Qué información falta? El panel te enseña los temas más consultados y los huecos de contenido, edición tras edición.</p>
+      <small>PANEL DE ACTIVIDAD · INFORMES MENSUALES</small>
+    </div>
+    <div class="benefit">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h3>Imagen de feria del futuro</h3>
+      <p>Un asistente con tu marca, tus colores y tu tono transmite lo que toda feria tecnológica quiere proyectar: innovación. La primera impresión también vende stands.</p>
+      <small>WIDGET PERSONALIZADO CON TU IDENTIDAD</small>
+    </div>
+  </div>
+
+  <div class="pagefoot"><span><b>EXPOBOT</b> · BENEFICIOS</span><span>04 / 06</span></div>
+</div>
+
+<!-- ==================== PÁGINA 5 · PLATAFORMA + CONFIANZA ==================== -->
+<div class="page">
+  <div class="topbar">
+    <img src="assets/expobot-wordmark-light.svg" alt="ExpoBOT">
+    <span>LA PLATAFORMA</span>
+  </div>
+
+  <div class="label">TODO INCLUIDO, SIN COMPLICACIONES TÉCNICAS</div>
+  <h2>Nosotros nos ocupamos de la tecnología.<br>Tú, de tu feria.</h2>
+
+  <div class="features">
+    <div class="feature"><strong>Puesta en marcha llave en mano</strong><p>Recopilamos tus contenidos, entrenamos el asistente y lo integramos. Operativo en 2–3 semanas.</p></div>
+    <div class="feature"><strong>Multicanal real</strong><p>La misma IA y el mismo conocimiento en tu web, WhatsApp y Telegram. Sin duplicar mantenimiento.</p></div>
+    <div class="feature"><strong>Panel de cliente</strong><p>Leads, conversaciones y preguntas sin respuesta en un panel claro, con exportación a CSV.</p></div>
+    <div class="feature"><strong>Contenido siempre al día</strong><p>Sube documentos (PDF, web, texto) cuando cambien fechas, tarifas o programa. El bot aprende al momento.</p></div>
+    <div class="feature"><strong>Control de calidad continuo</strong><p>Exámenes automáticos con preguntas trampa y detección de huecos de contenido con mejora asistida por IA.</p></div>
+    <div class="feature"><strong>Privacidad y cumplimiento</strong><p>Datos alojados en la UE y aislados por cliente. El widget solo funciona en tus dominios autorizados.</p></div>
+  </div>
+
+  <div class="authority">
+    <div><h3>ESPECIALISTAS EN FERIAS</h3><p>No hacemos chatbots para todo: hacemos asistentes para recintos y organizadores feriales. Visitantes, expositores y stands son nuestro terreno.</p></div>
+    <div><h3>IA DE ÚLTIMA GENERACIÓN</h3><p>Cada asistente funciona con modelos líderes (Claude, Gemini), elegidos y ajustados según las necesidades de tu proyecto.</p></div>
+    <div><h3>INFRAESTRUCTURA GLOBAL</h3><p>Desplegado en la red de Cloudflare: respuestas en menos de 3 segundos y disponibilidad continua, también en picos de feria.</p></div>
+    <div><h3>SIN RIESGO REPUTACIONAL</h3><p>El asistente solo afirma lo que tu organización ha validado. Ante la duda, deriva a tu equipo. Tu marca, protegida.</p></div>
+  </div>
+
+  <div class="social">
+    <div class="case">
+      <span class="tag">CASO DE USO · SECTOR SALUD</span>
+      <h3>FISIOEXPO — salón profesional de fisioterapia (IFEMA, Madrid)</h3>
+      <p>El asistente de FISIOEXPO orienta a los visitantes profesionales —programa, accesos, expositores— y detecta a las empresas interesadas en contratar un stand, capturando sus datos para el equipo comercial del salón. Todo desde la web del evento y con la imagen de la feria.</p>
+    </div>
+    <div class="testis">
+      <div class="testi"><p>«Aquí irá lo que tu equipo diga de ExpoBOT después de su primera edición con él.»</p><span>ESPACIO RESERVADO · TESTIMONIO DE CLIENTE</span></div>
+      <div class="testi"><p>«Y aquí, el resultado en cifras: consultas atendidas, leads captados, horas ahorradas.»</p><span>ESPACIO RESERVADO · RESULTADOS</span></div>
+    </div>
+  </div>
+
+  <div class="pagefoot"><span><b>EXPOBOT</b> · LA PLATAFORMA</span><span>05 / 06</span></div>
+</div>
+
+<!-- ==================== PÁGINA 6 · CONTRAPORTADA / CIERRE ==================== -->
+<div class="page dark">
+  <div class="topbar">
+    <img src="assets/expobot-wordmark-dark.svg" alt="ExpoBOT">
+    <span>SIGUIENTE PASO</span>
+  </div>
+
+  <div class="label">TU PRÓXIMA EDICIÓN YA ESTÁ RECIBIENDO PREGUNTAS</div>
+  <h2>Cada semana sin asistente son conversaciones<br>que <span class="hl">nunca sabrás que perdiste.</span></h2>
+
+  <div class="urgency">
+    <div class="dot"></div>
+    <p>Incorporamos un número limitado de proyectos por temporada ferial para garantizar una puesta en marcha impecable. Si tu próxima edición está a menos de 6 meses, este es el momento de reservar plaza.</p>
+  </div>
+
+  <div class="cta-final">
+    <div class="grow">
+      <h3>Agenda tu demo de 20 minutos.</h3>
+      <p>Sin compromiso y con tu caso real: verás cómo respondería ExpoBOT con la información de tu feria, y qué leads podría estar captando desde el primer día.</p>
+      <span class="url">expobot.es → Solicitar demo</span>
+    </div>
+    <div class="qr"><img src="assets/qr-demo.svg" alt="Código QR para solicitar una demo"><span>ESCANEA Y AGENDA</span></div>
+  </div>
+
+  <div class="next-steps">
+    <div class="nstep"><b>1</b><strong>Demo con tu caso</strong><p>20 minutos, en vídeollamada. Traemos el asistente ya cargado con información pública de tu evento.</p></div>
+    <div class="nstep"><b>2</b><strong>Propuesta a medida</strong><p>Alcance, canales y precio cerrado según tu feria. Sin sorpresas ni letra pequeña.</p></div>
+    <div class="nstep"><b>3</b><strong>En marcha en 2–3 semanas</strong><p>Desde que recibimos tus contenidos hasta que el asistente atiende en tu web. Nosotros hacemos el trabajo.</p></div>
+  </div>
+
+  <p class="ps">P. D.: La primera pregunta de tu próximo cliente llegará esta noche, fuera de horario. <b>Alguien debería contestarla.</b></p>
+
+  <div class="back-foot">
+    <img src="assets/expobot-wordmark-dark.svg" alt="ExpoBOT">
+    <p>Inteligencia artificial para el sector ferial · expobot.es · © 2026 ExpoBOT. Todos los derechos reservados.</p>
+  </div>
+</div>
+
+</body>
+</html>
