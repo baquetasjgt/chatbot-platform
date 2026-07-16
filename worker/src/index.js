@@ -2236,7 +2236,7 @@ const ADMIN_HTML = `<!doctype html>
   #cv-cta{margin:0 14px 12px;border:0;border-radius:11px;padding:11px;font-weight:700;font-size:13px;text-align:center;background:#f5be10;color:#0a0a0a}
   #cv-btnrow{display:flex;justify-content:flex-end}
   #cv-btn{width:58px;height:58px;min-width:58px;border-radius:50%;background:#f5be10;display:flex;gap:8px;position:relative;
-    align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:0}
+    align-items:center;justify-content:center;box-shadow:var(--cv-lshadow,0 4px 16px rgba(0,0,0,.18));padding:0}
   #cv-btn.radar:before,#cv-btn.radar:after{content:"";position:absolute;inset:-1px;border:1px solid var(--preview-radar,#f5be10);
     border-radius:inherit;animation:preview-radar 2.4s ease-out infinite;pointer-events:none}
   #cv-btn.radar:after{animation-delay:1.2s}@keyframes preview-radar{to{opacity:0;transform:scale(1.65)}}
@@ -2244,6 +2244,16 @@ const ADMIN_HTML = `<!doctype html>
   #cv-btn.bounce{animation:cv-bounce 1.7s ease infinite}@keyframes cv-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
   #cv-btn.glow{animation:cv-glow 1.9s ease-in-out infinite}@keyframes cv-glow{0%,100%{box-shadow:0 4px 14px rgba(0,0,0,.2)}50%{box-shadow:0 4px 14px rgba(0,0,0,.2),0 0 0 5px rgba(245,190,16,.16),0 0 20px 4px var(--preview-radar,#f5be10)}}
   #cv-btn.shake{animation:cv-shake 3.2s ease infinite}@keyframes cv-shake{0%,90%,100%{transform:rotate(0)}92%{transform:rotate(-9deg)}94%{transform:rotate(9deg)}96%{transform:rotate(-6deg)}98%{transform:rotate(4deg)}}
+  #cv-frame.cv-left{align-items:flex-start}
+  #cv-frame.cv-left #cv-btnrow{justify-content:flex-start}
+  #cv-clip{display:none;width:32px;height:32px;border-radius:9px;align-items:center;justify-content:center;flex:0 0 auto;color:#9a9a95;cursor:pointer}
+  #cv-widget.cv-hasclip #cv-clip{display:flex}
+  #cv-clip svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #cv-teaser{position:relative;max-width:232px;align-self:inherit;background:#fff;border:1px solid var(--line);border-radius:14px;border-bottom-right-radius:4px;
+    padding:11px 28px 11px 13px;font-size:12.5px;line-height:1.4;color:#2a2a2a;box-shadow:0 8px 28px rgba(0,0,0,.16)}
+  #cv-teaser .cv-tx{position:absolute;top:3px;right:7px;background:0;border:0;color:#999;font-size:16px;line-height:1;cursor:pointer;padding:2px}
+  #cv-frame.cv-left #cv-teaser{border-bottom-right-radius:14px;border-bottom-left-radius:4px}
+  #cv-frame.cv-dark #cv-teaser{background:#232327;color:#ececec;border-color:#3a3a40}
   @media(max-width:1100px){#main.with-canvas{display:block}#canvas-panel{margin-top:4px}}
   #bot-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   #bot-tabs button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 16px;
@@ -3085,9 +3095,10 @@ const ADMIN_HTML = `<!doctype html>
                 <div id="cv-sug"></div>
               </div>
               <div id="cv-cta" style="display:none"></div>
-              <div id="cv-foot"><input id="cv-in" placeholder="Escribe tu pregunta…"><div id="cv-send"></div></div>
+              <div id="cv-foot"><div id="cv-clip" title="Adjuntar archivo"><svg viewBox="0 0 24 24"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg></div><input id="cv-in" placeholder="Escribe tu pregunta…"><div id="cv-send"></div></div>
               <div id="cv-brand" class="hide"></div>
             </div>
+            <div id="cv-teaser" style="display:none"><span id="cv-teasertx">👋 ¿Te ayudo en algo?</span><button type="button" id="cv-teaserx" aria-label="Cerrar">&times;</button></div>
             <div id="cv-btnrow"><div id="cv-btn"></div></div>
           </div>
           <p class="mut" style="margin-top:10px;font-size:12px">Vista en vivo del diseño <b>y chat real</b>:
@@ -4446,6 +4457,7 @@ function selTenant(id, projectId) {
   $("f-color2").value = th.secondary_color || "#f2f2f0";
   $("f-name2").value = isNew ? "" : (t.name || "");
   $("f-userbubble").value = th.user_bubble || (t && t.primary_color) || "#f5be10";
+  ubTouched = !!(th.user_bubble && th.user_bubble.toLowerCase() !== (((t && t.primary_color) || "").toLowerCase()));
   $("f-density").value = th.density || "cozy";
   $("f-timestamps").checked = !!th.timestamps;
   $("f-avatars").checked = !!th.msg_avatars;
@@ -4517,7 +4529,7 @@ function selTenant(id, projectId) {
   $("f-expobot").checked = th.expobot_branding !== false;
   $("f-sound").checked = !!th.sound;
   $("f-css").value = th.custom_css || "";
-  iconBtnSel = th.icon_btn || "burbuja";
+  iconBtnSel = th.icon_btn || "expobot";
   iconSendSel = th.icon_send || "";
   $("f-btnshape").value = th.btn_shape || "circulo";
   $("f-btnlabel").value = th.btn_label || "";
@@ -4830,6 +4842,7 @@ var SEND_ICONS = {
 };
 var iconBtnSel = "expobot";
 var iconSendSel = "";
+var ubTouched = false;
 
 function svgIcon(path) {
   return path.indexOf("<svg") === 0 ? path : '<svg viewBox="0 0 24 24">' + path + "</svg>";
@@ -5049,8 +5062,8 @@ function updPrev() {
   w.style.fontFamily = fontStack(font);
   w.style.background = cbg;
   w.style.borderRadius = Math.min(rad + 4, 28) + "px";
-  w.style.boxShadow = sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.4)"
-    : sh === "media" ? "0 14px 44px rgba(0,0,0,.2)" : "0 8px 24px rgba(0,0,0,.12)";
+  w.style.boxShadow = sh === "ninguna" ? "none" : sh === "fuerte" ? "0 18px 60px rgba(0,0,0,.35)"
+    : sh === "media" ? "0 12px 48px rgba(0,0,0,.2)" : "0 8px 28px rgba(0,0,0,.14)";
   $("f-winborderw-v").textContent = $("f-winborderw").value;
   w.style.border = $("f-winborderon").checked
     ? (($("f-winborderw").value || 1) + "px solid " + $("f-winborder").value)
@@ -5085,6 +5098,7 @@ function updPrev() {
     b.style.borderBottomLeftRadius = "4px";
   });
   $("cv-welcome").textContent = $("f-welcome").value.trim() || "¡Hola! ¿En qué puedo ayudarte?";
+  if (!ubTouched) $("f-userbubble").value = c;
   var ub = $("f-userbubble").value || c;
   var ubt = contrastFor(ub);
   [].forEach.call(document.querySelectorAll(".cv-m"), function (um) {
@@ -5101,6 +5115,16 @@ function updPrev() {
   wdg.classList.toggle("cv-times", $("f-timestamps").checked);
   wdg.classList.toggle("cv-avatars", $("f-avatars").checked);
   wdg.classList.toggle("cv-hasreset", $("f-reset").checked);
+  wdg.classList.toggle("cv-hasclip", $("f-attach").checked);
+  var cvFrame = $("cv-frame");
+  cvFrame.classList.toggle("cv-left", $("f-side").value === "izquierda");
+  cvFrame.classList.toggle("cv-dark", cvDark);
+  var teaserOn = $("f-teaser").checked, cvTe = document.getElementById("cv-teaser");
+  if (cvTe) {
+    cvTe.style.display = teaserOn ? "" : "none";
+    document.getElementById("cv-teasertx").textContent = $("f-tteaser").value.trim() || $("f-welcome").value.trim() || "👋 ¿Te ayudo en algo?";
+    document.getElementById("cv-teaserx").style.display = $("f-teaserclose").checked ? "" : "none";
+  }
   var ctaTxt = $("f-cta").value.trim();
   var ctaEl = $("cv-cta");
   if (ctaEl) { ctaEl.style.display = ctaTxt ? "block" : "none"; ctaEl.textContent = ctaTxt || ""; ctaEl.style.background = ub; ctaEl.style.color = ubt; }
@@ -5171,6 +5195,8 @@ function updPrev() {
   var fxMap = { radar: "radar", latido: "beat", rebote: "bounce", brillo: "glow", sacudida: "shake" };
   if (fxMap[fx]) pb.classList.add(fxMap[fx]);
   pb.style.setProperty("--preview-radar", c);
+  pb.style.setProperty("--cv-lshadow", sh === "ninguna" ? "none" : sh === "fuerte" ? "0 6px 22px rgba(0,0,0,.32)"
+    : sh === "media" ? "0 4px 16px rgba(0,0,0,.18)" : "0 4px 14px rgba(0,0,0,.14)");
   pb.style.borderRadius = shape === "redondeado" ? Math.min(rad + 6, 18) + "px" : shape === "pastilla" ? "99px" : "50%";
   var isz = parseInt($("f-iconsize").value, 10) || 46;
   $("f-iconsize-v").textContent = isz;
@@ -5201,9 +5227,10 @@ function updPrev() {
 ["f-color", "f-colorhead", "f-color2", "f-colorbg", "f-controlborder", "f-radius", "f-subtitle", "f-name", "f-welcome", "f-btnlabel",
  "f-tplaceholder", "f-tsend", "f-brand", "f-brandlogo", "f-sugg", "f-logo", "f-wordmark", "f-btnicon", "f-btnbg", "f-btnborder", "f-radarcolor", "f-bgimg",
  "f-iconsize", "f-btnborderw", "f-winborder", "f-winborderw",
- "f-edge", "f-btnpx", "f-userbubble", "f-cta", "f-tteaser", "f-name2", "f-btnlabel"].forEach(function (id) {
+ "f-edge", "f-btnpx", "f-cta", "f-tteaser", "f-name2", "f-btnlabel"].forEach(function (id) {
   $(id).oninput = updPrev;
 });
+$("f-userbubble").oninput = function () { ubTouched = true; updPrev(); };
 ["f-font", "f-shadow", "f-btnshape", "f-btnborderon", "f-effect", "f-winborderon", "f-expobot",
  "f-side", "f-dark", "f-density", "f-size", "f-teaserclose", "f-autoopen", "f-typing", "f-attach",
  "f-timestamps", "f-avatars", "f-reset", "f-lang", "f-qualSw", "f-sugSw"].forEach(function (id) {
@@ -5212,6 +5239,10 @@ function updPrev() {
 ["g-c1", "g-c2"].forEach(function (id) {
   $(id).oninput = function () { renderGradStyles(); updPrev(); };
 });
+(function () {
+  var tx = document.getElementById("cv-teaserx");
+  if (tx) tx.onclick = function (e) { e.stopPropagation(); document.getElementById("cv-teaser").style.display = "none"; };
+})();
 
 
 // ----- asistente de diseño -----
@@ -5401,7 +5432,7 @@ function collect() {
     theme: {
       header_color: "",
       secondary_color: $("f-color2").value,
-      user_bubble: $("f-userbubble").value,
+      user_bubble: ubTouched ? $("f-userbubble").value : "",
       edge: parseInt($("f-edge").value, 10) || 24,
       btn_px: parseInt($("f-btnpx").value, 10) || 56,
       teaser_close: $("f-teaserclose").checked,

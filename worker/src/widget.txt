@@ -141,6 +141,9 @@
   .cb-foot button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round}
   .cb-foot button:disabled{opacity:.45;cursor:default}
+  .cb-foot button.cb-clip{background:transparent;color:#9a9a95;padding:0 2px;border-radius:0}
+  .cb-foot button.cb-clip:hover{color:var(--cb)}
+  .cb-foot button.cb-clip svg{width:20px;height:20px}
   .cb-brand{flex:0 0 auto;text-align:center;font-size:11px;color:#999;padding:0 0 7px}
   .cb-brand a{color:#999;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
   .cb-brand-logo{display:inline-block;width:68px;height:16px;object-fit:fill;vertical-align:middle}
@@ -406,7 +409,9 @@
       '<div class="cb-log" id="cb-log"></div>' +
       '<div class="cb-sug" id="cb-sug"></div>' +
       (TH.cta_text ? '<button class="cb-cta" id="cb-cta">' + esc(TH.cta_text) + "</button>" : "") +
-      '<div class="cb-foot"><input id="cb-in" placeholder="' + esc(TXT.placeholder) + '" ' +
+      '<div class="cb-foot">' +
+      (TH.attach ? '<button class="cb-clip" id="cb-clip" type="button" aria-label="Adjuntar archivo"><svg viewBox="0 0 24 24"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg></button><input type="file" id="cb-file" style="display:none">' : "") +
+      '<input id="cb-in" placeholder="' + esc(TXT.placeholder) + '" ' +
       'aria-label="Tu pregunta" autocomplete="off"><button id="cb-send" aria-label="Enviar">' +
       (SEND_ICONS[TH.icon_send]
         ? '<svg viewBox="0 0 24 24">' + SEND_ICONS[TH.icon_send] + "</svg>"
@@ -419,6 +424,17 @@
     if (rst) rst.onclick = function () { history = []; render(); };
     var ctaBtn = panel.querySelector("#cb-cta");
     if (ctaBtn) ctaBtn.onclick = function () { panel.querySelector("#cb-in").value = TH.cta_text; send(); };
+    var clip = panel.querySelector("#cb-clip"), fileIn = panel.querySelector("#cb-file");
+    if (clip && fileIn) {
+      clip.onclick = function () { fileIn.click(); };
+      fileIn.onchange = function () {
+        if (fileIn.files && fileIn.files[0]) {
+          var box = panel.querySelector("#cb-in");
+          box.value = (box.value ? box.value + " " : "") + "📎 " + fileIn.files[0].name;
+          box.focus();
+        }
+      };
+    }
     var inp = panel.querySelector("#cb-in");
     inp.onkeydown = function (e) {
       if (e.key === "Enter") send();
@@ -666,7 +682,7 @@
       (TH.position === "izquierda" ? " cb-left" : "") +
       (isDark() ? " cb-dark" : "");
     teaser.setAttribute("role", "button");
-    teaser.innerHTML = '<button class="cb-tx" aria-label="Cerrar aviso">&times;</button>' + esc(TXT.teaser);
+    teaser.innerHTML = (TH.teaser_close !== false ? '<button class="cb-tx" aria-label="Cerrar aviso">&times;</button>' : "") + esc(TXT.teaser);
     teaser.onclick = function (e) {
       var closeOnly = e.target && e.target.className === "cb-tx";
       hideTeaser();
