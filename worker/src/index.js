@@ -872,7 +872,7 @@ async function answerTenant(env, ctx, tenant, sid, message, pageUrl, history) {
       method: "PATCH",
       body: { human_handoff: true, handoff_at: new Date().toISOString() },
     });
-    const notify = notifyHandoff(env, tenant, conv, message, motivo, pageUrl);
+    const notify = notifyHandoff(env, tenant, { id: conv.id, session_id: sid }, message, motivo, pageUrl);
     if (ctx && ctx.waitUntil) ctx.waitUntil(notify); else await notify.catch(() => {});
   };
 
@@ -976,11 +976,43 @@ async function sendHumanReply(env, tenant, conv, text) {
 }
 
 // aviso al cliente/gestor de que un cliente pide atención humana en un canal
+// envía un mensaje al Telegram del dueño (puente de atención) y deja mapeado el
+// message_id a la conversación, para enrutar su respuesta de vuelta a WhatsApp.
+// Devuelve true si el puente está configurado y se ha enviado.
+async function bridgeSend(env, tenant, conv, text) {
+  const cfg = tenant.handoff || {};
+  if (!cfg.enabled || !cfg.bot_token || !cfg.chat_id) return false;
+  try {
+    const res = await tgSendText(cfg.bot_token, cfg.chat_id, text);
+    const mid = res?.result?.message_id;
+    if (mid && conv.id) {
+      await sb(env, "handoff_bridge", {
+        method: "POST", headers: { Prefer: "return=minimal" },
+        body: { tenant_id: tenant.id, conversation_id: conv.id, tg_message_id: mid },
+      });
+    }
+    return true;
+  } catch (e) {
+    await logError(env, "bridge-send/" + tenant.slug, e?.message || e).catch(() => {});
+    return false;
+  }
+}
+
+// aviso de relevo: primero por Telegram (si el dueño lo tiene vinculado), si no, email
 async function notifyHandoff(env, tenant, conv, customerMsg, motivo, channel) {
+  const canal = channel === "whatsapp" ? "WhatsApp" : channel === "telegram" ? "Telegram" : "un canal";
+  const from = (conv.session_id || "").slice(3);
+  const tgText =
+    "🙋 Un cliente quiere hablar con una persona\n" +
+    "Canal: " + canal + (from ? " · " + from : "") + "\n" +
+    (motivo ? "Motivo: " + motivo + "\n" : "") +
+    (customerMsg ? "\n« " + String(customerMsg).slice(0, 400) + " »\n" : "") +
+    "\n↩️ Responde a ESTE mensaje y se lo enviaré por " + canal + ".";
+  if (await bridgeSend(env, tenant, conv, tgText)) return;
+  // sin Telegram configurado: aviso por email como antes
   try {
     const to = await leadNotifyEmail(env, tenant);
     if (!to) return;
-    const canal = channel === "whatsapp" ? "WhatsApp" : channel === "telegram" ? "Telegram" : "un canal";
     await sendEmail(
       env,
       to,
@@ -1563,6 +1595,11 @@ async function handleAdminApi(request, env, url) {
       env,
       "tenants?select=*,tenant_keys(public_key,revoked_at)&order=created_at.asc"
     );
+    // el puente de Telegram guarda token+secreto: nunca viajan al navegador
+    (tenants || []).forEach((t) => {
+      const c = t.handoff || {};
+      t.handoff = { enabled: !!c.enabled, bot_username: c.bot_username || "", linked: !!c.chat_id };
+    });
     return json(tenants);
   }
 
@@ -2228,6 +2265,41 @@ Indicaciones del diseñador: ${brief && brief.trim() ? brief.trim().slice(0, 100
       return json({ error: e?.message || "no se ha podido enviar" }, 400);
     }
     return json({ ok: true });
+  }
+
+  // --- puente de atención por Telegram: estado / conectar / desconectar ---
+  const mHandoff = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/handoff$/);
+  if (mHandoff && request.method === "GET") {
+    const [t] = await sb(env, `tenants?id=eq.${mHandoff[1]}&select=handoff`);
+    const c = t?.handoff || {};
+    return json({ enabled: !!c.enabled, bot_username: c.bot_username || "", linked: !!c.chat_id });
+  }
+  if (mHandoff && request.method === "DELETE") {
+    const [t] = await sb(env, `tenants?id=eq.${mHandoff[1]}&select=handoff`);
+    const c = t?.handoff || {};
+    if (c.bot_token) await fetch(`https://api.telegram.org/bot${c.bot_token}/deleteWebhook`).catch(() => {});
+    await sb(env, `tenants?id=eq.${mHandoff[1]}`, { method: "PATCH", body: { handoff: {} } });
+    return json({ ok: true });
+  }
+  const mHandoffConn = url.pathname.match(/^\/admin\/api\/tenants\/([0-9a-f-]{36})\/handoff-connect$/);
+  if (mHandoffConn && request.method === "POST") {
+    const { bot_token } = await request.json();
+    const tok = String(bot_token || "").trim();
+    if (!tok) return json({ error: "pega el token del bot de avisos (de @BotFather)" }, 400);
+    const me = await (await fetch(`https://api.telegram.org/bot${tok}/getMe`)).json();
+    if (!me.ok) return json({ error: "El token del bot no es válido." }, 400);
+    const [t] = await sb(env, `tenants?id=eq.${mHandoffConn[1]}&select=handoff`);
+    const prev = t?.handoff || {};
+    const secret = prev.secret || randomHex(16);
+    const hook = `${url.origin}/webhooks/tg-bridge/${mHandoffConn[1]}`;
+    const set = await (await fetch(`https://api.telegram.org/bot${tok}/setWebhook`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: hook, secret_token: secret, allowed_updates: ["message"], drop_pending_updates: true }),
+    })).json();
+    if (!set.ok) return json({ error: "Telegram rechazó el webhook: " + (set.description || "") }, 400);
+    const handoff = { enabled: true, bot_token: tok, secret, bot_username: me.result.username || "", chat_id: prev.chat_id || null };
+    await sb(env, `tenants?id=eq.${mHandoffConn[1]}`, { method: "PATCH", body: { handoff } });
+    return json({ ok: true, bot_username: me.result.username, link: "https://t.me/" + me.result.username, linked: !!prev.chat_id });
   }
 
   // --- asistente de configuración con IA ---
@@ -3147,7 +3219,28 @@ const ADMIN_HTML = `<!doctype html>
 
       <section class="workspace-view studio hide" id="v-inbox">
         <div class="page-heading"><div><p class="section-kicker">ATENCIÓN HUMANA</p><h1>Bandeja</h1><p>Conversaciones de WhatsApp y Telegram. Toma el control para responder tú; el bot se calla en esa conversación hasta que lo devuelvas.</p></div><button id="inbox-refresh" class="ghost">Actualizar</button></div>
-        <div class="note" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Aquí solo aparecen los canales de mensajería (el chat de la web no se puede intervenir). Se actualiza sola cada 12 s.</span></div>
+
+        <details class="cfg" open>
+          <summary><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21.5 4.5 2.5 11.8l5.5 1.7M21.5 4.5 18 20l-6-5.5M21.5 4.5 8 13.5M8 13.5V19l3-3.2"/></svg></span>
+            <div><div class="ct">Avísame por Telegram</div><div class="cs">Recibe los avisos y contesta desde tu Telegram; el cliente lo recibe en WhatsApp</div></div><span class="cv">›</span></summary>
+          <div class="cfgb">
+            <div id="ho-status" class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Cargando…</span></div>
+            <div id="ho-setup">
+              <ol style="margin:0 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:13.5px">
+                <li>En Telegram, crea un bot con <b>@BotFather</b> (/newbot) y copia su token.</li>
+                <li>Pega el token aquí abajo y pulsa <b>Conectar</b>.</li>
+                <li>Te daremos un enlace: ábrelo y pulsa <b>Start</b> para vincular tu Telegram.</li>
+              </ol>
+              <div class="fieldset"><label>Token del bot de avisos</label><input id="ho-token" type="password" placeholder="1234567:ABC… (déjalo en blanco para conservar el guardado)"></div>
+              <div class="actions" style="margin-top:8px"><button id="ho-connect" class="primary">Conectar</button><span id="ho-msg" class="mut"></span></div>
+            </div>
+            <div id="ho-linked" class="hide">
+              <div class="actions"><a id="ho-open" class="ghost small" target="_blank" rel="noopener">Abrir el bot y pulsar Start</a><button id="ho-disc" class="ghost small danger">Desconectar</button></div>
+            </div>
+          </div>
+        </details>
+
+        <div class="note" style="margin:6px 0 14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Abajo solo aparecen los canales de mensajería (el chat de la web no se puede intervenir). Se actualiza sola cada 12 s.</span></div>
         <div id="inbox-list" class="mut">Cargando…</div>
       </section>
 
@@ -5545,7 +5638,44 @@ $("f-chweb").addEventListener("change", function () {
 var INBOX_OPEN = {};
 function inboxChannel(sid) { return /^wa:/.test(sid || "") ? "WhatsApp" : /^tg:/.test(sid || "") ? "Telegram" : ""; }
 
+function loadHandoff() {
+  api("/admin/api/tenants/" + sel.id + "/handoff").then(function (r) {
+    if (!r || r.error) return;
+    var st = $("ho-status"), setup = $("ho-setup"), linked = $("ho-linked");
+    if (r.enabled) {
+      setup.classList.add("hide"); linked.classList.remove("hide");
+      if (r.bot_username) { $("ho-open").href = "https://t.me/" + r.bot_username; $("ho-open").textContent = r.linked ? "Abrir @" + r.bot_username : "Abrir @" + r.bot_username + " y pulsar Start"; }
+      st.className = "note " + (r.linked ? "ok" : "warn");
+      st.querySelector("span").textContent = r.linked
+        ? "Conectado y vinculado. Cuando alguien pida una persona, te llega a tu Telegram y respondes desde ahí."
+        : "Bot conectado, pero falta vincular tu chat: abre el bot y pulsa Start.";
+    } else {
+      setup.classList.remove("hide"); linked.classList.add("hide");
+      st.className = "note";
+      st.querySelector("span").textContent = "Aún no configurado: los avisos van por email. Conéctalo para recibirlos y contestar por Telegram.";
+    }
+  }).catch(function () {});
+}
+$("ho-connect").onclick = function () {
+  var tok = $("ho-token").value.trim();
+  $("ho-msg").textContent = "Conectando…"; $("ho-msg").className = "mut";
+  api("/admin/api/tenants/" + sel.id + "/handoff-connect", { method: "POST", body: JSON.stringify({ bot_token: tok }) })
+    .then(function (r) {
+      if (r.error) { $("ho-msg").textContent = r.error; $("ho-msg").className = "err"; return; }
+      $("ho-msg").textContent = "Conectado ✓ Ahora abre el bot y pulsa Start."; $("ho-msg").className = "ok";
+      $("ho-token").value = "";
+      loadHandoff();
+    }).catch(function () { $("ho-msg").textContent = "No se ha podido conectar."; $("ho-msg").className = "err"; });
+};
+$("ho-disc").onclick = function () {
+  if (!confirm("¿Desconectar el aviso por Telegram? Los avisos volverán a ir por email.")) return;
+  api("/admin/api/tenants/" + sel.id + "/handoff", { method: "DELETE" }).then(function (r) {
+    if (r && !r.error) { toast("Telegram desconectado"); loadHandoff(); }
+  });
+};
+
 function renderInbox() {
+  loadHandoff();
   var box = $("inbox-list"); if (!box) return;
   api("/admin/api/tenants/" + sel.id + "/conversations").then(function (rows) {
     if (!Array.isArray(rows)) { box.className = "mut"; box.textContent = "No se han podido cargar las conversaciones."; return; }
@@ -9099,7 +9229,11 @@ ${inject}</body></html>`;
                     const sid = "wa:" + m.from, txt = m.text.body.slice(0, 2000);
                     // conversación en manos de una persona: guardar sin que el bot conteste
                     const st = await channelHandoffState(env, tenant.id, sid);
-                    if (st.paused) { await saveInboundOnly(env, tenant.id, st.id, sid, txt, "whatsapp"); continue; }
+                    if (st.paused) {
+                      await saveInboundOnly(env, tenant.id, st.id, sid, txt, "whatsapp");
+                      await bridgeSend(env, tenant, { id: st.id, session_id: sid }, "💬 " + m.from + ": " + txt);
+                      continue;
+                    }
                     const out = await answerTenant(env, ctx, tenant, sid, txt, "whatsapp");
                     await waSendText(integ.settings.access_token, phoneId, m.from, out.reply);
                   }
@@ -9133,10 +9267,59 @@ ${inject}</body></html>`;
             if ((await rpc(env, "check_rate", { p_ip: "tg:" + chatId, p_limit: 20 })) === false) return;
             const sid = "tg:" + chatId, txt = String(msg.text).slice(0, 2000);
             const st = await channelHandoffState(env, tenant.id, sid);
-            if (st.paused) { await saveInboundOnly(env, tenant.id, st.id, sid, txt, "telegram"); return; }
+            if (st.paused) {
+              await saveInboundOnly(env, tenant.id, st.id, sid, txt, "telegram");
+              await bridgeSend(env, tenant, { id: st.id, session_id: sid }, "💬 " + chatId + ": " + txt);
+              return;
+            }
             const out = await answerTenant(env, ctx, tenant, sid, txt, "telegram");
             await tgSendText(token, chatId, out.reply);
           } catch (err) { await logError(env, "tg-webhook", err?.message || err).catch(() => {}); }
+        })());
+        return new Response("ok", { status: 200 });
+      }
+
+      // --- puente de atención por Telegram: el dueño del negocio contesta desde SU Telegram ---
+      const mBridge = url.pathname.match(/^\/webhooks\/tg-bridge\/([0-9a-f-]{36})$/);
+      if (mBridge && request.method === "POST") {
+        const [tenant] = await sb(env, `tenants?id=eq.${mBridge[1]}&select=*`);
+        const cfg = tenant?.handoff || {};
+        const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
+        if (!tenant || !cfg.secret || secret !== cfg.secret) return new Response("forbidden", { status: 403 });
+        let update = {};
+        try { update = await request.json(); } catch (e) {}
+        ctx.waitUntil((async () => {
+          try {
+            const msg = update.message; if (!msg || !msg.chat) return;
+            const chatId = msg.chat.id;
+            const text = String(msg.text || "").trim();
+            // vinculación: al pulsar Start (o /vincular) guardamos el chat del dueño
+            if (/^\/(start|vincular)\b/i.test(text) || !cfg.chat_id) {
+              const nh = Object.assign({}, cfg, { chat_id: chatId });
+              await sb(env, `tenants?id=eq.${tenant.id}`, { method: "PATCH", body: { handoff: nh } });
+              await tgSendText(cfg.bot_token, chatId,
+                "✅ Vinculado. Aquí te avisaré cuando alguien quiera hablar con una persona. Responde a cada aviso y el cliente lo recibirá en su chat.");
+              return;
+            }
+            if (String(chatId) !== String(cfg.chat_id)) return; // solo el chat vinculado
+            // respuesta del dueño: debe ir «respondiendo» a un aviso concreto
+            const replyTo = msg.reply_to_message?.message_id;
+            if (!replyTo) {
+              await tgSendText(cfg.bot_token, chatId, "↩️ Para contestar a un cliente, responde (reply) al mensaje del aviso.");
+              return;
+            }
+            const [map] = await sb(env, `handoff_bridge?tenant_id=eq.${tenant.id}&tg_message_id=eq.${replyTo}&select=conversation_id&limit=1`);
+            if (!map) { await tgSendText(cfg.bot_token, chatId, "No encuentro a qué cliente corresponde ese aviso."); return; }
+            const [conv] = await sb(env, `conversations?id=eq.${map.conversation_id}&select=id,session_id,tenant_id`);
+            if (!conv) return;
+            if (!text) return;
+            try {
+              await sendHumanReply(env, tenant, conv, text);
+              await tgSendText(cfg.bot_token, chatId, "✓ Enviado al cliente.");
+            } catch (e) {
+              await tgSendText(cfg.bot_token, chatId, "No se ha podido enviar: " + (e?.message || "error"));
+            }
+          } catch (err) { await logError(env, "tg-bridge", err?.message || err).catch(() => {}); }
         })());
         return new Response("ok", { status: 200 });
       }
