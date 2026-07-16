@@ -190,6 +190,17 @@ proyectos, y cada proyecto sus chatbots (puede haber varios). Desde ahí puedes:
 
 El alta por SQL sigue funcionando igual; el panel hace lo mismo por debajo.
 
+### Asistente privado de administración
+
+El panel de administración incorpora un copiloto privado de solo lectura. Puede consultar la estructura de clientes, proyectos, asistentes, integraciones y métricas operativas, además de buscar fragmentos relevantes en las bases de conocimiento de todos los bots. Nunca ejecuta cambios ni devuelve secretos de integraciones.
+
+El endpoint es POST /admin/api/copilot, requiere el token de administración y aplica validación de entrada, límite de peticiones y tiempos máximos para los proveedores de IA.
+
+### Gestión de proyectos y leads
+
+- Para cambiar el nombre de un proyecto, abre el proyecto y usa Renombrar o entra en Configuración, edita Nombre del proyecto y guarda.
+- En Administración > Leads, cada fila ofrece la acción Eliminar con confirmación.
+- En el panel de cliente, los leads también pueden eliminarse desde su tabla. La API valida el tenant del usuario para impedir accesos cruzados.
 ## Consultas útiles
 
 ```sql

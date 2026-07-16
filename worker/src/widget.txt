@@ -252,6 +252,14 @@
     return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
+  function safeHttpUrl(value) {
+    try {
+      var parsed = new URL(String(value || ""), location.href);
+      return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : "";
+    } catch (_) {
+      return "";
+    }
+  }
   function md(t) {
     var x = esc(t);
     x = x.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
@@ -615,15 +623,25 @@
     log.appendChild(d);
 
     if (sources && sources.length) {
-      var s2 = document.createElement("div");
-      s2.className = "cb-src";
-      s2.innerHTML = "Fuente: " + sources.map(function (u) {
-        return '<a href="' + esc(u) + '" target="_blank" rel="noopener">' +
-          esc(u.replace(/^https?:\/\/[^/]+\//, "").slice(0, 34) || "web") + "</a>";
-      }).join(" · ");
-      log.appendChild(s2);
-    }
-    scrollLog();
+      var safeSources = sources.map(safeHttpUrl).filter(Boolean);
+      if (safeSources.length) {
+        var s2 = document.createElement("div");
+        s2.className = "cb-src";
+        s2.appendChild(document.createTextNode("Fuente: "));
+        safeSources.forEach(function (u, index) {
+          if (index) s2.appendChild(document.createTextNode(" · "));
+          var link = document.createElement("a");
+          link.href = u;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          var label = new URL(u).pathname;
+          while (label.charAt(0) === "/") label = label.slice(1);
+          link.textContent = label.slice(0, 34) || "web";
+          s2.appendChild(link);
+        });
+        log.appendChild(s2);
+      }
+    }    scrollLog();
     return d;
   }
 
