@@ -547,8 +547,10 @@ const LEAD_TOOL = {
   name: "guardar_lead",
   description:
     "Guarda los datos de contacto de una persona interesada para que el equipo comercial le contacte. " +
-    "Úsala SOLO cuando el usuario ya te haya dado, como mínimo, su nombre y su email. " +
-    "No la uses para preguntas informativas normales.",
+    "Úsala SOLO cuando el usuario ya te haya dado, como mínimo, su nombre y su email (o teléfono), " +
+    "normalmente al final de una conversación en la que ya entendiste qué necesita. " +
+    "Pide los datos de forma natural y explicando el beneficio, nunca nada más empezar. " +
+    "No la uses para preguntas informativas normales. En 'message' resume en una frase su caso concreto.",
   input_schema: {
     type: "object",
     properties: {
@@ -576,13 +578,16 @@ const FORM_TOOL = {
   name: "pedir_datos_contacto",
   description:
     "Muestra al visitante un formulario dentro del chat para que deje sus datos de contacto. " +
-    "Úsala ÚNICAMENTE en dos casos: (1) el visitante pide expresamente hablar con una persona, " +
-    "que le contacten o que le llame la organización; (2) el visitante necesita una respuesta que NO está " +
-    "en el contexto y no puedes dársela. " +
-    "NUNCA la uses solo porque el visitante diga quién es (expositor, visitante, prensa...), ni al saludar, " +
-    "ni ante preguntas que puedas responder con el contexto: en esos casos responde con normalidad. " +
-    "Antes de usarla, responde primero lo que sepas. Acompáñala siempre de una frase breve invitando a rellenarlo. " +
-    "No la uses si el visitante ya envió el formulario en esta conversación.",
+    "Sé EXIGENTE: el formulario llega al FINAL de una buena conversación, no al principio. " +
+    "Úsala ÚNICAMENTE en dos casos: (1) el visitante pide EXPRESAMENTE que le contacten, le llamen " +
+    "o hablar con una persona; (2) hay interés comercial claro construido en la conversación (pregunta " +
+    "por precios, propuesta, reserva, demo...) Y ya has hecho las dos cosas siguientes: responder lo " +
+    "que sabías y hacerle al menos una pregunta para entender su caso. " +
+    "NUNCA la uses en tu primera respuesta, ni solo porque algo no esté en el contexto (primero ayuda " +
+    "con lo que sí sabes y pregunta qué necesita), ni solo porque el visitante diga quién es " +
+    "(expositor, visitante, prensa...), ni al saludar, ni ante preguntas que puedas responder. " +
+    "Acompáñala siempre de una frase breve explicando el beneficio de dejar los datos. " +
+    "No la uses si el visitante ya envió el formulario o ya rechazó dejarlos en esta conversación.",
   input_schema: {
     type: "object",
     properties: {
@@ -666,10 +671,16 @@ const MASTER_PROMPT =
   "calma y tranquiliza al cliente («te paso con una persona del equipo, te atenderá enseguida»). " +
   "Nunca inventes datos que no tengas: si no lo sabes, dilo y ofrece el contacto.";
 
-// herramientas disponibles según el tenant y si el canal admite relevo humano
+// herramientas disponibles según el tenant y si el canal admite relevo humano.
+// El formulario visual solo existe en el widget web: en WhatsApp/Telegram
+// (allowEscalate) no se ofrece, porque allí invitaría a un formulario que
+// nunca aparece — en canales el bot pide los datos conversando (guardar_lead).
 function toolsFor(tenant, allowEscalate) {
   const t = [];
-  if (leadCaptureEnabled(tenant)) t.push(LEAD_TOOL, FORM_TOOL);
+  if (leadCaptureEnabled(tenant)) {
+    t.push(LEAD_TOOL);
+    if (!allowEscalate) t.push(FORM_TOOL);
+  }
   if (allowEscalate) t.push(ESCALATE_TOOL);
   return t;
 }
@@ -680,12 +691,21 @@ function toolsFor(tenant, allowEscalate) {
 function leadDirective(tenant) {
   if (leadCaptureEnabled(tenant)) {
     return (
-      "\n\n== Captación de leads: ACTIVADA ==\n" +
-      "Cuando un usuario muestre interés real o comercial legítimo, pídele con naturalidad y " +
-      "cortesía su nombre y su email (o teléfono) y usa la herramienta 'guardar_lead' para " +
-      "registrarlo. Necesitas como mínimo su nombre y un medio de contacto (email o teléfono) " +
-      "antes de guardarlo. No lo hagas al saludar ni ante preguntas normales que puedas " +
-      "responder: solo cuando haya un interés claro."
+      "\n\n== Captación de leads: ACTIVADA (compórtate como un buen comercial humano) ==\n" +
+      "Los datos de contacto se piden al FINAL de una buena conversación, nunca al principio. " +
+      "Tu embudo, en este orden:\n" +
+      "1) RESUELVE: contesta lo que te pregunten con tu conocimiento, como haría un compañero atento.\n" +
+      "2) INTERÉSATE: haz alguna pregunta genuina para entender su caso (qué organiza o necesita, " +
+      "para cuándo, para cuánta gente...). Escucha y adapta tus respuestas a lo que te cuente.\n" +
+      "3) APORTA: explícale cómo lo que ofrecemos encaja con SU caso concreto.\n" +
+      "4) SOLO cuando el interés sea claro (pregunta por precios, propuesta, reserva, demo, " +
+      "disponibilidad... o pide que le contacten), ofrécele dejar sus datos explicando el beneficio " +
+      "concreto: «si me dejas tu nombre y email, el equipo te prepara una propuesta / te llama con " +
+      "la disponibilidad».\n" +
+      "Prohibido: pedir datos en tu primer o segundo mensaje, nada más saludar, o ante una pregunta " +
+      "informativa normal. Máximo UNA petición de datos por conversación: si no quiere, respétalo y " +
+      "sigue ayudando igual de bien. Para registrar usa 'guardar_lead' (necesitas como mínimo nombre " +
+      "y email o teléfono)."
     );
   }
   return (
