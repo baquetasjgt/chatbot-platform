@@ -4609,7 +4609,7 @@ const ADMIN_HTML = `<!doctype html>
                 <option value="redondeado">Redondeado</option>
                 <option value="pastilla">Píldora</option>
               </select>
-              <div id="pilllab"><label>Texto de la píldora</label><input id="f-btnlabel" placeholder="Chat"></div>
+              <div id="pilllab"><label>Texto de la píldora</label><input id="f-btnlabel" placeholder="Asistente IA"></div>
               <label>Icono</label>
               <div class="icopick" id="pick-btn"></div>
               <div class="cfgrow"><div class="cfgl">Tamaño del icono</div>
@@ -7735,6 +7735,9 @@ function updPrev() {
   pb.style.width = shape === "pastilla" ? "auto" : bpx + "px";
   pb.style.minWidth = bpx + "px";
   pb.style.height = bpx + "px";
+  // píldora: alargada de verdad — chip a la izquierda + etiqueta con aire
+  pb.style.padding = shape === "pastilla" ? "0 20px 0 7px" : "0";
+  pb.style.gap = shape === "pastilla" ? "10px" : "8px";
   var edge = parseInt($("f-edge").value, 10) || 24;
   $("f-edge-v").textContent = edge;
   $("cv-frame").style.padding = Math.max(edge, 16) + "px";
@@ -7759,9 +7762,15 @@ function updPrev() {
       ';stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">' + ic + "</svg>";
   }
   if (shape === "pastilla") {
+    // el icono va dentro de un círculo con anillo, como en la marca de referencia
+    var chip = document.createElement("span");
+    var chipPx = Math.max(bpx - 14, 28);
+    chip.style.cssText = "width:" + chipPx + "px;height:" + chipPx + "px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;border:1.5px solid " + btnText;
+    while (pb.firstChild) chip.appendChild(pb.firstChild);
+    pb.appendChild(chip);
     var lbl = document.createElement("span");
-    lbl.textContent = $("f-btnlabel").value.trim() || "Chat";
-    lbl.style.cssText = "color:" + btnText + ";font:600 14px system-ui,sans-serif";
+    lbl.textContent = $("f-btnlabel").value.trim() || "Asistente IA";
+    lbl.style.cssText = "color:" + btnText + ";font:700 15px system-ui,sans-serif;letter-spacing:.01em;white-space:nowrap";
     pb.appendChild(lbl);
   }
   syncSwatches();
