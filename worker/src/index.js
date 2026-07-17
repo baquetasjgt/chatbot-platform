@@ -5014,7 +5014,7 @@ const ADMIN_HTML = `<!doctype html>
               <div id="cv-foot"><div id="cv-clip" title="Adjuntar archivo"><svg viewBox="0 0 24 24"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg></div><input id="cv-in" placeholder="Escribe tu pregunta…"><div id="cv-send"></div></div>
               <div id="cv-brand" class="hide"></div>
             </div>
-            <div id="cv-teaser" style="display:none"><span id="cv-teasertx">👋 ¿Te ayudo en algo?</span><button type="button" id="cv-teaserx" aria-label="Cerrar">&times;</button></div>
+            <div id="cv-teaser" style="display:none"><span id="cv-teasertx">👋 ¿Te ayudo en algo?</span><button type="button" id="cv-teaserx" class="cv-tx" aria-label="Cerrar">&times;</button></div>
             <div id="cv-btnrow"><div id="cv-btn"></div></div>
           </div>
           <p class="mut" style="margin-top:10px;font-size:12px">Vista en vivo del diseño <b>y chat real</b>:
