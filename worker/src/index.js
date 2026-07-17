@@ -10573,7 +10573,7 @@ function webHtml(body) {
 }
 
 
-function serveWeb(url) {
+function serveWeb(url, env) {
   let base = null;
   let path = null;
   if (url.pathname === "/web" || url.pathname.startsWith("/web/")) {
@@ -10589,11 +10589,18 @@ function serveWeb(url) {
   if (path === null) return null;
   if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
 
+  // identidad fiscal de la página legal: misma fuente que las facturas
+  // (secretos INVOICE_ISSUER_*). Si faltan, se ve claramente en la página.
+  const issuer = env ? invoiceIssuer(env) : null;
   const fill = (tpl) =>
     tpl
       .replaceAll("%%BASE%%", base)
       .replaceAll("%%WEBKEY%%", WEB_BOT_KEY)
-      .replaceAll("%%ORIGIN%%", url.origin);
+      .replaceAll("%%ORIGIN%%", url.origin)
+      .replaceAll("%%ISSUER_NAME%%", issuer ? h(issuer.name) : "[pendiente: secreto INVOICE_ISSUER_NAME]")
+      .replaceAll("%%ISSUER_NIF%%", issuer ? h(issuer.nif) : "[pendiente]")
+      .replaceAll("%%ISSUER_ADDRESS%%", issuer ? h(issuer.address) : "[pendiente]")
+      .replaceAll("%%ISSUER_EMAIL%%", issuer ? h(issuer.email) : "[pendiente]");
 
   const textAsset = (body, type, cache = "public, max-age=3600") =>
     new Response(body, { headers: { "Content-Type": type, "Cache-Control": cache } });
@@ -10734,7 +10741,7 @@ export default {
       }
 
       // --- web pública de ExpoBot (expobot.es; vista previa en /web) ---
-      const webResp = serveWeb(url);
+      const webResp = serveWeb(url, env);
       if (webResp) return webResp;
 
       // --- demo: clon estático de la web del cliente con el bot funcionando ---
