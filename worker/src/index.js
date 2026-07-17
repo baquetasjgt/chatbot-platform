@@ -2503,7 +2503,12 @@ function invoiceIssuer(env) {
   const name = String(env.INVOICE_ISSUER_NAME || "").trim();
   const nif = String(env.INVOICE_ISSUER_NIF || "").trim();
   const address = String(env.INVOICE_ISSUER_ADDRESS || "").trim();
-  const email = normEmail(env.INVOICE_ISSUER_EMAIL || env.EMAIL_FROM || "");
+  // EMAIL_FROM suele venir como "ExpoBot <informes@expobot.es>": extraer la
+  // dirección antes de validar, o el fallback fallaría en silencio (facturas
+  // con 503 y página legal en [pendiente] aun con el resto de datos puestos)
+  const rawEmail = String(env.INVOICE_ISSUER_EMAIL || env.EMAIL_FROM || "");
+  const angled = rawEmail.match(/<([^<>]+)>/);
+  const email = normEmail(angled ? angled[1] : rawEmail);
   const phone = String(env.INVOICE_ISSUER_PHONE || "").trim();
   const parsedRate = Number(env.INVOICE_IVA_RATE ?? 0.21);
   if (!name || !nif || !address || !email || phone.length > 60 ||

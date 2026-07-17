@@ -23,6 +23,9 @@ jobs:
           node --check worker/src/index.js
           cp worker/src/widget.txt /tmp/widget-check.js && node --check /tmp/widget-check.js
 
+      - name: Escapes perdidos en páginas embebidas (la barra se evapora en el template)
+        run: node tests/scan-embedded-escapes.js
+
       - name: Extraer páginas embebidas (ADMIN/PANEL/PORTAL/FAQ)
         run: node tests/extract-pages.js
 
