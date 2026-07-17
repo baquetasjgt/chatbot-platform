@@ -631,6 +631,9 @@ const MODEL_PRICES_USD = {
   gemini: { in: 0.3, out: 2.5 },
   elevenlabs: { per_minute: 0.08 },
 };
+// caché en memoria del isolate para /api/config (60 s por clave pública)
+const CONFIG_MEMO = new Map();
+
 function modelPrice(env, model) {
   let table = MODEL_PRICES_USD;
   if (env.MODEL_PRICES_JSON) {
@@ -1327,6 +1330,9 @@ async function monthlyReportData(env, t) {
     monthStats(prevStart, start),
     rpc(env, "unanswered_questions", { p_tenant_id: t.id, p_days: 45 }),
   ]);
+  // sin actividad previa (bot recién dado de alta) no hay comparativa honesta:
+  // "↑ +12 vs mes anterior" contra un mes en que el servicio no existía engaña
+  const hadPrev = prev.convs > 0 || prev.questions > 0 || prev.leads > 0;
   return {
     monthName: start.toLocaleDateString("es-ES", { month: "long", year: "numeric" }),
     convs: cur.convs,
@@ -1334,7 +1340,7 @@ async function monthlyReportData(env, t) {
     rate: cur.rate,
     leads: cur.leads,
     gaps: gaps || [],
-    prev, // mes anterior, para la comparativa del informe
+    prev: hadPrev ? prev : null, // mes anterior, para la comparativa del informe
   };
 }
 
@@ -1371,10 +1377,12 @@ async function sendMonthlyReport(env, tenantId, toOverride) {
     <tr>${emailStat(rate + "%", "con información de tu contenido")}${emailStat(leads?.length || 0, "contactos captados (leads)")}</tr>
   </table>
   <p style="margin:0 0 14px;color:#6b7590;font-size:13px">
-    Comparado con el mes anterior: conversaciones${reportDelta(rep.convs, rep.prev?.convs)},
-    preguntas${reportDelta(rep.questions, rep.prev?.questions)},
-    leads${reportDelta(rep.leads, rep.prev?.leads)},
-    tasa de resolución${reportDelta(rep.rate, rep.prev?.rate, " pt")}.
+    ${rep.prev
+      ? `Comparado con el mes anterior: conversaciones${reportDelta(rep.convs, rep.prev.convs)},
+    preguntas${reportDelta(rep.questions, rep.prev.questions)},
+    leads${reportDelta(rep.leads, rep.prev.leads)},
+    tasa de resolución${reportDelta(rep.rate, rep.prev.rate, " pt")}.`
+      : ""}
     El asistente te ha ahorrado aproximadamente <b>${Math.round((q * 3) / 60)} horas</b> de atención este mes.
   </p>
   ${
@@ -1867,16 +1875,27 @@ async function runWeeklyReindex(env) {
     `documents?source_type=eq.url&source_url=not.is.null&select=id,tenant_id,source_url&order=indexed_at.asc.nullsfirst&limit=12`
   );
   for (const d of docs || []) {
+    let ok = false;
     try {
       const page = await fetchUrlDocument(d.source_url);
-      await indexDocument(env, d.tenant_id, {
+      const res = await indexDocument(env, d.tenant_id, {
         source_url: page.url,
         source_type: "url",
         title: page.title,
         content: page.content,
       });
+      ok = !!res?.ok;
+      if (!ok) await logError(env, "reindex/" + String(d.source_url).slice(0, 80), res?.reason || "no indexado").catch(() => {});
     } catch (err) {
       await logError(env, "reindex/" + String(d.source_url || d.id).slice(0, 80), err?.message || err).catch(() => {});
+    }
+    // también en fallo se avanza indexed_at: si no, una URL muerta volvería a
+    // encabezar el lote de 12 cada lunes y bloquearía el refresco de las vivas
+    if (!ok) {
+      await sb(env, `documents?id=eq.${d.id}`, {
+        method: "PATCH",
+        body: { indexed_at: new Date().toISOString() },
+      }).catch(() => {});
     }
   }
 }
@@ -2765,7 +2784,10 @@ Instrucciones del bot (contexto): ${(t.system_prompt || "").slice(0, 2000)}${
   // --- costes por tokens y margen por cliente (mes actual o ?month=YYYY-MM) ---
   if (url.pathname === "/admin/api/costs" && request.method === "GET") {
     const monthParam = url.searchParams.get("month");
-    const monthDate = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam + "-01" : null;
+    if (monthParam && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)) {
+      return json({ error: "mes no válido (usa YYYY-MM)" }, 400);
+    }
+    const monthDate = monthParam ? monthParam + "-01" : null;
     const eurPerUsd = Math.min(2, Math.max(0.5, Number(env.EUR_PER_USD) || 0.9));
     const [usage, tenants] = await Promise.all([
       rpc(env, "admin_token_usage", monthDate ? { p_month: monthDate } : {}),
@@ -10214,7 +10236,7 @@ function refreshConvs(force) {
 
 function computeGaps() {
   GAPS = [];
-  var seen = {};
+  var seen = Object.create(null); // sin prototipo: "constructor"/"toString" son preguntas válidas
   CONVS.forEach(function (c) {
     var ms = c.messages || [];
     ms.forEach(function (m, i) {
@@ -10865,10 +10887,12 @@ ${inject}</body></html>`;
         const [integ] = await sb(env, `project_integrations?id=eq.${mTg[1]}&provider=eq.telegram&limit=1`);
         // secreto que Telegram reenvía en cada actualización (lo fijamos al conectar)
         const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
-        // mismo criterio que WhatsApp: una integración pausada o con error no contesta
-        if (!integ || integ.status !== "connected" || !integ.settings?.webhook_secret || !safeEqual(secret, integ.settings.webhook_secret)) {
+        if (!integ || !integ.settings?.webhook_secret || !safeEqual(secret, integ.settings.webhook_secret)) {
           return new Response("forbidden", { status: 403 });
         }
+        // pausada o con error: 200 y descartar. Con un 403 Telegram ENCOLA los
+        // updates y al reconectar el bot respondería en ráfaga a mensajes antiguos.
+        if (integ.status !== "connected") return new Response("ok", { status: 200 });
         let update;
         try { update = await readJsonBody(request); }
         catch { return new Response("bad request", { status: 400 }); }
@@ -10971,14 +10995,20 @@ ${inject}</body></html>`;
         // caché de 60 s: cada carga de página con el widget pedía el tenant a
         // Supabase. Se cachea el SNAPSHOT (payload + dominios + canal web), nunca
         // las cabeceras CORS: esas se calculan por petición según el Origin.
+        // Dos capas: memoria del isolate (funciona SIEMPRE, también en *.workers.dev,
+        // donde la Cache API es un no-op) y caches.default (para el dominio propio).
         const cfgKey = url.searchParams.get("key") || "";
         const cache = caches.default;
         const cacheKey = new Request("https://config-cache.internal/v1?key=" + encodeURIComponent(cfgKey));
         let snap = null;
-        try {
-          const hit = await cache.match(cacheKey);
-          if (hit) snap = await hit.json();
-        } catch (e) {}
+        const memoHit = CONFIG_MEMO.get(cfgKey);
+        if (memoHit && Date.now() - memoHit.at < 60000) snap = memoHit.snap;
+        if (!snap) {
+          try {
+            const hit = await cache.match(cacheKey);
+            if (hit) snap = await hit.json();
+          } catch (e) {}
+        }
         if (!snap) {
           const tenant = await getTenant(env, cfgKey);
           if (!tenant) return json({ error: "clave no válida" }, 401); // los fallos no se cachean
@@ -10993,6 +11023,8 @@ ${inject}</body></html>`;
               theme: tenant.theme || {},
             },
           };
+          if (CONFIG_MEMO.size > 500) CONFIG_MEMO.clear(); // tope defensivo por isolate
+          CONFIG_MEMO.set(cfgKey, { at: Date.now(), snap });
           ctx.waitUntil(cache.put(cacheKey, new Response(JSON.stringify(snap), {
             headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" },
           })).catch(() => {}));
@@ -11014,7 +11046,7 @@ ${inject}</body></html>`;
 
       // --- chat ---
       if (url.pathname === "/api/chat" && request.method === "POST") {
-        const { key, session_id, message, page_url, history = [], stream } = await readJsonBody(request);
+        const { key, session_id, message, page_url, history = [], stream, client_msg_id } = await readJsonBody(request);
         const tenant = await getTenant(env, key);
         if (!tenant) return json({ error: "clave no válida" }, 401);
 
@@ -11058,6 +11090,37 @@ ${inject}</body></html>`;
               ch
             );
           }
+        }
+
+        // Idempotencia del turno: el widget manda un client_msg_id por mensaje y lo
+        // REUTILIZA si reintenta tras un stream cortado. Como el primer intento sigue
+        // procesándose en waitUntil aunque el cliente se desconecte, sin esto el
+        // reintento duplicaría la llamada al modelo, los mensajes y el lead/webhook.
+        const cmid = typeof client_msg_id === "string" ? client_msg_id.trim().slice(0, 64) : "";
+        if (cmid && !(await firstDelivery(env, "webchat", tenant.id + ":" + cmid))) {
+          // reintento detectado: dar tiempo a que el primer intento persista y
+          // devolver SU respuesta en vez de generar (y cobrar) otra vez
+          await new Promise((r) => setTimeout(r, 3500));
+          let recovered = null;
+          try {
+            const [conv] = await sb(env, `conversations?tenant_id=eq.${tenant.id}&session_id=eq.${encodeURIComponent(sid)}&select=id&limit=1`);
+            if (conv) {
+              const since = new Date(Date.now() - 3 * 60000).toISOString();
+              const [last] = await sb(
+                env,
+                `messages?conversation_id=eq.${conv.id}&role=eq.assistant&created_at=gte.${since}&order=created_at.desc&limit=1&select=id,content,sources`
+              );
+              if (last) recovered = last;
+            }
+          } catch (e) {}
+          if (recovered) {
+            return json({ reply: recovered.content, sources: recovered.sources || [], message_id: recovered.id }, 200, ch);
+          }
+          return json(
+            { reply: "Sigo terminando de responder a tu mensaje anterior. Dame unos segundos y, si no ves la respuesta, vuelve a preguntarme 🙂", sources: [], recovering: true },
+            200,
+            ch
+          );
         }
 
         // --- modo streaming (SSE, opt-in con body.stream): el texto llega palabra

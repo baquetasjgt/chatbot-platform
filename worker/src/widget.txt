@@ -710,12 +710,18 @@
       wait.style.display = "none";
     }
 
+    // id de idempotencia del turno: si el stream se corta y reintentamos por el
+    // camino clásico, el servidor reconoce el reintento y NO vuelve a generar
+    var cmid = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
     var payload = {
       key: KEY,
       session_id: sid,
       message: text,
       page_url: location.href,
       history: history,
+      client_msg_id: cmid,
     };
 
     // camino clásico (respuesta completa de una vez); también es el fallback
@@ -752,6 +758,9 @@
           if (!sBubble) {
             wait.remove();
             sBubble = add("bot", "");
+            // fuera del árbol de accesibilidad mientras crece: con aria-live en el
+            // log, cada trozo re-anunciaría el mensaje entero al lector de pantalla
+            sBubble.setAttribute("aria-hidden", "true");
           }
           streamed += t;
           sBubble.textContent = streamed;
@@ -779,6 +788,11 @@
         return pump().then(function (f) {
           if (!f) throw new Error("stream incompleto");
           return f;
+        }).catch(function (e) {
+          // liberar la conexión antes del fallback (el servidor ya deduplica por
+          // client_msg_id, esto solo evita mantener el stream muerto abierto)
+          try { reader.cancel(); } catch (x) {}
+          throw e;
         });
       });
     }
@@ -798,11 +812,13 @@
         if (d.error) throw new Error(d.error);
         if (sBubble) {
           // sustituir el texto plano provisional por el render definitivo
+          // (y devolverlo al árbol de accesibilidad: se anuncia UNA vez, completo)
           sBubble.classList.add("md");
           sBubble.innerHTML = md(d.reply);
+          sBubble.removeAttribute("aria-hidden");
           addSources(d.sources);
         } else {
-          add("bot", d.reply, d.sources, typingOn && !canStream);
+          add("bot", d.reply, d.sources, typingOn);
         }
         addFeedback(d.message_id);
         if (TH.sound) playPing();
