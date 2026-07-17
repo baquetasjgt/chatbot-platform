@@ -416,7 +416,7 @@
           : brandBody) +
         "</div>";
     } else if (TH.expobot_branding !== false) {
-      var ebLogo = API + "/brand/wordmark-" + (isDark() ? "light" : "dark") + ".svg";
+      var ebLogo = API + "/brand/wordmark-" + (isDark() ? "light" : "dark") + ".svg?v=2";
       brand = '<div class="cb-brand"><a href="https://expobot.es" target="_blank" rel="noopener">Con tecnología de <img class="cb-eblogo" src="' + ebLogo + '" alt="ExpoBot"></a></div>';
     }
     panel.innerHTML =

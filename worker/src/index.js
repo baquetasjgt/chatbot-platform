@@ -3528,7 +3528,9 @@ ${brief}`;
 function brandAppHtml(html) {
   return html
     .replace("</style>", APP_BRAND_CSS + "</style>")
-    .replaceAll("/brand/logo.png", "/brand/wordmark-light.svg")
+    // (antes se reemplazaba aquí el logo en bloque hacia wordmark-light; ahora
+    // cada página lleva la variante correcta según su fondo: dark sobre claro,
+    // light sobre la barra oscura del panel)
     .replace("</head>", '<script src="/brand/ui-icons.js" defer></script></head>');
 }
 const ADMIN_HTML = `<!doctype html>
@@ -4061,7 +4063,7 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="login" class="login hide">
   <div class="card">
-    <div class="brand" style="margin-bottom:12px"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
+    <div class="brand" style="margin-bottom:12px"><img src="/brand/wordmark-dark.svg?v=2" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
     <h1>Bienvenido a tu estudio</h1>
     <p class="mut">Introduce tu clave de acceso para gestionar tus clientes y sus asistentes.</p>
     <input id="tok" type="password" placeholder="Token" autocomplete="current-password"
@@ -4074,7 +4076,7 @@ const ADMIN_HTML = `<!doctype html>
 
 <div id="app" class="hide">
   <header>
-    <div class="brand"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"><em>estudio de asistentes IA</em></div>
+    <div class="brand"><img src="/brand/wordmark-dark.svg?v=2" alt="ExpoBot" style="height:34px;width:auto;display:block"><em>estudio de asistentes IA</em></div>
     <div>
       <button id="menu-btn" class="ghost small"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Menú</button>
       <button id="search-btn" class="ghost small" title="Ctrl+K"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.18em;flex:none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Buscar</button>
@@ -7719,7 +7721,7 @@ function updPrev() {
   $("cv-brand").innerHTML = brandLogo
     ? 'Impulsado por <img src="' + brandLogo.replace(/"/g, "") + '" alt="' + (brand || "Marca") + '" style="max-width:62px;max-height:14px;vertical-align:middle;margin-left:4px">'
     : brand ? "Impulsado por " + brand
-    : (expobotOn ? 'Con tecnología de <img src="/brand/wordmark-' + (cvDark ? "light" : "dark") + '.svg" alt="ExpoBot" style="height:13px;width:auto;vertical-align:middle;margin-left:4px">' : "");
+    : (expobotOn ? 'Con tecnología de <img src="/brand/wordmark-' + (cvDark ? "light" : "dark") + '.svg?v=2" alt="ExpoBot" style="height:13px;width:auto;vertical-align:middle;margin-left:4px">' : "");
   $("cv-brand").style.background = cbg;
   $("cv-brand").style.color = cvDark ? "#777" : "#999";
 
@@ -8853,7 +8855,7 @@ const PORTAL_HTML = `<!doctype html>
 
 <div id="login" class="login hide">
   <div class="card">
-    <div class="brand" style="margin-bottom:14px"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
+    <div class="brand" style="margin-bottom:14px"><img src="/brand/wordmark-dark.svg?v=2" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
     <h2>Portal de cliente</h2>
     <p class="sub">Accede con el email y la contraseña que te hemos facilitado.</p>
     <label>Email</label>
@@ -8900,7 +8902,7 @@ const PORTAL_HTML = `<!doctype html>
 <div id="app" class="hide">
   <header>
     <div style="display:flex;align-items:center;gap:14px">
-      <div class="brand"><img src="/brand/logo.png" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
+      <div class="brand"><img src="/brand/wordmark-dark.svg?v=2" alt="ExpoBot" style="height:34px;width:auto;display:block"></div>
       <h1 id="c-name" style="font-weight:600;color:var(--mut);font-size:15px">Portal</h1>
     </div>
     <button id="logout" class="ghost small">Salir</button>
@@ -9651,7 +9653,7 @@ const PANEL_HTML = `<!doctype html>
 <body class="panel-client">
 <div class="panel-shell">
   <aside id="client-sidebar" aria-label="Navegación del panel">
-    <img class="side-logo" src="/brand/logo.png" alt="ExpoBot">
+    <img class="side-logo" src="/brand/wordmark-light.svg?v=2" alt="ExpoBot">
     <nav id="client-nav">
       <button class="on" data-tab="t-overview" aria-label="Resumen"><span class="nav-ico" aria-hidden="true">⌂</span><span class="nav-label">Resumen</span></button>
       <button data-tab="t-leads" aria-label="Leads"><span class="nav-ico" aria-hidden="true">◎</span><span class="nav-label">Leads</span><span class="badge hide" id="bg-leads"></span></button>

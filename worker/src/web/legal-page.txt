@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Información legal, privacidad, cookies, condiciones y accesibilidad de ExpoBOT.">
   <title>Información legal | ExpoBOT</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="%%BASE%%/styles.css?v=14">
   <script src="/brand/ui-icons.js" defer></script>
 </head>
