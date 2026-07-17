@@ -7721,7 +7721,7 @@ function updPrev() {
   $("cv-brand").innerHTML = brandLogo
     ? 'Impulsado por <img src="' + brandLogo.replace(/"/g, "") + '" alt="' + (brand || "Marca") + '" style="max-width:62px;max-height:14px;vertical-align:middle;margin-left:4px">'
     : brand ? "Impulsado por " + brand
-    : (expobotOn ? 'Con tecnología de <img src="/brand/wordmark-' + (cvDark ? "light" : "dark") + '.svg?v=2" alt="ExpoBot" style="height:13px;width:auto;vertical-align:middle;margin-left:4px">' : "");
+    : (expobotOn ? '<a href="https://expobot.es" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Con tecnología de <img src="/brand/wordmark-' + (cvDark ? "light" : "dark") + '.svg?v=2" alt="ExpoBot" style="height:13px;width:auto;vertical-align:middle;margin-left:4px"></a>' : "");
   $("cv-brand").style.background = cbg;
   $("cv-brand").style.color = cvDark ? "#777" : "#999";
 
