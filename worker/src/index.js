@@ -320,6 +320,70 @@ async function fetchExternal(resource, options = {}, timeoutMs = 10000, maxRedir
   throw new HttpError(502, "no se pudo descargar el recurso externo");
 }
 
+function htmlAttribute(tag, name) {
+  const match = String(tag || "").match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));
+  return match ? (match[1] ?? match[2] ?? match[3] ?? "") : null;
+}
+
+async function demoAssetUrl(env, origin, resourceUrl, expiresAt) {
+  const payload = `${resourceUrl}\n${expiresAt}`;
+  const signature = await hmacSign(payload, portalSecret(env));
+  const params = new URLSearchParams({ url: resourceUrl, exp: String(expiresAt), sig: signature });
+  return `${origin}/demo-asset?${params}`;
+}
+
+async function replaceAsync(value, pattern, replacer) {
+  const source = String(value || "");
+  const matches = [...source.matchAll(pattern)];
+  if (!matches.length) return source;
+  const replacements = await Promise.all(matches.map((match) => replacer(...match)));
+  let output = "";
+  let cursor = 0;
+  matches.forEach((match, index) => {
+    output += source.slice(cursor, match.index) + replacements[index];
+    cursor = match.index + match[0].length;
+  });
+  return output + source.slice(cursor);
+}
+
+async function rewriteDemoStylesheetLinks(page, baseUrl, env, origin, expiresAt) {
+  return replaceAsync(page, /<link\b[^>]*>/gi, async (tag) => {
+    const rel = htmlAttribute(tag, "rel");
+    const href = htmlAttribute(tag, "href");
+    if (!rel?.toLowerCase().split(/\s+/).includes("stylesheet") || !href) return tag;
+    let stylesheetUrl = null;
+    try { stylesheetUrl = safeExternalUrl(new URL(href, baseUrl).href); } catch {}
+    if (!stylesheetUrl) return "";
+    const proxyUrl = await demoAssetUrl(env, origin, stylesheetUrl.href, expiresAt);
+    return tag
+      .replace(/\bhref\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i, `href="${h(proxyUrl)}"`)
+      .replace(/\s+integrity\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+      .replace(/\s+crossorigin(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, "");
+  });
+}
+
+async function rewriteDemoCss(css, stylesheetUrl, env, origin, expiresAt) {
+  let output = await replaceAsync(
+    css,
+    /@import\s+(?:url\(\s*)?(["'])([^"']+)\1\s*\)?/gi,
+    async (rule, quote, href) => {
+      let importedUrl = null;
+      try { importedUrl = safeExternalUrl(new URL(href, stylesheetUrl).href); } catch {}
+      if (!importedUrl) return "";
+      const proxyUrl = await demoAssetUrl(env, origin, importedUrl.href, expiresAt);
+      return `@import url("${proxyUrl}")`;
+    }
+  );
+  output = output.replace(/url\(\s*(["']?)(.*?)\1\s*\)/gi, (rule, quote, href) => {
+    const value = String(href || "").trim();
+    if (!value || value.startsWith("#") || /^data:/i.test(value) || value.startsWith(origin + "/demo-asset?")) return rule;
+    if (/^(?:javascript|vbscript|file|blob):/i.test(value)) return 'url("")';
+    let assetUrl = null;
+    try { assetUrl = safeExternalUrl(new URL(value, stylesheetUrl).href); } catch {}
+    return assetUrl ? `url("${assetUrl.href.replace(/"/g, "%22")}")` : 'url("")';
+  });
+  return output.replace(/<\/style/gi, "<\\/style");
+}
 async function fetchSiteHtml(domain, maxBytes = 500000) {
   const clean = normalizedDomain(domain);
   const target = clean ? safeExternalUrl(`https://${clean}`) : null;
@@ -10781,6 +10845,50 @@ export default {
       const webResp = serveWeb(url, env);
       if (webResp) return webResp;
 
+      // Las hojas CSS de las demos se sirven desde el mismo origen mediante URLs
+      // firmadas y breves. Evita bloqueos CORP/CORS sin convertir el Worker en un proxy.
+      if (url.pathname === "/demo-asset") {
+        if (request.method !== "GET" && request.method !== "HEAD") {
+          return new Response("método no permitido", { status: 405, headers: { Allow: "GET, HEAD" } });
+        }
+        const resourceUrl = String(url.searchParams.get("url") || "");
+        const expiresAt = Number(url.searchParams.get("exp"));
+        const signature = String(url.searchParams.get("sig") || "");
+        const target = resourceUrl.length <= 4096 ? safeExternalUrl(resourceUrl) : null;
+        const now = Date.now();
+        if (!target || !Number.isSafeInteger(expiresAt) || expiresAt < now || expiresAt > now + 60 * 60 * 1000 ||
+            !/^[A-Za-z0-9_-]{40,100}$/.test(signature)) {
+          return new Response("recurso no válido", { status: 403 });
+        }
+        const secret = portalSecret(env);
+        const expected = secret ? await hmacSign(`${target.href}\n${expiresAt}`, secret) : "";
+        if (!expected || !safeEqual(expected, signature)) {
+          return new Response("recurso no válido", { status: 403 });
+        }
+
+        const response = await fetchExternal(target, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+            Accept: "text/css,*/*;q=0.1",
+            Referer: `${target.origin}/`,
+          },
+        }, 10000);
+        const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
+        if (!response.ok || !contentType.includes("text/css")) {
+          await response.body?.cancel().catch(() => {});
+          return new Response("hoja de estilo no disponible", { status: 502 });
+        }
+        const css = await responseTextLimited(response, 2 * 1024 * 1024);
+        const rewritten = await rewriteDemoCss(css, target.href, env, url.origin, expiresAt);
+        return new Response(request.method === "HEAD" ? null : rewritten, {
+          headers: {
+            "Content-Type": "text/css;charset=utf-8",
+            "Cache-Control": "private, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+            "Cross-Origin-Resource-Policy": "same-origin",
+          },
+        });
+      }
       // --- demo: clon estático de la web del cliente con el bot funcionando ---
       if (url.pathname === "/demo") {
         const key = url.searchParams.get("key") || "";
@@ -10819,7 +10927,9 @@ export default {
           `<script src="${url.origin}/widget.js?v=${Date.now()}" data-key="${h(key)}" data-api="${url.origin}" data-open="2500" data-fresh="1"></script>`;
 
         if (page) {
-          // copia estática: fuera scripts y CSP; base para que css/imágenes carguen del sitio real
+          // copia estática: fuera scripts y CSP; base para que imágenes carguen del sitio real
+          const demoAssetExpiresAt = Date.now() + 15 * 60 * 1000;
+          page = await rewriteDemoStylesheetLinks(page, target.href, env, url.origin, demoAssetExpiresAt);
           page = page
             .replace(/<script[\s\S]*?<\/script>/gi, "")
             .replace(/<script[^>]*>/gi, "")
