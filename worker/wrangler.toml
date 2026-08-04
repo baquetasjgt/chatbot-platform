@@ -9,9 +9,10 @@ rules = [
 ]
 
 # Día 1 de cada mes a las 07:00 UTC: informes automáticos a los clientes
-# Cada día a las 07:00 UTC: resumen diario de leads (tenants con lead_notify = daily)
+# Cada día a las 07:00 UTC: leads, retención y salud de canales
+# Cada lunes a las 05:00 UTC: reindexado semanal de fuentes web
 [triggers]
-crons = ["0 7 1 * *", "0 7 * * *"]
+crons = ["0 7 1 * *", "0 7 * * *", "0 5 * * 1"]
 
 # Embeddings (@cf/baai/bge-m3) via Workers AI
 [ai]

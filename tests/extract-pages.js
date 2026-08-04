@@ -11,7 +11,10 @@ const src = fs.readFileSync(SRC, "utf8");
 fs.mkdirSync(OUT, { recursive: true });
 
 function grab(name) {
-  const start = src.indexOf("const " + name + " = `");
+  const start = ["const ", "let ", "var "]
+    .map((prefix) => src.indexOf(prefix + name + " = `"))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0] ?? -1;
   if (start < 0) throw new Error("no encontrado: " + name);
   const open = src.indexOf("`", start);
   let i = open + 1;

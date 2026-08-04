@@ -75,7 +75,9 @@
   @media(prefers-reduced-motion:reduce){.cb-btn.cb-beat,.cb-btn.cb-bounce,.cb-btn.cb-glow,.cb-btn.cb-shake{animation:none}.cb-btn:before,.cb-btn:after{animation:none}}
   .cb-btn.cb-left{left:var(--cbedge,24px);right:auto}
   .cb-btn.cb-square{border-radius:calc(var(--cbr,14px) + 4px)}
-  .cb-btn.cb-pill{width:auto;padding:0 18px;border-radius:calc(var(--cbbtn,56px)/2);gap:8px}
+  .cb-btn.cb-pill{width:auto;padding:0 22px 0 7px;border-radius:999px;gap:10px}
+  .cb-pill-chip{width:calc(var(--cbbtn,56px) - 14px);height:calc(var(--cbbtn,56px) - 14px);flex:0 0 auto;
+    border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--cbbtntext,var(--cbt,#fff));opacity:.96}
   .cb-btn svg{width:var(--cbicon,46%);height:var(--cbicon,46%);fill:none;stroke:var(--cbbtntext,var(--cbt,#fff));stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round}
   .cb-btn svg.botiso{fill:var(--cbbtntext,var(--cbt,#fff))!important;stroke:none!important}
@@ -83,7 +85,7 @@
   .cb-btn.cb-pill svg{width:24px;height:24px;flex:0 0 auto}
   .cb-btn img.cb-btn-img{width:var(--cbiconimg,70%);height:var(--cbiconimg,70%);object-fit:contain;display:block;pointer-events:none}
   .cb-btn.cb-pill img.cb-btn-img{width:26px;height:26px;flex:0 0 auto}
-  .cb-pill-t{color:var(--cbbtntext,var(--cbt,#fff));font:600 15px/1 var(--cbf,system-ui,sans-serif);white-space:nowrap}
+  .cb-pill-t{color:var(--cbbtntext,var(--cbt,#fff));font:700 15px/1 var(--cbf,system-ui,sans-serif);white-space:nowrap;letter-spacing:.01em}
   .cb-panel{position:fixed;bottom:calc(var(--cbbtn,56px) + var(--cbedge,24px) + 12px);right:var(--cbedge,24px);width:var(--cbw,380px);
     max-width:calc(100vw - 32px);height:var(--cbh,560px);max-height:calc(100vh - 130px);
     background:var(--cbg,#fff);border:var(--cbpanelborder,0);border-radius:var(--cbrl,16px);z-index:2147483000;
@@ -123,6 +125,12 @@
   .cb-msg.md a{color:inherit;text-decoration:underline}
   .cb-msg.md b{font-weight:600}
   .cb-src{font-size:12px;color:#888;align-self:flex-start;margin-top:-6px}
+  .cb-fb{display:flex;gap:4px;align-self:flex-start;margin-top:-6px}
+  .cb-fb button{background:none;border:0;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.45;filter:grayscale(1);transition:opacity .15s}
+  .cb-fb button:hover{opacity:1}
+  .cb-fb button.on{opacity:1;filter:none}
+  .cb-fb button:disabled{cursor:default}
+  .cb-fb.cb-fb-done button:not(.on){visibility:hidden}
   .cb-src a{color:#888}
   .cb-sug{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 12px}
   .cb-sug button{background:var(--cbg,#fff);border:1px solid var(--cbcontrolborder,#ddd);border-radius:var(--cbr,14px);padding:7px 12px;
@@ -227,8 +235,9 @@
     var glyph = customIcon
       ? '<img class="cb-btn-img" src="' + esc(customIcon) + '" alt="">'
       : (icon.indexOf("<svg") === 0 ? icon : '<svg viewBox="0 0 24 24">' + icon + "</svg>");
-    btn.innerHTML = glyph +
-      (pill ? '<span class="cb-pill-t">' + esc(TH.btn_label || "Chat") + "</span>" : "");
+    // en píldora el icono va dentro de un círculo con anillo, como un chip
+    btn.innerHTML = (pill ? '<span class="cb-pill-chip">' + glyph + "</span>" : glyph) +
+      (pill ? '<span class="cb-pill-t">' + esc(TH.btn_label || "Asistente IA") + "</span>" : "");
     btn.style.background = TH.btn_bg || "";
     btn.style.border = "";
     if (BORDER) {
@@ -410,7 +419,7 @@
           : brandBody) +
         "</div>";
     } else if (TH.expobot_branding !== false) {
-      var ebLogo = API + "/brand/wordmark-" + (isDark() ? "light" : "dark") + ".svg";
+      var ebLogo = API + "/brand/wordmark-" + (isDark() ? "light" : "dark") + ".svg?v=2";
       brand = '<div class="cb-brand"><a href="https://expobot.es" target="_blank" rel="noopener">Con tecnología de <img class="cb-eblogo" src="' + ebLogo + '" alt="ExpoBot"></a></div>';
     }
     panel.innerHTML =
@@ -419,7 +428,7 @@
       '<div class="cb-hsub">' + esc(TXT.subtitle) + '</div></div>' +
       (TH.reset_btn ? '<button class="cb-reset" id="cb-reset" aria-label="Reiniciar conversación"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>' : "") +
       '<button class="cb-close" aria-label="Cerrar chat">&times;</button></div>' +
-      '<div class="cb-log" id="cb-log"></div>' +
+      '<div class="cb-log" id="cb-log" role="log" aria-live="polite" aria-label="Conversación"></div>' +
       '<div class="cb-sug" id="cb-sug"></div>' +
       (TH.cta_text ? '<button class="cb-cta" id="cb-cta">' + esc(TH.cta_text) + "</button>" : "") +
       '<div class="cb-foot">' +
@@ -452,6 +461,13 @@
     inp.onkeydown = function (e) {
       if (e.key === "Enter") send();
     };
+    // accesibilidad: Escape cierra el chat desde cualquier parte de la página
+    if (!window.__cbEscBound) {
+      window.__cbEscBound = true;
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && open) toggle();
+      });
+    }
     inp.onfocus = function () { setTimeout(fitMobile, 250); };
     inp.onblur = function () { setTimeout(fitMobile, 250); };
 
@@ -621,28 +637,60 @@
       d.innerHTML = md(text);
     }
     log.appendChild(d);
-
-    if (sources && sources.length) {
-      var safeSources = sources.map(safeHttpUrl).filter(Boolean);
-      if (safeSources.length) {
-        var s2 = document.createElement("div");
-        s2.className = "cb-src";
-        s2.appendChild(document.createTextNode("Fuente: "));
-        safeSources.forEach(function (u, index) {
-          if (index) s2.appendChild(document.createTextNode(" · "));
-          var link = document.createElement("a");
-          link.href = u;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          var label = new URL(u).pathname;
-          while (label.charAt(0) === "/") label = label.slice(1);
-          link.textContent = label.slice(0, 34) || "web";
-          s2.appendChild(link);
-        });
-        log.appendChild(s2);
-      }
-    }    scrollLog();
+    if (sources && sources.length) addSources(sources);
+    scrollLog();
     return d;
+  }
+
+  function addSources(sources) {
+    var log = panel.querySelector("#cb-log");
+    var safeSources = (sources || []).map(safeHttpUrl).filter(Boolean);
+    if (!safeSources.length) return;
+    var s2 = document.createElement("div");
+    s2.className = "cb-src";
+    s2.appendChild(document.createTextNode("Fuente: "));
+    safeSources.forEach(function (u, index) {
+      if (index) s2.appendChild(document.createTextNode(" · "));
+      var link = document.createElement("a");
+      link.href = u;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      var label = new URL(u).pathname;
+      while (label.charAt(0) === "/") label = label.slice(1);
+      link.textContent = label.slice(0, 34) || "web";
+      s2.appendChild(link);
+    });
+    log.appendChild(s2);
+    scrollLog();
+  }
+
+  // valoración 👍/👎 de la última respuesta: alimenta la calidad del bot
+  function addFeedback(mid) {
+    if (!mid) return;
+    var log = panel.querySelector("#cb-log");
+    var row = document.createElement("div");
+    row.className = "cb-fb";
+    function mk(label, symbol, value) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", label);
+      b.textContent = symbol;
+      b.onclick = function () {
+        row.classList.add("cb-fb-done");
+        b.classList.add("on");
+        row.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+        fetch(API + "/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: KEY, message_id: mid, rating: value }),
+        }).catch(function () {});
+      };
+      return b;
+    }
+    row.appendChild(mk("La respuesta ha sido útil", "👍", 1));
+    row.appendChild(mk("La respuesta no ha sido útil", "👎", -1));
+    log.appendChild(row);
+    scrollLog();
   }
 
   function send() {
@@ -665,22 +713,117 @@
       wait.style.display = "none";
     }
 
-    fetch(API + "/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        key: KEY,
-        session_id: sid,
-        message: text,
-        page_url: location.href,
-        history: history,
-      }),
-    })
-      .then(function (r) { return r.json(); })
+    // id de idempotencia del turno: si el stream se corta y reintentamos por el
+    // camino clásico, el servidor reconoce el reintento y NO vuelve a generar
+    var cmid = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    var payload = {
+      key: KEY,
+      session_id: sid,
+      message: text,
+      page_url: location.href,
+      history: history,
+      client_msg_id: cmid,
+    };
+
+    // camino clásico (respuesta completa de una vez); también es el fallback
+    function classicChat() {
+      return fetch(API + "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json(); });
+    }
+
+    // streaming SSE: el texto llega palabra a palabra; {done} trae la respuesta
+    // definitiva. Cualquier fallo a mitad lanza y se reintenta por classicChat.
+    var sBubble = null;
+    var streamed = "";
+    function streamChat() {
+      return fetch(API + "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.assign({ stream: true }, payload)),
+      }).then(function (r) {
+        var ct = r.headers.get("Content-Type") || "";
+        if (!r.ok || ct.indexOf("text/event-stream") < 0 || !r.body) throw new Error("sin stream");
+        var reader = r.body.getReader();
+        var dec = new TextDecoder();
+        var buf = "";
+        var final = null;
+        function onDelta(t) {
+          if (t === null) { // restart: lo emitido hasta ahora no vale (lead a mitad)
+            streamed = "";
+            if (sBubble) sBubble.textContent = "";
+            return;
+          }
+          if (!sBubble) {
+            wait.remove();
+            sBubble = add("bot", "");
+            // fuera del árbol de accesibilidad mientras crece: con aria-live en el
+            // log, cada trozo re-anunciaría el mensaje entero al lector de pantalla
+            sBubble.setAttribute("aria-hidden", "true");
+          }
+          streamed += t;
+          sBubble.textContent = streamed;
+          scrollLog();
+        }
+        function pump() {
+          return reader.read().then(function (st) {
+            if (st.done) return final;
+            buf += dec.decode(st.value, { stream: true });
+            var nl;
+            while ((nl = buf.indexOf("\n")) >= 0) {
+              var line = buf.slice(0, nl).trim();
+              buf = buf.slice(nl + 1);
+              if (line.indexOf("data:") !== 0) continue;
+              var ev;
+              try { ev = JSON.parse(line.slice(5)); } catch (e) { continue; }
+              if (ev.error) throw new Error(ev.error);
+              if (ev.restart) onDelta(null);
+              else if (ev.t) onDelta(ev.t);
+              if (ev.done) final = ev;
+            }
+            return pump();
+          });
+        }
+        return pump().then(function (f) {
+          if (!f) throw new Error("stream incompleto");
+          return f;
+        }).catch(function (e) {
+          // liberar la conexión antes del fallback (el servidor ya deduplica por
+          // client_msg_id, esto solo evita mantener el stream muerto abierto)
+          try { reader.cancel(); } catch (x) {}
+          throw e;
+        });
+      });
+    }
+
+    var canStream = typeof TextDecoder !== "undefined" && window.ReadableStream;
+    var req = canStream
+      ? streamChat().catch(function () {
+          // el stream falló: limpiar lo pintado a medias y reintentar en clásico
+          if (sBubble) { sBubble.remove(); sBubble = null; streamed = ""; }
+          return classicChat();
+        })
+      : classicChat();
+
+    req
       .then(function (d) {
         wait.remove();
         if (d.error) throw new Error(d.error);
-        add("bot", d.reply, d.sources, typingOn);
+        if (sBubble) {
+          // sustituir el texto plano provisional por el render definitivo
+          // (y devolverlo al árbol de accesibilidad: se anuncia UNA vez, completo)
+          sBubble.classList.add("md");
+          sBubble.innerHTML = md(d.reply);
+          sBubble.removeAttribute("aria-hidden");
+          addSources(d.sources);
+        } else {
+          add("bot", d.reply, d.sources, typingOn);
+        }
+        addFeedback(d.message_id);
         if (TH.sound) playPing();
         history.push({ role: "user", content: text });
         history.push({ role: "assistant", content: d.reply });
@@ -691,6 +834,7 @@
       })
       .catch(function () {
         wait.remove();
+        if (sBubble) { sBubble.remove(); sBubble = null; }
         add("bot", TXT.error);
       })
       .finally(function () {
